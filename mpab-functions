@@ -1,0 +1,336 @@
+#
+# Copyright (c) 2006,2008 Bryan L Blackburn.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name Bryan L Blackburn, nor the names of any contributors
+#    may be used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
+#------------------------------------------------------------------------
+# Check necessary bits are available
+# $1 - base directory
+# $2 - MacPorts source tarball
+function checkDependencies()
+{
+   baseDir=$1
+   mpTarball=$2
+
+   if [[ `id -u` != 0 ]]; then
+      echo "This must be run as root, please do so"
+      return 1
+   fi
+   if [[ ! -f ${baseDir}/${mpTarball} ]]; then
+      cat << EOF
+Need to have a MacPorts source tarball as ${baseDir}/${mpTarball}
+See the ReadMe.txt file.
+EOF
+   return 2
+   fi
+}
+
+
+#------------------------------------------------------------------------
+# Print out usage help and exit
+function printUsageAndExit()
+{
+   cat << EOF
+Usage: $0 [help | mount | umount | buildmp | rebuildmp |
+           buildports [portlist_file]]
+   help:        this help
+   mount:       just mount the chroot images
+   umount:      unmount the chroot images
+   buildmp:     build/install MacPorts inside the chroot
+   rebuildmp:   force a rebuild of MacPorts inside the chroot
+   buildports:  build ports; if a portlist file is given, use it, otherwise
+                build all; portlist_file is a simple text file with one port
+                per line; dependencies will be built as needed
+   default is to do everything (except rebuildmp); buildmp and buildports
+   will unmount the chroot when done
+EOF
+   exit 0
+}
+
+
+#------------------------------------------------------------------------
+# Do whatever cleanup is necessary
+# $1 - base directory
+# $2 - chroot path
+function exitFunction()
+{
+   baseDir=$1
+   chrootPath=$2
+
+   if [[ -n $exitMessage ]]; then
+      echo $exitMessage
+   fi
+   if [[ -d ${chrootPath}/var/tmp/portresults/fail ]]; then
+      moveAndReport ${baseDir} ${chrootPath}
+   fi
+   if [[ -d ${chrootPath} ]]; then
+      umountChroot ${chrootPath}
+   fi
+}
+
+
+#------------------------------------------------------------------------
+# Build the base chroot and distfile cache disk images
+# $1 - base directory
+# $2 - chroot path
+# $3 - base name for the disk images
+function buildImages()
+{
+   baseDir=$1
+   chrootPath=$2
+   imgBaseName=$3
+
+   echo "Building MP chroot images, if necessary"
+
+   # Paths to create within the chroot
+   pathsToCreate="private/etc private/var/folders private/var/log private/var/spool private/var/run private/var/tmp private/var/db/dyld private/tmp"
+
+   # Paths to copy to the chroot
+   pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl"
+
+   # Size of the disk images (hdiutil nomenclature)
+   imageSize="32g"
+
+   # Filesystem of the disk images (hdiutil nomenclature)
+   imageFileSystem="HFS+J"
+
+   mkdir -p ${chrootPath}
+
+   if [[ ! -f ${baseDir}/${imgBaseName}.dmg ]]; then
+      hdiutil create -size ${imageSize} -fs ${imageFileSystem} -volname MPRoot -imagekey sparse-band-size=16384 ${baseDir}/${imgBaseName}.sparseimage ${HDIUTILDEBUG}
+      returnValue=$?
+      if [[ ${returnValue} != 0 ]]; then
+         echo "hdiutil create (MPRoot) failed"
+         return ${returnValue}
+      fi
+
+      hdiutil attach ${baseDir}/${imgBaseName}.sparseimage -mountpoint ${chrootPath} -owners on -nobrowse -noautofsck ${HDIUTILDEBUG}
+      returnValue=$?
+      if [[ ${returnValue} != 0 ]]; then
+         echo "Failed to attach"
+         return ${returnValue}
+      fi
+      mkdir ${chrootPath}/dev
+      mount_devfs devfs ${chrootPath}/dev
+      mount_fdesc -o union fdesc ${chrootPath}/dev
+
+      if [[ ! -d ${chrootPath}/usr ]]; then
+         cd /
+         for createpath in ${pathsToCreate}; do
+            mkdir -p ${chrootPath}/${createpath}
+         done
+
+         for copypath in ${pathsToCopy}; do
+            pax -r -w -pe $copypath ${chrootPath}
+         done
+         cd - > /dev/null
+      fi
+
+      umount -f ${chrootPath}/dev
+      umount -f ${chrootPath}/dev
+      hdiutil detach ${chrootPath} ${HDIUTILDEBUG}
+      returnValue=$?
+      if [[ ${returnValue} != 0 ]]; then
+         echo "hdiutil detach failed"
+         return ${returnValue}
+      fi
+      hdiutil convert ${baseDir}/${imgBaseName}.sparseimage -format UDRO -o ${baseDir}/${imgBaseName}.dmg ${HDIUTILDEBUG}
+      returnValue=$?
+      if [[ ${returnValue} != 0 ]]; then
+         echo "hdiutil convert failed"
+         return ${returnValue}
+      fi
+      rm ${baseDir}/${imgBaseName}.sparseimage
+   fi
+
+   if [[ ! -f ${baseDir}/${imgBaseName}_distcache.sparseimage ]]; then
+      hdiutil create -size ${imageSize} -fs ${imageFileSystem} -volname MPCache -imagekey sparse-band-size=16384 ${baseDir}/${imgBaseName}_distcache.sparseimage ${HDIUTILDEBUG}
+      returnValue=$?
+      if [[ ${returnValue} != 0 ]]; then
+         echo "hdiutil create (MPCache) failed"
+         return ${returnValue}
+      fi
+   fi
+
+   return 0
+}
+
+
+#------------------------------------------------------------------------
+# Build MacPorts in the chroot
+# $1 - base directory
+# $2 - chroot path
+# $3 - MacPorts source tarball
+function buildMacPorts()
+{
+   baseDir=$1
+   chrootPath=$2
+   mpTarball=$3
+
+   echo "Building/installing MP in chroot, if necessary"
+
+   if [[ ! -d ${chrootPath}/opt/mports ]]; then
+      if [[ ! -f ${baseDir}/${mpTarball} ]]; then
+         echo "No ${mpTarball} found"
+         return 1
+      fi
+      mkdir -p ${chrootPath}/opt/mports
+      cd ${chrootPath}/opt/mports
+      bunzip2 -c ${baseDir}/${mpTarball} | tar xf -
+      cd - > /dev/null
+   fi
+
+   if [[ ! -f ${chrootPath}/opt/local/bin/port ]]; then
+      cp -p ${baseDir}/chroot-scripts/installmacports ${chrootPath}/var/tmp/
+      # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
+      # errors to syslog/console log like:
+      # com.apple.launchd[1] (com.apple.dyld): Throttling respawn: Will start in 10 seconds
+      env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/installmacports
+      rm ${chrootPath}/var/tmp/installmacports
+      sed 's/portarchivemode.*no/portarchivemode yes/' ${chrootPath}/opt/local/etc/macports/macports.conf > ${chrootPath}/opt/local/etc/macports/macports.conf.new
+      mv ${chrootPath}/opt/local/etc/macports/macports.conf.new ${chrootPath}/opt/local/etc/macports/macports.conf
+   fi
+
+   return 0
+}
+
+
+#------------------------------------------------------------------------
+# Build MP ports, either those listed in a file given or by generating
+# a list of all ports and using that
+# $1 - base directory
+# $2 - chroot path
+function buildPorts()
+{
+   baseDir=$1
+   chrootPath=$2
+
+   echo "Building ports"
+
+   cp -p ${baseDir}/chroot-scripts/buildports ${chrootPath}/var/tmp/
+   cp -p ${baseDir}/chroot-scripts/genportlist.tcl ${chrootPath}/var/tmp/
+
+   # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
+   # errors to syslog/console log like:
+   # com.apple.launchd[1] (com.apple.dyld): Throttling respawn: Will start in 10 seconds
+   env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/buildports
+
+   return 0
+}
+
+
+#------------------------------------------------------------------------
+# Move logs and report results
+# $1 - base directory
+# $2 - chroot path
+function moveAndReport()
+{
+   baseDir=$1
+   chrootPath=$2
+
+   now=`date '+%Y%m%d-%H%M%S'`
+   mkdir ${baseDir}/logs-${now}
+   mv ${chrootPath}/var/tmp/portresults/fail ${baseDir}/logs-${now}
+   mv ${chrootPath}/var/tmp/portresults/success ${baseDir}/logs-${now}
+   failcount=`ls -1 ${baseDir}/logs-${now}/fail | wc -l`
+   successcount=`ls -1 ${baseDir}/logs-${now}/success | wc -l`
+   echo "Ports built successfully: $successcount"
+   echo "Ports failed: $failcount"
+   echo "All logs are located in ${baseDir}/logs-${now}"
+
+   return 0
+}
+
+
+#------------------------------------------------------------------------
+# Mount the full chroot stuff
+# $1 - base directory
+# $2 - chroot path
+# $3 - base name for the disk images
+function mountChroot()
+{
+   baseDir=$1
+   chrootPath=$2
+   imgBaseName=$3
+
+   echo "Mounting chroot images"
+
+   mkdir -p ${chrootPath}
+
+   if [[ ! -d ${chrootPath}/usr ]]; then
+      if [[ ! -f ${baseDir}/${imgBaseName}.dmg ]]; then
+         echo "MPRoot image ${baseDir}/${imgBaseName}.dmg not found"
+         return 1
+      fi
+      hdiutil attach ${baseDir}/${imgBaseName}.dmg -mountpoint ${chrootPath} -shadow -noverify -owners on -nobrowse -noautofsck ${HDIUTILDEBUG}
+      returnValue=$?
+      if [[ ${returnValue} != 0 ]]; then
+         echo "Failed to attach root image"
+         return ${returnValue}
+      fi
+      mount_devfs devfs ${chrootPath}/dev
+      mount_fdesc -o union fdesc ${chrootPath}/dev
+
+      mkdir -p ${chrootPath}/opt/local/var/macports/distfiles
+      hdiutil attach ${baseDir}/${imgBaseName}_distcache.sparseimage -mountpoint ${chrootPath}/opt/local/var/macports/distfiles -noverify -owners on -nobrowse -noautofsck ${HDIUTILDEBUG}
+      returnValue=$?
+      if [[ ${returnValue} != 0 ]]; then
+         echo "Failed to attach distfiles image"
+         return ${returnValue}
+      fi
+   fi
+
+   return 0
+}
+
+
+#------------------------------------------------------------------------
+# Unmount everything for the MP chroot
+# $1 - chroot path
+function umountChroot()
+{
+   chrootPath=$1
+
+   if [[ -d ${chrootPath}/dev ]]; then
+      # First for the fdesc
+      umount -f ${chrootPath}/dev
+      # And again for the devfs
+      umount -f ${chrootPath}/dev
+   fi
+   if [[ -d ${chrootPath}/opt/local/var/macports/distfiles ]]; then
+      # Now the cache image for the dist files
+      hdiutil detach ${chrootPath}/opt/local/var/macports/distfiles ${HDIUTILDEBUG}
+   fi
+   if [[ -d ${chrootPath} ]]; then
+      # Finally, the main image itself
+      hdiutil detach ${chrootPath} ${HDIUTILDEBUG}
+      rmdir ${chrootPath}
+   fi
+
+   return 0
+}
+

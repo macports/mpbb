@@ -1,0 +1,140 @@
+#!/bin/sh
+#
+# This is run in the chroot, so don't run yourself...
+#
+# Copyright (c) 2006,2008 Bryan L Blackburn.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name Bryan L Blackburn, nor the names of any contributors
+#    may be used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS''
+# AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
+function uninstallPorts()
+{
+   installedPorts=`/opt/local/bin/port installed | /usr/bin/tail +2 | /usr/bin/awk '{print $1}'`
+   for uninstallPort in $installedPorts; do
+      portOutput=`/opt/local/bin/port -dvf uninstall $uninstallPort 2>&1`
+      if [[ $? != 0 ]]; then
+         echo $portOutput
+         break
+      fi
+   done
+}
+
+
+function cleanBuildStuff()
+{
+   rm -rf /opt/local/var/macports/build/*
+   uninstallPorts
+   if [[ $? != 0 ]]; then
+      echo "Uninstall failed, aborting"
+      exit 1
+   fi
+}
+
+
+cleanBuildStuff
+PORTRESULTSDIR="/var/tmp/portresults"
+rm -rf ${PORTRESULTSDIR}
+/bin/mkdir -p ${PORTRESULTSDIR}/success ${PORTRESULTSDIR}/fail
+
+
+if [[ -f /var/tmp/portlist ]]; then
+   portList=`/bin/cat /var/tmp/portlist`
+   /bin/rm /var/tmp/portlist
+else
+   portList=`/usr/bin/tclsh /var/tmp/genportlist.tcl`
+fi
+
+portCount=`echo ${portList} | /usr/bin/wc -w`
+portCount=$(($portCount))   # Get rid of wc's spacing
+
+tclOS=`echo 'puts [string tolower $tcl_platform(os)]' | tclsh`
+tclArch=`echo 'puts $tcl_platform(machine)' | tclsh`
+if [[ $tclArch == "Power Macintosh" ]]; then
+   tclArch='powerpc'
+elif [[ $tclArch == 'i586' || $tclArch == 'i686' ]]; then
+   tclArch='i386'
+fi
+packageDir="/opt/local/var/macports/packages/${tclOS}/${tclArch}"
+
+currentCount=1
+for portName in ${portList}; do
+   trap "echo \"Canceled, cleaning up...\"; cleanBuildStuff" EXIT
+
+   # special-case XFree86 and xorg since they will "fail" (according to port's
+   # exit status) but since the chroot has Apple's X11, it's okay
+   if [[ ${portName} == "XFree86" || ${portName} == "xorg" ]]; then
+      continue
+   fi
+
+   echo "Building ${portName} (${currentCount} of ${portCount})...\c"
+   # If there's a package, don't build again
+   portVersion=`/opt/local/bin/port info --version ${portName} | awk '{print $2}'`
+   portRevision=`/opt/local/bin/port info --revision ${portName} | awk '{print $2}'`
+   portPackageBaseName="${portName}-${portVersion}_${portRevision}"
+   ls ${packageDir}/${portPackageBaseName}*.${tclArch}.tgz > /dev/null 2>&1
+   if [[ $? == 0 ]]; then
+      echo "package found, not building again"
+   else
+      skipPort=""
+      portDeps=`/opt/local/bin/port deps ${portName} | /usr/bin/tail +2`
+      for oneDep in ${portDeps}; do
+         if [[ -f ${PORTRESULTSDIR}/fail/${oneDep}.log ]]; then
+            skipPort=${oneDep}
+            break
+         fi
+      done
+      if [[ -z $skipPort ]]; then
+         /opt/local/bin/port -dvx install $portName > ${PORTRESULTSDIR}/${portName}.log 2>&1
+         if [[ $? == 0 ]]; then
+            /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/success
+            echo "success"
+         else
+            /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/fail
+            echo "failure"
+            /opt/local/bin/port clean --work $portName
+            # If a port fails in the activation stage, MP has already built
+            # a package, so remove it here
+            rm -f ${packageDir}/${portPackageBaseName}*.${tclArch}.tgz
+         fi
+         uninstallPorts
+         if [[ $? != 0 ]]; then
+            echo "Uninstall failed, aborting"
+            exit 2
+         fi
+      else
+         echo "skipping, ${skipPort} previously failed and is needed"
+         echo "${portName} not built due to failed dependency ${skipPort}" > ${PORTRESULTSDIR}/fail/${portName}.log
+      fi
+   fi
+   currentCount=$((${currentCount}+1))
+done
+
+trap "" EXIT
+
+cleanBuildStuff
+
+exit 0
+

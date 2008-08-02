@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# configure/build/install MacPorts in the chroot
+#
+
+cd /opt/mports/base
+./configure && make all && make install && make distclean
+if [[ $? == 0 ]]; then
+   echo "file:///opt/mports/dports" > /opt/local/etc/macports/sources.conf
+fi
+
