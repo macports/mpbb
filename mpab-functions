@@ -110,7 +110,7 @@ function buildImages()
    pathsToCreate="private/etc private/var/folders private/var/log private/var/spool private/var/run private/var/tmp private/var/db/dyld private/tmp"
 
    # Paths to copy to the chroot
-   pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl"
+   pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Platforms Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl"
 
    # Size of the disk images (hdiutil nomenclature)
    imageSize="32g"
