@@ -31,6 +31,7 @@ current working directory.
 
 If you already have MacPorts from svn, run this instead of the first command
 above, then do the rest:
+
    svn export /path/to/macports/svn/trunk mpexport
 
 
@@ -55,8 +56,24 @@ The first time you run, it will take some time as it is creating a chroot
 environment, which involves copying several gigabytes of files into
 said chroot...be patient.
 
-You can also run 'sudo ./mpab help' to see what commands can be used with
+To build only a certain set of ports you need a file containing the
+list of the port names. The `port list' command adds more information
+than you want here, like version and category.  To create an list for
+mpab consumption, you can use something like this:
+
+  port echo maintainer:YOURNAME > own_ports
+
+and then
+
+  sudo ./mpab buildports own_ports
+
+You can run './mpab help' to see what commands can be used with
 mpab.
+
+Note that ports don't get rebuild when you run this twice, since they
+get stored as package once built sucessfully, and only rebuild when
+the version or revision gets changed. The port file definitions come
+from the macports_dist.tar.bz2 file you used for creating the disk images.
 
 
 Maintenance
@@ -74,9 +91,10 @@ mpab creates several disk images:
 
 When the OS version is updated, both mproot.dmg and mproot.dmg.shadow
 should be deleted so they can be rebuilt.  Any time you want to clean out
-the MacPorts stuff within the chroot but not rebuild the entire environment,
+the built MacPorts within the chroot but not rebuild the entire environment,
 you can delete just mproot.dmg.shadow, to start from scratch.  Note if you
-want to rebuild MacPorts, mpab has a rebuildmp target to do just that.
+want to rebuild MacPorts program and libraries, mpab has a rebuildmp target
+to do just that.
 
 
 Todo
