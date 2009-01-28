@@ -5,10 +5,3 @@
 
 cd /opt/mports/dports
 /opt/local/bin/portindex > /dev/null
-#!/bin/sh
-#
-# re-create the portindex
-#
-
-cd /opt/mports/dports
-/opt/local/bin/portindex > /dev/null
