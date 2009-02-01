@@ -2,6 +2,7 @@
 
 baseDir=`dirname $0`
 chrootPath=${baseDir}/mpchroot
+exportDir=mpexport
 
 # $1 - script to execute
 function chroot_exec () {
@@ -13,15 +14,15 @@ function chroot_exec () {
     rm ${chrootPath}/var/tmp/$1
 }
 
-if [[ -d ${baseDir}/mpexport ]] ; then 
+if [[ -d ${baseDir}/${exportDir} ]] ; then 
     svn update --non-interactive \
-	-r HEAD ${baseDir}/mpexport \
+	-r HEAD ${baseDir}/${exportDir} \
 	> /dev/null || exit 1
 else
     echo "Checking out macports from svn..."
     svn checkout --non-interactive -r HEAD \
 	http://svn.macports.org/repository/macports/trunk \
-	${baseDir}/mpexport > /dev/null || exit 1
+	${baseDir}/${exportDir} > /dev/null || exit 1
 fi
 
 if [[ ! -d ${baseDir}/mpchroot ]] ; then
@@ -30,7 +31,7 @@ if [[ ! -d ${baseDir}/mpchroot ]] ; then
 fi
 
 rsync -r --del --exclude '*~' --exclude '.svn' \
-    ${baseDir}/mpexport/dports \
+    ${baseDir}/${exportDir}/dports \
     ${baseDir}/mpchroot/opt/mports || exit 1
 
 echo "Re-creating portindex in chroot"
