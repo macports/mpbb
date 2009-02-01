@@ -35,14 +35,15 @@ function checkDependencies()
 {
    baseDir=$1
    mpTarball=$2
+   mpSvnWorkdir=$3
 
    if [[ `id -u` != 0 ]]; then
       echo "This must be run as root, please do so"
       return 1
    fi
-   if [[ ! -f ${baseDir}/${mpTarball} ]]; then
+   if [[ ! -f ${baseDir}/${mpTarball} && ! -d ${baseDir}/${mpSvnWorkdir} ]]; then
       cat << EOF
-Need to have a MacPorts source tarball as ${baseDir}/${mpTarball}
+Need to have a MacPorts source tarball ${baseDir}/${mpTarball} or svn working directhory ${baseDir}/${mpSvnWorkDir}
 See the ReadMe.txt file.
 EOF
    return 2
@@ -184,24 +185,30 @@ function buildImages()
 # Build MacPorts in the chroot
 # $1 - base directory
 # $2 - chroot path
-# $3 - MacPorts source tarball
+# $3 - MacPorts source tarball or svn export dir
 function buildMacPorts()
 {
    baseDir=$1
    chrootPath=$2
-   mpTarball=$3
+   mpExport=$3
 
    echo "Building/installing MP in chroot, if necessary"
 
    if [[ ! -d ${chrootPath}/opt/mports ]]; then
-      if [[ ! -f ${baseDir}/${mpTarball} ]]; then
-         echo "No ${mpTarball} found"
+      if [[ -f ${baseDir}/${mpExport} ]]; then
+	 mkdir -p ${chrootPath}/opt/mports
+	 cd ${chrootPath}/opt/mports
+	 bunzip2 -c ${baseDir}/${mpExport} | tar xf -
+	 cd - > /dev/null
+      elif [[ -d ${baseDir}/${mpExport} ]]; then
+	 mkdir -p ${chrootPath}/opt/mports
+         cd ${baseDir}/${mpExport} && \
+            rsync -r --del --exclude '*~' --exclude '.svn' . ${chrootPath}/opt/mports
+         cd - > /dev/null
+      else
+         echo "No ${mpExport} found"
          return 1
       fi
-      mkdir -p ${chrootPath}/opt/mports
-      cd ${chrootPath}/opt/mports
-      bunzip2 -c ${baseDir}/${mpTarball} | tar xf -
-      cd - > /dev/null
    fi
 
    if [[ ! -f ${chrootPath}/opt/local/bin/port ]]; then
@@ -334,3 +341,8 @@ function umountChroot()
    return 0
 }
 
+# Local Variables:
+# mode: shell-script
+# indent-tabs-mode: nil
+# sh-basic-offset: 3
+# End:

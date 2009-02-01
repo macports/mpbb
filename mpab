@@ -38,6 +38,7 @@ CHROOTSUBDIR="mpchroot"
 
 # Name of the file containing all of MacPorts
 MPTARBALL="macports_dist.tar.bz2"
+MP_SVN_WORKDIR="mpexport"
 
 if [[ -n ${MPABDEBUG} ]]; then
    HDIUTILDEBUG="-verbose"
@@ -74,7 +75,7 @@ if [[ -n $1 ]]; then
    fi
 fi
 
-checkDependencies ${baseDir} ${MPTARBALL}
+checkDependencies ${baseDir} ${MPTARBALL} ${MP_SVN_WORKDIR}
 returnValue=$?
 if [[ ${returnValue} != 0 ]]; then
    exit ${returnValue}
@@ -98,7 +99,11 @@ if [[ ${command} == "mount" || ${command} == "buildmp" ||
          rm -rf ${chrootPath}/opt/mports
          rm -f ${chrootPath}/opt/local/bin/port
       fi
-      buildMacPorts ${baseDir} ${chrootPath} ${MPTARBALL}
+      if [[ -d ${MP_SVN_WORKDIR} ]]; then
+         buildMacPorts ${baseDir} ${chrootPath} ${MP_SVN_WORKDIR}
+      else
+         buildMacPorts ${baseDir} ${chrootPath} ${MPTARBALL}
+      fi
       exitMessage=""
       if [[ $? == 0 && ${command} == "buildports" ]]; then
          if [[ -e ${portlistFile} ]]; then
@@ -111,3 +116,8 @@ if [[ ${command} == "mount" || ${command} == "buildmp" ||
    fi
 fi
 
+# Local Variables:
+# mode: shell-script
+# indent-tabs-mode: nil
+# sh-basic-offset: 3
+# End:
