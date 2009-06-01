@@ -1,0 +1,2 @@
+#!/bin/sh
+PS1="[MPAB_CHROOT \w] \$ " sh -i 

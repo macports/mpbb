@@ -38,7 +38,16 @@ CHROOTSUBDIR="mpchroot"
 
 # Name of the file containing all of MacPorts
 MPTARBALL="macports_dist.tar.bz2"
+# Alternatively, the SVN checkout dir of MacPorts
 MP_SVN_WORKDIR="mpexport"
+
+baseDir=$(dirname $0)
+
+dataDir=$(pwd)
+if [[ $MPAB_DATA ]]; then
+   dataDir=$MPAB_DATA
+fi
+chrootPath="${dataDir}/${CHROOTSUBDIR}"
 
 if [[ -n ${MPABDEBUG} ]]; then
    HDIUTILDEBUG="-verbose"
@@ -46,11 +55,6 @@ else
    HDIUTILDEBUG="-quiet"
 fi
 export HDIUTILDEBUG
-
-cd `dirname $0`
-baseDir=`pwd -P`
-chrootPath="${baseDir}/${CHROOTSUBDIR}"
-cd - > /dev/null
 
 . ${baseDir}/mpab-functions
 
@@ -60,8 +64,12 @@ if [[ -n $1 ]]; then
    command=$1 && shift
    if [[ ${command} != "help" && ${command} != "mount" &&
          ${command} != "umount" && ${command} != "buildmp" &&
-         ${command} != "rebuildmp" && ${command} != "buildports" ]]; then
+         ${command} != "rebuildmp" && ${command} != "buildports" && 
+         ${command} != "shell" ]]; then
       printUsageAndExit
+   fi
+   if [[ ${command} == "buildmp" || ${command} == "rebuildmp" ]]; then
+      installPackage=$1 && shift
    fi
    if [[ ${command} == "buildports" && -n $1 ]]; then
       portlistFile=$1 && shift
@@ -75,35 +83,47 @@ if [[ -n $1 ]]; then
    fi
 fi
 
-checkDependencies ${baseDir} ${MPTARBALL} ${MP_SVN_WORKDIR}
-returnValue=$?
-if [[ ${returnValue} != 0 ]]; then
-   exit ${returnValue}
-fi
-
 if [[ ${command} == "umount" ]]; then
    umountChroot ${chrootPath}
    exit 0
 fi
 
+if [[ ${command} == "shell" ]]; then
+   chrootShell
+   exit 0
+fi
+
+checkDependencies ${dataDir} ${MPTARBALL} ${MP_SVN_WORKDIR} ${installPackage}
+returnValue=$?
+if [[ ${returnValue} != 0 ]]; then
+   exit ${returnValue}
+fi
+
 if [[ ${command} == "mount" || ${command} == "buildmp" ||
    ${command} == "rebuildmp" || ${command} == "buildports" ]]; then
-   buildImages ${baseDir} ${chrootPath} ${IMGBASENAME}
-   mountChroot ${baseDir} ${chrootPath} ${IMGBASENAME}
+   buildImages ${dataDir} ${chrootPath} ${IMGBASENAME}
+   mountChroot ${dataDir} ${chrootPath} ${IMGBASENAME}
    if [[ $? == 0 &&
          ( ${command} == "buildmp" || ${command} == "rebuildmp" ||
            ${command} == "buildports" ) ]]; then
-      trap "exitFunction ${baseDir} ${chrootPath}" EXIT
+      trap "exitFunction ${dataDir} ${chrootPath}" EXIT
       exitMessage="Stopping..."
       if [[ ${command} == "rebuildmp" ]]; then
          rm -rf ${chrootPath}/opt/mports
          rm -f ${chrootPath}/opt/local/bin/port
       fi
-      if [[ -d ${MP_SVN_WORKDIR} ]]; then
-         buildMacPorts ${baseDir} ${chrootPath} ${MP_SVN_WORKDIR}
+      
+      if [[ -n ${installPackage} ]]; then
+         buildMacPorts ${baseDir} ${dataDir} ${chrootPath} ${installPackage} ||
+            ( echo "Failed to build MacPorts from release archive" && exit 1 )
+      elif [[ -d ${MP_SVN_WORKDIR} ]]; then
+         buildMacPorts ${baseDir} ${dataDir} ${chrootPath} ${MP_SVN_WORKDIR} ||
+            ( echo "Failed to build MacPorts from SVN checkout directory (MP_SVN_WORKDIR)" && exit 1 )
       else
-         buildMacPorts ${baseDir} ${chrootPath} ${MPTARBALL}
+         buildMacPorts ${baseDir} ${dataDir} ${chrootPath} ${MPTARBALL} ||
+            ( echo "Failed to build MacPorts from ${mpExport}" && exit 1 )
       fi
+
       exitMessage=""
       if [[ $? == 0 && ${command} == "buildports" ]]; then
          if [[ -e ${portlistFile} ]]; then

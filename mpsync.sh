@@ -1,8 +1,17 @@
 #!/bin/sh
 
-baseDir=`dirname $0`
-chrootPath=${baseDir}/mpchroot
 exportDir=mpexport
+
+CHROOTSUBDIR=mpchroot
+
+baseDir=$(dirname $0)
+
+dataDir=$(pwd)
+if [[ $MPAB_DATA ]]; then
+   dataDir=$MPAB_DATA
+fi
+
+chrootPath="${dataDir}/${CHROOTSUBDIR}"
 
 # $1 - script to execute
 function chroot_exec () {
@@ -14,29 +23,29 @@ function chroot_exec () {
     rm ${chrootPath}/var/tmp/$1
 }
 
-if [[ -d ${baseDir}/${exportDir} ]] ; then 
+if [[ -d ${dataDir}/${exportDir} ]] ; then 
     svn update --non-interactive \
-	-r HEAD ${baseDir}/${exportDir} \
+	-r HEAD ${dataDir}/${exportDir} \
 	> /dev/null || exit 1
 else
     echo "Checking out macports from svn..."
     svn checkout --non-interactive -r HEAD \
 	http://svn.macports.org/repository/macports/trunk \
-	${baseDir}/${exportDir} > /dev/null || exit 1
+	${dataDir}/${exportDir} > /dev/null || exit 1
 fi
 
-if [[ ! -d ${baseDir}/mpchroot ]] ; then
+if [[ ! -d ${dataDir}/mpchroot ]] ; then
     sudo ${baseDir}/mpab mount || exit 1
     umount=yes
 fi
 
 rsync -r --del --exclude '*~' --exclude '.svn' \
-    ${baseDir}/${exportDir}/dports \
-    ${baseDir}/mpchroot/opt/mports || exit 1
+    ${dataDir}/${exportDir}/dports \
+    ${dataDir}/mpchroot/opt/mports || exit 1
 
 echo "Re-creating portindex in chroot"
 chroot_exec recreateportindex
 
 if [[ "${umount}" = yes ]] ; then
-    sudo ${baseDir}/mpab mount || exit 1
+    sudo ${baseDir}/mpab umount || exit 1
 fi

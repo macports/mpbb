@@ -28,22 +28,26 @@
 #
 
 #------------------------------------------------------------------------
-# Check necessary bits are available
-# $1 - base directory
+# Check necessary bits are available. Either svn export tarball, or svn
+# working directory, or release tarball have to be present.
+# $1 - data directory
 # $2 - MacPorts source tarball
+# $3 - MacPosts svn working copy
+# $4 - MacPorts release tarball
 function checkDependencies()
 {
-   baseDir=$1
-   mpTarball=$2
-   mpSvnWorkdir=$3
+   local dataDir=$1
+   local mpTarball=$2
+   local mpSvnWorkdir=$3
+   local installPackage=$4
 
    if [[ `id -u` != 0 ]]; then
       echo "This must be run as root, please do so"
       return 1
    fi
-   if [[ ! -f ${baseDir}/${mpTarball} && ! -d ${baseDir}/${mpSvnWorkdir} ]]; then
+   if [[ ! -f ${dataDir}/${mpTarball} && ! -d ${dataDir}/${mpSvnWorkdir} && ! -f ${dataDir}/${installPackage} ]]; then
       cat << EOF
-Need to have a MacPorts source tarball ${baseDir}/${mpTarball} or svn working directory ${baseDir}/${mpSvnWorkDir}
+Need to have a MacPorts source tarball ${mpTarball} or svn working directory ${mpSvnWorkDir}
 See the ReadMe.txt file.
 EOF
    return 2
@@ -56,11 +60,12 @@ EOF
 function printUsageAndExit()
 {
    cat << EOF
-Usage: $0 [help | mount | umount | buildmp | rebuildmp |
+Usage: $0 [help | mount | umount | shell | buildmp [RELEASE_FILE] | rebuildmp [RELEASE_FILE] |
            buildports [portlist_file]]
    help:        this help
    mount:       just mount the chroot images
    umount:      unmount the chroot images
+   shell:       start an interactive shell in the chroot
    buildmp:     build/install MacPorts inside the chroot
    rebuildmp:   force a rebuild of MacPorts inside the chroot
    buildports:  build ports; if a portlist file is given, use it, otherwise
@@ -79,8 +84,8 @@ EOF
 # $2 - chroot path
 function exitFunction()
 {
-   baseDir=$1
-   chrootPath=$2
+   local baseDir=$1
+   local chrootPath=$2
 
    if [[ -n $exitMessage ]]; then
       echo $exitMessage
@@ -101,9 +106,9 @@ function exitFunction()
 # $3 - base name for the disk images
 function buildImages()
 {
-   baseDir=$1
-   chrootPath=$2
-   imgBaseName=$3
+   local baseDir=$1
+   local chrootPath=$2
+   local imgBaseName=$3
 
    echo "Building MP chroot images, if necessary"
 
@@ -111,7 +116,7 @@ function buildImages()
    pathsToCreate="private/etc private/var/folders private/var/log private/var/spool private/var/run private/var/tmp private/var/db/dyld private/tmp"
 
    # Paths to copy to the chroot
-   pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Platforms Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl"
+   pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Platforms Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl Developer/Applications/Xcode.app"
 
    # Size of the disk images (hdiutil nomenclature)
    imageSize="32g"
@@ -146,6 +151,7 @@ function buildImages()
          done
 
          for copypath in ${pathsToCopy}; do
+            echo "Copying ${copypath}..." ###
             pax -r -w -pe $copypath ${chrootPath}
          done
          cd - > /dev/null
@@ -182,27 +188,36 @@ function buildImages()
 
 
 #------------------------------------------------------------------------
-# Build MacPorts in the chroot
+# Build MacPorts in the chroot (if not already there)
 # $1 - base directory
-# $2 - chroot path
-# $3 - MacPorts source tarball or svn export dir
+# $2 - dataDir
+# $3 - chroot path
+# $4 - MacPorts source tarball or svn checkout directory
 function buildMacPorts()
 {
-   baseDir=$1
-   chrootPath=$2
-   mpExport=$3
-
-   echo "Building/installing MP in chroot, if necessary"
+   local baseDir=$1
+   local dataDir=$2
+   local chrootPath=$3
+   local mpExport=$4
 
    if [[ ! -d ${chrootPath}/opt/mports ]]; then
-      if [[ -f ${baseDir}/${mpExport} ]]; then
+      if [[ -f ${dataDir}/${mpExport} ]]; then
 	 mkdir -p ${chrootPath}/opt/mports
-	 cd ${chrootPath}/opt/mports
-	 bunzip2 -c ${baseDir}/${mpExport} | tar xf -
+         echo ${mpExport} | grep -q "MacPorts-......tar.gz"
+         if [[ $? == 0 ]]; then
+            cp ${mpExport} ${chrootPath}/opt/mports
+	    cd ${chrootPath}/opt/mports
+            tar xzf ${mpExport} || return 1
+            rm -rf base 2>/dev/null
+            mv $(ls -d MacPorts-?.?.?) base || return 1
+         else
+	    cd ${chrootPath}/opt/mports
+	    bunzip2 -c ${dataDir}/${mpExport} | tar xf -
+         fi
 	 cd - > /dev/null
-      elif [[ -d ${baseDir}/${mpExport} ]]; then
+      elif [[ -d ${dataDir}/${mpExport} ]]; then
 	 mkdir -p ${chrootPath}/opt/mports
-         cd ${baseDir}/${mpExport} && \
+         cd ${dataDir}/${mpExport} && \
             rsync -r --del --exclude '*~' --exclude '.svn' . ${chrootPath}/opt/mports
          cd - > /dev/null
       else
@@ -212,12 +227,9 @@ function buildMacPorts()
    fi
 
    if [[ ! -f ${chrootPath}/opt/local/bin/port ]]; then
-      cp -p ${baseDir}/chroot-scripts/installmacports ${chrootPath}/var/tmp/
-      # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
-      # errors to syslog/console log like:
-      # com.apple.launchd[1] (com.apple.dyld): Throttling respawn: Will start in 10 seconds
-      env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/installmacports
-      rm ${chrootPath}/var/tmp/installmacports
+
+      chroot_exec installmacports
+
       sed 's/portarchivemode.*no/portarchivemode yes/' ${chrootPath}/opt/local/etc/macports/macports.conf > ${chrootPath}/opt/local/etc/macports/macports.conf.new
       mv ${chrootPath}/opt/local/etc/macports/macports.conf.new ${chrootPath}/opt/local/etc/macports/macports.conf
    fi
@@ -233,18 +245,30 @@ function buildMacPorts()
 # $2 - chroot path
 function buildPorts()
 {
-   baseDir=$1
-   chrootPath=$2
+   local baseDir=$1
+   local chrootPath=$2
 
    echo "Building ports"
 
-   cp -p ${baseDir}/chroot-scripts/buildports ${chrootPath}/var/tmp/
    cp -p ${baseDir}/chroot-scripts/genportlist.tcl ${chrootPath}/var/tmp/
 
-   # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
-   # errors to syslog/console log like:
-   # com.apple.launchd[1] (com.apple.dyld): Throttling respawn: Will start in 10 seconds
-   env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/buildports
+   chroot_exec buildports
+
+   return 0
+}
+
+
+#------------------------------------------------------------------------
+# Start a shell inside of the chroot jail.
+function chrootShell()
+{
+   echo "Starting chroot shell"
+
+   cp -p ${baseDir}/chroot-scripts/chrootshell ${chrootPath}/var/tmp/
+
+   chroot_exec chrootshell
+
+   echo "Chroot shell exited"
 
    return 0
 }
@@ -256,8 +280,8 @@ function buildPorts()
 # $2 - chroot path
 function moveAndReport()
 {
-   baseDir=$1
-   chrootPath=$2
+   local baseDir=$1
+   local chrootPath=$2
 
    now=`date '+%Y%m%d-%H%M%S'`
    mkdir ${baseDir}/logs-${now}
@@ -280,9 +304,9 @@ function moveAndReport()
 # $3 - base name for the disk images
 function mountChroot()
 {
-   baseDir=$1
-   chrootPath=$2
-   imgBaseName=$3
+   local baseDir=$1
+   local chrootPath=$2
+   local imgBaseName=$3
 
    echo "Mounting chroot images"
 
@@ -320,7 +344,7 @@ function mountChroot()
 # $1 - chroot path
 function umountChroot()
 {
-   chrootPath=$1
+   local chrootPath=$1
 
    if [[ -d ${chrootPath}/dev ]]; then
       # First for the fdesc
@@ -340,6 +364,21 @@ function umountChroot()
 
    return 0
 }
+
+
+#------------------------------------------------------------------------
+# Execute a script inside the chroot environment. Includes copying it
+# into a temp file and removing it afterwards
+# $1 - script to execute
+function chroot_exec () {
+    cp -p ${baseDir}/chroot-scripts/$1 ${chrootPath}/var/tmp
+    # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
+    # errors to syslog/console log like:
+    # com.apple.launchd[1] (com.apple.dyld): Throttling respawn: Will start in 10 seconds
+    env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/$1
+    rm ${chrootPath}/var/tmp/$1
+}
+
 
 # Local Variables:
 # mode: shell-script

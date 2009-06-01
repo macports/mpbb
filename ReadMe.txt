@@ -14,10 +14,11 @@ Prerequisites
 You need to have 10.5, Xcode 3.0, and Apple's X11 (other versions of Xcode
 and X11 may work, but these are the ones tested so far).
 
-For the MacPorts which will live in the chroot, you'll need (in the same
-directory as the mpab script) a tarball named macports_dist.tar.bz2.  To
-create this straight from the MacPorts svn server (assuming current
-working directory is the same as the mpab script):
+For the MacPorts which will live in the chroot, you'll need (in the
+same directory you run the command from) a tarball named
+macports_dist.tar.bz2.  To create this straight from the MacPorts svn
+server (assuming current working directory is the same as the mpab
+script):
 
    svn export http://svn.macports.org/repository/macports/trunk mpexport
    cd mpexport
@@ -39,7 +40,7 @@ Installation
 ------------
 Once the MPAB tarball is extracted (which you've probably done if you're
 reading this), make sure the above prerequisites are available, then you
-are ready to go
+are ready to go.
 
 
 Running

@@ -1,0 +1,32 @@
+2009-06-01  Florian Ebeling  <febeling@macports.org>
+
+	* mpab-functions (uninstallPorts): operate on `port list active'
+	instead of `port installed'
+
+	* mpab-functions: factor out function `chroot_exec' 
+
+	* mpab-functions: add /Developer/Applications/Xcode.app to
+	pathsToCopy list
+	
+2009-04-13  Florian Ebeling  <febeling@macports.org>
+
+	* chroot-scripts/buildports (uninstallPorts): Fix: use -x on
+	deactivate to see real success of operation.
+
+2009-04-09  Florian Ebeling  <febeling@macports.org>
+
+	* mpab-functions (chrootShell): add new function for interactive
+	shell inside of chroot
+
+2009-04-07  Florian Ebeling  <febeling@macports.org>
+
+	* mpab, mpab-functions (buildmp, rebuildmp): Accept a path to a
+	release tarball of MP to install into chroot.
+
+	* mpab: Add support for a data directory distinct from current
+	working directory.
+
+	* mpab-functions: Use local variables in functions.
+
+	* mpab: by default look for a SVN working copy named 'mpexport',
+	then fallback to 'macports_dist.tar.bz2'.
