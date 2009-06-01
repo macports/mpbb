@@ -1,7 +1,7 @@
 2009-06-01  Florian Ebeling  <febeling@macports.org>
 
-	* mpab-functions (uninstallPorts): operate on `port list active'
-	instead of `port installed'
+	* chroot-scripts/buildports (uninstallPorts): loop over `port list
+	active' instead of `port installed'
 
 	* mpab-functions: factor out function `chroot_exec' 
 
