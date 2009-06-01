@@ -228,7 +228,7 @@ function buildMacPorts()
 
    if [[ ! -f ${chrootPath}/opt/local/bin/port ]]; then
 
-      chroot_exec installmacports
+      chrootExec installmacports
 
       sed 's/portarchivemode.*no/portarchivemode yes/' ${chrootPath}/opt/local/etc/macports/macports.conf > ${chrootPath}/opt/local/etc/macports/macports.conf.new
       mv ${chrootPath}/opt/local/etc/macports/macports.conf.new ${chrootPath}/opt/local/etc/macports/macports.conf
@@ -252,7 +252,7 @@ function buildPorts()
 
    cp -p ${baseDir}/chroot-scripts/genportlist.tcl ${chrootPath}/var/tmp/
 
-   chroot_exec buildports
+   chrootExec buildports
 
    return 0
 }
@@ -266,7 +266,7 @@ function chrootShell()
 
    cp -p ${baseDir}/chroot-scripts/chrootshell ${chrootPath}/var/tmp/
 
-   chroot_exec chrootshell
+   chrootExec chrootshell
 
    echo "Chroot shell exited"
 
@@ -370,7 +370,7 @@ function umountChroot()
 # Execute a script inside the chroot environment. Includes copying it
 # into a temp file and removing it afterwards
 # $1 - script to execute
-function chroot_exec () {
+function chrootExec () {
     cp -p ${baseDir}/chroot-scripts/$1 ${chrootPath}/var/tmp
     # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
     # errors to syslog/console log like:

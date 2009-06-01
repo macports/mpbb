@@ -3,7 +3,7 @@
 	* chroot-scripts/buildports (uninstallPorts): loop over `port list
 	active' instead of `port installed'
 
-	* mpab-functions: factor out function `chroot_exec' 
+	* mpab-functions: factor out function `chrootExec' 
 
 	* mpab-functions: add /Developer/Applications/Xcode.app to
 	pathsToCopy list
