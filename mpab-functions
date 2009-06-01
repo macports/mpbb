@@ -43,7 +43,7 @@ function checkDependencies()
    fi
    if [[ ! -f ${baseDir}/${mpTarball} && ! -d ${baseDir}/${mpSvnWorkdir} ]]; then
       cat << EOF
-Need to have a MacPorts source tarball ${baseDir}/${mpTarball} or svn working directhory ${baseDir}/${mpSvnWorkDir}
+Need to have a MacPorts source tarball ${baseDir}/${mpTarball} or svn working directory ${baseDir}/${mpSvnWorkDir}
 See the ReadMe.txt file.
 EOF
    return 2
