@@ -32,7 +32,7 @@
 
 function uninstallPorts()
 {
-   installedPorts=`/opt/local/bin/port list active | /usr/bin/awk '{print $1}'`
+   installedPorts=`/opt/local/bin/port echo active | /usr/bin/awk '{print $1}'`
    for uninstallPort in $installedPorts; do
       portOutput=`/opt/local/bin/port -xdvf deactivate $uninstallPort 2>&1`
       if [[ $? != 0 ]]; then
