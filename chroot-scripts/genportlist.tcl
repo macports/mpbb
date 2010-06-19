@@ -75,7 +75,7 @@ if {[catch {set search_result [mportsearch ^.+$ no]} result]} {
 array set portdepinfo {}
 foreach {name infoarray} $search_result {
    array set portinfo $infoarray
-   set depstypes {depends_build depends_lib depends_run}
+   set depstypes {depends_fetch depends_extract depends_build depends_lib depends_run}
    set deplist [list]
    foreach depstype $depstypes {
       if {[info exists portinfo($depstype)] && $portinfo($depstype) != ""} {
