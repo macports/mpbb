@@ -34,7 +34,7 @@ function uninstallPorts()
 {
    installedPorts=`/opt/local/bin/port echo active | /usr/bin/awk '{print $1}'`
    for uninstallPort in $installedPorts; do
-      portOutput=`/opt/local/bin/port -xdvf deactivate $uninstallPort 2>&1`
+      portOutput=`/opt/local/bin/port -dvf deactivate $uninstallPort 2>&1`
       if [[ $? != 0 ]]; then
          echo $portOutput
          break
@@ -107,7 +107,7 @@ for portName in ${portList}; do
          fi
       done
       if [[ -z $skipPort ]]; then
-         /opt/local/bin/port -dvx install $portName > ${PORTRESULTSDIR}/${portName}.log 2>&1
+         /opt/local/bin/port -dv install $portName > ${PORTRESULTSDIR}/${portName}.log 2>&1
          if [[ $? == 0 ]]; then
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/success
             echo "success"
