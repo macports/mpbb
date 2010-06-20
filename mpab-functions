@@ -115,8 +115,19 @@ function buildImages()
    # Paths to create within the chroot
    pathsToCreate="private/etc private/var/folders private/var/log private/var/spool private/var/run private/var/tmp private/var/db/dyld private/tmp"
 
+   os_major=$(uname -r | sed 's/\..*//')
    # Paths to copy to the chroot
-   pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Platforms Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl Developer/Applications/Xcode.app"
+   if [[ $os_major -eq 8 ]]; then
+      # XXX these are just copied from the leopard list and so are probably wrong for tiger
+      pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Platforms Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl Developer/Applications/Xcode.app"
+   fi
+   if [[ $os_major -eq 9 ]]; then
+      pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Platforms Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl Developer/Applications/Xcode.app"
+   fi
+   # update this for future releases
+   if [[ $os_major -ge 10 ]]; then
+      pathsToCopy="private/etc/bashrc private/etc/group private/etc/hosts private/etc/pam.d private/etc/passwd private/etc/profile private/etc/shells private/var/root bin sbin etc tmp var usr/bin usr/include usr/lib usr/libexec usr/sbin usr/share usr/X11 usr/X11R6 Developer/Headers Developer/Library Developer/Makefiles Developer/Platforms Developer/Private Developer/SDKs Developer/Tools Developer/usr System/Library/CoreServices System/Library/Filesystems System/Library/Frameworks System/Library/Java System/Library/Perl System/Library/PrivateFrameworks System/Library/Tcl Developer/Applications/Xcode.app"
+   fi
 
    # Size of the disk images (hdiutil nomenclature)
    imageSize="32g"
@@ -233,6 +244,8 @@ function buildMacPorts()
       sed 's/portarchivemode.*no/portarchivemode yes/' ${chrootPath}/opt/local/etc/macports/macports.conf > ${chrootPath}/opt/local/etc/macports/macports.conf.new
       mv ${chrootPath}/opt/local/etc/macports/macports.conf.new ${chrootPath}/opt/local/etc/macports/macports.conf
    fi
+
+   chrootExec recreateportindex
 
    return 0
 }
