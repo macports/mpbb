@@ -31,8 +31,10 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+set prefix /opt/local
+
 catch {source \
-   [file join "/" Library Tcl macports1.0 macports_fastload.tcl]}
+   [file join ${prefix} share macports Tcl macports1.0 macports_fastload.tcl]}
 package require macports
 
 
@@ -67,7 +69,7 @@ if {[catch {mportinit "" "" ""} result]} {
    fatal "Failed to initialize ports sytem: $result"
 }
 
-if {[catch {set search_result [mportsearch ^.+$ no]} result]} {
+if {[catch {set search_result [mportlistall]} result]} {
    puts "$errorInfo"
    fatal "Failed to find any ports: $result"
 }
