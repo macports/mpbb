@@ -30,11 +30,14 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+PREFIX="/opt/local"
+ARCHIVE_TYPE=".tbz2"
+
 function uninstallPorts()
 {
-   installedPorts=`/opt/local/bin/port echo active | /usr/bin/awk '{print $1}'`
+   installedPorts=`${PREFIX}/bin/port echo active | /usr/bin/awk '{print $1}'`
    for uninstallPort in $installedPorts; do
-      portOutput=`/opt/local/bin/port -dvf deactivate $uninstallPort 2>&1`
+      portOutput=`${PREFIX}/bin/port -dvf deactivate $uninstallPort 2>&1`
       if [[ $? != 0 ]]; then
          echo $portOutput
          break
@@ -45,7 +48,7 @@ function uninstallPorts()
 
 function cleanBuildStuff()
 {
-   rm -rf /opt/local/var/macports/build/*
+   rm -rf ${PREFIX}/var/macports/build/*
    uninstallPorts
    if [[ $? != 0 ]]; then
       echo "Uninstall failed, aborting"
@@ -71,35 +74,29 @@ portCount=`echo ${portList} | /usr/bin/wc -w`
 portCount=$(($portCount))   # Get rid of wc's spacing
 
 tclOS=`echo 'puts [string tolower $tcl_platform(os)]' | tclsh`
-tclArch=`echo 'puts $tcl_platform(machine)' | tclsh`
-if [[ $tclArch == "Power Macintosh" ]]; then
-   tclArch='powerpc'
-elif [[ $tclArch == 'i586' || $tclArch == 'i686' ]]; then
-   tclArch='i386'
+tclOSMajor=`echo 'puts [lindex [split $tcl_platform(osVersion) .] 0]' | tclsh`
+packageDir="${PREFIX}/var/macports/packages/${tclOS}_${tclOSMajor}"
+if [[ $tclOSMajor -ge 10 ]]; then
+    ACCEPT_ARCHS="?(noarch|x86_64|i386)"
+else
+    ACCEPT_ARCHS="?(noarch|i386|ppc)"
 fi
-packageDir="/opt/local/var/macports/packages/${tclOS}/${tclArch}"
 
 currentCount=1
 for portName in ${portList}; do
    trap "echo \"Canceled, cleaning up...\"; cleanBuildStuff" EXIT
 
-   # special-case XFree86 and xorg since they will "fail" (according to port's
-   # exit status) but since the chroot has Apple's X11, it's okay
-   if [[ ${portName} == "XFree86" || ${portName} == "xorg" ]]; then
-      continue
-   fi
-
    echo "Building ${portName} (${currentCount} of ${portCount})...\c"
    # If there's a package, don't build again
-   portVersion=`/opt/local/bin/port info --version ${portName} | awk '{print $2}'`
-   portRevision=`/opt/local/bin/port info --revision ${portName} | awk '{print $2}'`
+   portVersion=`${PREFIX}/bin/port info --version ${portName} | awk '{print $2}'`
+   portRevision=`${PREFIX}/bin/port info --revision ${portName} | awk '{print $2}'`
    portPackageBaseName="${portName}-${portVersion}_${portRevision}"
-   ls ${packageDir}/${portPackageBaseName}*.${tclArch}.tgz > /dev/null 2>&1
+   ls ${packageDir}/*/${portName}/${portPackageBaseName}*.*${ACCEPT_ARCHS}*${ARCHIVE_TYPE} > /dev/null 2>&1
    if [[ $? == 0 ]]; then
       echo "package found, not building again"
    else
       skipPort=""
-      portDeps=`/opt/local/bin/port deps ${portName} | /usr/bin/tail +2`
+      portDeps=`${PREFIX}/bin/port echo depof:${portName}`
       for oneDep in ${portDeps}; do
          if [[ -f ${PORTRESULTSDIR}/fail/${oneDep}.log ]]; then
             skipPort=${oneDep}
@@ -107,17 +104,17 @@ for portName in ${portList}; do
          fi
       done
       if [[ -z $skipPort ]]; then
-         /opt/local/bin/port -dv install $portName > ${PORTRESULTSDIR}/${portName}.log 2>&1
+         ${PREFIX}/bin/port -dv install $portName > ${PORTRESULTSDIR}/${portName}.log 2>&1
          if [[ $? == 0 ]]; then
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/success
             echo "success"
          else
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/fail
             echo "failure"
-            /opt/local/bin/port clean --work $portName
+            ${PREFIX}/bin/port clean --work $portName
             # If a port fails in the activation stage, MP has already built
             # a package, so remove it here
-            rm -f ${packageDir}/${portPackageBaseName}*.${tclArch}.tgz
+            rm -f ${packageDir}/*/${portName}/${portPackageBaseName}*.*${ACCEPT_ARCHS}*${ARCHIVE_TYPE}
          fi
          uninstallPorts
          if [[ $? != 0 ]]; then
