@@ -91,7 +91,7 @@ function exitFunction()
       echo $exitMessage
    fi
    if [[ -d ${chrootPath}/var/tmp/portresults/fail ]]; then
-      moveAndReport ${baseDir} ${chrootPath}
+      moveAndReport ${baseDir} "${chrootPath}"
    fi
    if [[ -n "$chrootPath" && -d ${chrootPath} ]]; then
       umountChroot ${chrootPath}
