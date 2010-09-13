@@ -93,7 +93,7 @@ function exitFunction()
    if [[ -d ${chrootPath}/var/tmp/portresults/fail ]]; then
       moveAndReport ${baseDir} ${chrootPath}
    fi
-   if [[ -d ${chrootPath} ]]; then
+   if [[ -n "$chrootPath" && -d ${chrootPath} ]]; then
       umountChroot ${chrootPath}
    fi
 }
@@ -109,6 +109,10 @@ function buildImages()
    local baseDir=$1
    local chrootPath=$2
    local imgBaseName=$3
+
+   if [[ -z "$chrootPath" ]]; then
+      return 0
+   fi
 
    echo "Building MP chroot images, if necessary"
 
@@ -241,7 +245,10 @@ function buildMacPorts()
 
       chrootExec installmacports
 
-      sed 's/portarchivemode.*no/portarchivemode yes/' ${chrootPath}/opt/local/etc/macports/macports.conf > ${chrootPath}/opt/local/etc/macports/macports.conf.new
+      sed -E -e 's/#?portarchivemode.*no/portarchivemode yes/' \
+          -e 's/#?portarchivetype.*tgz/portarchivetype tbz2/' \
+          ${chrootPath}/opt/local/etc/macports/macports.conf \
+          > ${chrootPath}/opt/local/etc/macports/macports.conf.new
       mv ${chrootPath}/opt/local/etc/macports/macports.conf.new ${chrootPath}/opt/local/etc/macports/macports.conf
    fi
 
@@ -321,6 +328,10 @@ function mountChroot()
    local chrootPath=$2
    local imgBaseName=$3
 
+   if [[ -z "$chrootPath" ]]; then
+      return 0
+   fi
+
    echo "Mounting chroot images"
 
    mkdir -p ${chrootPath}
@@ -359,6 +370,10 @@ function umountChroot()
 {
    local chrootPath=$1
 
+   if [[ -z "$chrootPath" ]]; then
+      return 0
+   fi
+
    if [[ -d ${chrootPath}/dev ]]; then
       # First for the fdesc
       umount -f ${chrootPath}/dev
@@ -385,10 +400,14 @@ function umountChroot()
 # $1 - script to execute
 function chrootExec () {
     cp -p ${baseDir}/chroot-scripts/$1 ${chrootPath}/var/tmp
-    # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
-    # errors to syslog/console log like:
-    # com.apple.launchd[1] (com.apple.dyld): Throttling respawn: Will start in 10 seconds
-    env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/$1
+    if [[ -n "$chrootPath" ]]; then
+        # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
+        # errors to syslog/console log like:
+        # com.apple.launchd[1] (com.apple.dyld): Throttling respawn: Will start in 10 seconds
+        env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/$1
+    else
+        env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root /bin/sh /var/tmp/$1
+    fi
     rm ${chrootPath}/var/tmp/$1
 }
 

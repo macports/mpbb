@@ -49,7 +49,7 @@ if [[ $MPAB_DATA ]]; then
 fi
 chrootPath="${dataDir}/${CHROOTSUBDIR}"
 
-if [[ -n ${MPABDEBUG} ]]; then
+if [[ -n "${MPABDEBUG}" ]]; then
    HDIUTILDEBUG="-verbose"
 else
    HDIUTILDEBUG="-quiet"
@@ -57,6 +57,17 @@ fi
 export HDIUTILDEBUG
 
 . ${baseDir}/mpab-functions
+
+# option parsing
+OSMajor=`uname -r | sed 's/\..*//'`
+# xcodebuild breaks in chroots on 10.6
+if [[ $1 = "-n" -o $OSMajor -ge 10 ]]; then
+    chrootPath=""
+    echo "Warning: not using chroot"
+    if [[ $1 = "-n" ]]; then
+        shift
+    fi
+fi
 
 command="buildports"
 portlistFile=""
@@ -101,16 +112,20 @@ fi
 
 if [[ ${command} == "mount" || ${command} == "buildmp" ||
    ${command} == "rebuildmp" || ${command} == "buildports" ]]; then
-   buildImages ${dataDir} ${chrootPath} ${IMGBASENAME}
-   mountChroot ${dataDir} ${chrootPath} ${IMGBASENAME}
-   if [[ $? == 0 &&
+   if [[ -n "$chrootPath" ]]; then
+      buildImages ${dataDir} ${chrootPath} ${IMGBASENAME}
+      mountChroot ${dataDir} ${chrootPath} ${IMGBASENAME}
+   fi
+   if [[ ( $? == 0 || -n "$chrootPath" ) &&
          ( ${command} == "buildmp" || ${command} == "rebuildmp" ||
            ${command} == "buildports" ) ]]; then
       trap "exitFunction ${dataDir} ${chrootPath}" EXIT
       exitMessage="Stopping..."
       if [[ ${command} == "rebuildmp" ]]; then
          rm -rf ${chrootPath}/opt/mports
-         rm -f ${chrootPath}/opt/local/bin/port
+         if [[ -n "$chrootPath" ]]; then
+            rm -f ${chrootPath}/opt/local/bin/port
+         fi
       fi
       
       if [[ -n ${installPackage} ]]; then
