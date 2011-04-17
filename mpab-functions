@@ -307,6 +307,7 @@ function moveAndReport()
    mkdir ${baseDir}/logs-${now}
    mv ${chrootPath}/var/tmp/portresults/fail ${baseDir}/logs-${now}
    mv ${chrootPath}/var/tmp/portresults/success ${baseDir}/logs-${now}
+   chmod -R a+rX ${baseDir}/logs-${now}
    failcount=`ls -1 ${baseDir}/logs-${now}/fail | wc -l`
    successcount=`ls -1 ${baseDir}/logs-${now}/success | wc -l`
    echo "Ports built successfully: $successcount"
