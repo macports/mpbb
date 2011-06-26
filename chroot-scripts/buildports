@@ -75,11 +75,12 @@ portCount=$(($portCount))   # Get rid of wc's spacing
 
 tclOS=`echo 'puts [string tolower $tcl_platform(os)]' | tclsh`
 tclOSMajor=`echo 'puts [lindex [split $tcl_platform(osVersion) .] 0]' | tclsh`
-packageDir="${PREFIX}/var/macports/packages/${tclOS}_${tclOSMajor}"
+packageDir="${PREFIX}/var/macports/software"
+shopt -s extglob
 if [[ $tclOSMajor -ge 10 ]]; then
-    ACCEPT_ARCHS="?(noarch|x86_64|i386)"
+    ACCEPT_ARCHS="+(noarch|x86_64|i386|-)"
 else
-    ACCEPT_ARCHS="?(noarch|i386|ppc)"
+    ACCEPT_ARCHS="+(noarch|i386|ppc|-)"
 fi
 
 currentCount=1
@@ -91,7 +92,7 @@ for portName in ${portList}; do
    portVersion=`${PREFIX}/bin/port info --version ${portName} | awk '{print $2}'`
    portRevision=`${PREFIX}/bin/port info --revision ${portName} | awk '{print $2}'`
    portPackageBaseName="${portName}-${portVersion}_${portRevision}"
-   ls ${packageDir}/*/${portName}/${portPackageBaseName}*.*${ACCEPT_ARCHS}*${ARCHIVE_TYPE} > /dev/null 2>&1
+   ls ${packageDir}/${portName}/${portPackageBaseName}[+.]*${tclOS}_${tclOSMajor}.${ACCEPT_ARCHS}${ARCHIVE_TYPE} > /dev/null 2>&1
    if [[ $? == 0 ]]; then
       echo "package found, not building again"
    else
@@ -112,9 +113,6 @@ for portName in ${portList}; do
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/fail
             echo "failure"
             ${PREFIX}/bin/port clean --work $portName
-            # If a port fails in the activation stage, MP has already built
-            # a package, so remove it here
-            rm -f ${packageDir}/*/${portName}/${portPackageBaseName}*.*${ACCEPT_ARCHS}*${ARCHIVE_TYPE}
          fi
          uninstallPorts
          if [[ $? != 0 ]]; then

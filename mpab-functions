@@ -242,14 +242,7 @@ function buildMacPorts()
    fi
 
    if [[ ! -f ${chrootPath}/opt/local/bin/port ]]; then
-
       chrootExec installmacports
-
-      sed -E -e 's/#?portarchivemode.*no/portarchivemode yes/' \
-          -e 's/#?portarchivetype.*tgz/portarchivetype tbz2/' \
-          ${chrootPath}/opt/local/etc/macports/macports.conf \
-          > ${chrootPath}/opt/local/etc/macports/macports.conf.new
-      mv ${chrootPath}/opt/local/etc/macports/macports.conf.new ${chrootPath}/opt/local/etc/macports/macports.conf
    fi
 
    chrootExec recreateportindex

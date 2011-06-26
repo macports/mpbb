@@ -30,7 +30,7 @@ if [[ -d ${dataDir}/${exportDir} ]] ; then
 else
     echo "Checking out macports from svn..."
     svn checkout --non-interactive -r HEAD \
-	http://svn.macports.org/repository/macports/trunk \
+	https://svn.macports.org/repository/macports/trunk \
 	${dataDir}/${exportDir} > /dev/null || exit 1
 fi
 
