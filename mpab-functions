@@ -239,6 +239,7 @@ function buildMacPorts()
          echo "No ${mpExport} found"
          return 1
       fi
+      chmod -R a+rX ${chrootPath}${SRC_PREFIX}
    fi
 
    if [[ ! -f ${chrootPath}${PREFIX}/bin/port ]]; then
