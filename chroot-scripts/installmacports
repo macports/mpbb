@@ -3,9 +3,15 @@
 # configure/build/install MacPorts in the chroot
 #
 
-cd /opt/mports/base
-./configure && make all && make install && make distclean
-if [[ $? == 0 ]]; then
-   echo "file:///opt/mports/dports [default]" > /opt/local/etc/macports/sources.conf
+if [[ -z "$PREFIX" ]]; then
+    PREFIX=/opt/local
+fi
+if [[ -z "$SRC_PREFIX" ]]; then
+    SRC_PREFIX=/opt/mports
 fi
 
+cd ${SRC_PREFIX}/base
+./configure --prefix=${PREFIX} && make -j2 all && make install && make distclean
+if [[ $? == 0 ]]; then
+   echo "file://${SRC_PREFIX}/dports [default]" > ${PREFIX}/etc/macports/sources.conf
+fi

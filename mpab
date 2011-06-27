@@ -30,6 +30,16 @@
 
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
+if [[ -z "$PREFIX" ]]; then
+    PREFIX=/opt/local
+fi
+export PREFIX
+# location to store base and dports sources
+if [[ -z "$SRC_PREFIX" ]]; then
+    SRC_PREFIX=/opt/mports
+fi
+export SRC_PREFIX
+
 # Base filename for the disk image
 IMGBASENAME="mproot"
 
@@ -122,9 +132,9 @@ if [[ ${command} == "mount" || ${command} == "buildmp" ||
       trap "exitFunction ${dataDir} ${chrootPath}" EXIT
       exitMessage="Stopping..."
       if [[ ${command} == "rebuildmp" ]]; then
-         rm -rf ${chrootPath}/opt/mports
+         rm -rf ${chrootPath}${SRC_PREFIX}
          if [[ -n "$chrootPath" ]]; then
-            rm -f ${chrootPath}/opt/local/bin/port
+            rm -f ${chrootPath}${PREFIX}/bin/port
          fi
       fi
       

@@ -30,7 +30,9 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-PREFIX="/opt/local"
+if [[ -z "$PREFIX" ]]; then
+    PREFIX=/opt/local
+fi
 ARCHIVE_TYPE=".tbz2"
 
 function uninstallPorts()

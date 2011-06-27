@@ -3,5 +3,12 @@
 # re-create the portindex
 #
 
-cd /opt/mports/dports
-/opt/local/bin/portindex > /dev/null
+if [[ -z "$PREFIX" ]]; then
+    PREFIX=/opt/local
+fi
+if [[ -z "$SRC_PREFIX" ]]; then
+    SRC_PREFIX=/opt/mports
+fi
+
+cd ${SRC_PREFIX}/dports
+${PREFIX}/bin/portindex > /dev/null

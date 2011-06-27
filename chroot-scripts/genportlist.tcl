@@ -31,10 +31,13 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-set prefix /opt/local
+if {[info exists env(PREFIX)]} {
+    set prefix $env(PREFIX)
+} else {
+    set prefix /opt/local
+}
 
-catch {source \
-   [file join ${prefix} share macports Tcl macports1.0 macports_fastload.tcl]}
+source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
 package require macports
 
 

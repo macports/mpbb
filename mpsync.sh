@@ -7,8 +7,11 @@ CHROOTSUBDIR=mpchroot
 baseDir=$(dirname $0)
 
 dataDir=$(pwd)
-if [[ $MPAB_DATA ]]; then
+if [[ -n "$MPAB_DATA" ]]; then
    dataDir=$MPAB_DATA
+fi
+if [[ -z "$SRC_PREFIX" ]]; then
+   SRC_PREFIX=/opt/mports
 fi
 
 chrootPath="${dataDir}/${CHROOTSUBDIR}"
@@ -34,14 +37,14 @@ else
 	${dataDir}/${exportDir} > /dev/null || exit 1
 fi
 
-if [[ ! -d ${dataDir}/mpchroot ]] ; then
+if [[ ! -d ${chrootPath} ]] ; then
     sudo ${baseDir}/mpab mount || exit 1
     umount=yes
 fi
 
 rsync -r --del --exclude '*~' --exclude '.svn' \
     ${dataDir}/${exportDir}/dports \
-    ${dataDir}/mpchroot/opt/mports || exit 1
+    ${chrootPath}${SRC_PREFIX} || exit 1
 
 echo "Re-creating portindex in chroot"
 chroot_exec recreateportindex

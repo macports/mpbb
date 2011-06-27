@@ -215,25 +215,25 @@ function buildMacPorts()
    local chrootPath=$3
    local mpExport=$4
 
-   if [[ ! -d ${chrootPath}/opt/mports ]]; then
+   if [[ ! -d ${chrootPath}${SRC_PREFIX} ]]; then
       if [[ -f ${dataDir}/${mpExport} ]]; then
-	 mkdir -p ${chrootPath}/opt/mports
+	 mkdir -p ${chrootPath}${SRC_PREFIX}
          echo ${mpExport} | grep -q "MacPorts-......tar.gz"
          if [[ $? == 0 ]]; then
-            cp ${mpExport} ${chrootPath}/opt/mports
-	    cd ${chrootPath}/opt/mports
+            cp ${mpExport} ${chrootPath}${SRC_PREFIX}
+	    cd ${chrootPath}${SRC_PREFIX}
             tar xzf ${mpExport} || return 1
             rm -rf base 2>/dev/null
             mv $(ls -d MacPorts-?.?.?) base || return 1
          else
-	    cd ${chrootPath}/opt/mports
+	    cd ${chrootPath}${SRC_PREFIX}
 	    bunzip2 -c ${dataDir}/${mpExport} | tar xf -
          fi
 	 cd - > /dev/null
       elif [[ -d ${dataDir}/${mpExport} ]]; then
-	 mkdir -p ${chrootPath}/opt/mports
+	 mkdir -p ${chrootPath}${SRC_PREFIX}
          cd ${dataDir}/${mpExport} && \
-            rsync -r --del --exclude '*~' --exclude '.svn' . ${chrootPath}/opt/mports
+            rsync -r --del --exclude '*~' --exclude '.svn' . ${chrootPath}${SRC_PREFIX}
          cd - > /dev/null
       else
          echo "No ${mpExport} found"
@@ -241,7 +241,7 @@ function buildMacPorts()
       fi
    fi
 
-   if [[ ! -f ${chrootPath}/opt/local/bin/port ]]; then
+   if [[ ! -f ${chrootPath}${PREFIX}/bin/port ]]; then
       chrootExec installmacports
    fi
 
@@ -344,8 +344,8 @@ function mountChroot()
       mount_devfs devfs ${chrootPath}/dev
       mount_fdesc -o union fdesc ${chrootPath}/dev
 
-      mkdir -p ${chrootPath}/opt/local/var/macports/distfiles
-      hdiutil attach ${baseDir}/${imgBaseName}_distcache.sparseimage -mountpoint ${chrootPath}/opt/local/var/macports/distfiles -noverify -owners on -nobrowse -noautofsck ${HDIUTILDEBUG}
+      mkdir -p ${chrootPath}${PREFIX}/var/macports/distfiles
+      hdiutil attach ${baseDir}/${imgBaseName}_distcache.sparseimage -mountpoint ${chrootPath}${PREFIX}/var/macports/distfiles -noverify -owners on -nobrowse -noautofsck ${HDIUTILDEBUG}
       returnValue=$?
       if [[ ${returnValue} != 0 ]]; then
          echo "Failed to attach distfiles image"
@@ -374,9 +374,9 @@ function umountChroot()
       # And again for the devfs
       umount -f ${chrootPath}/dev
    fi
-   if [[ -d ${chrootPath}/opt/local/var/macports/distfiles ]]; then
+   if [[ -d ${chrootPath}${PREFIX}/var/macports/distfiles ]]; then
       # Now the cache image for the dist files
-      hdiutil detach ${chrootPath}/opt/local/var/macports/distfiles ${HDIUTILDEBUG}
+      hdiutil detach ${chrootPath}${PREFIX}/var/macports/distfiles ${HDIUTILDEBUG}
    fi
    if [[ -d ${chrootPath} ]]; then
       # Finally, the main image itself
@@ -398,9 +398,9 @@ function chrootExec () {
         # Set DYLD_NO_FIX_PREBINDING as otherwise, on 10.5, dyld will spew
         # errors to syslog/console log like:
         # com.apple.launchd[1] (com.apple.dyld): Throttling respawn: Will start in 10 seconds
-        env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/$1
+        env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root DYLD_NO_FIX_PREBINDING=1 PREFIX=${PREFIX} SRC_PREFIX=${SRC_PREFIX} /usr/sbin/chroot ${chrootPath} /bin/sh /var/tmp/$1
     else
-        env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root /bin/sh /var/tmp/$1
+        env -i PATH=/bin:/usr/bin:/sbin:/usr/sbin HOME=/var/root PREFIX=${PREFIX} SRC_PREFIX=${SRC_PREFIX} /bin/sh /var/tmp/$1
     fi
     rm ${chrootPath}/var/tmp/$1
 }
