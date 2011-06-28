@@ -58,7 +58,7 @@ if [[ -n "$chrootPath" && ! -d "$chrootPath" ]] ; then
 fi
 
 rsync -r --del --exclude '*~' --exclude '.svn' \
-    ${dataDir}/${exportDir}/dports \
+    ${dataDir}/${exportDir} \
     ${chrootPath}${SRC_PREFIX} || exit 1
 
 echo "Re-creating portindex"
