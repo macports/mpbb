@@ -92,8 +92,8 @@ for portName in ${portList}; do
 
    echo "Building ${portName} (${currentCount} of ${portCount})...\c"
    # If there's a package, don't build again
-   portVersion=`${PREFIX}/bin/port info --version ${portName} | awk '{print $2}'`
-   portRevision=`${PREFIX}/bin/port info --revision ${portName} | awk '{print $2}'`
+   portVersion=`${PREFIX}/bin/port info --version --line ${portName}`
+   portRevision=`${PREFIX}/bin/port info --revision --line ${portName}`
    portPackageBaseName="${portName}-${portVersion}_${portRevision}"
    #ls ${packageDir}/${portName}/${portPackageBaseName}[+.]*${tclOS}_${tclOSMajor}.${ACCEPT_ARCHS}${ARCHIVE_TYPE} > /dev/null 2>&1
    #if [[ $? == 0 ]]; then
