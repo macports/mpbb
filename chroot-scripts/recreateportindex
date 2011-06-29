@@ -11,4 +11,4 @@ if [[ -z "$SRC_PREFIX" ]]; then
 fi
 
 cd ${SRC_PREFIX}/dports
-${PREFIX}/bin/portindex > /dev/null
+${PREFIX}/bin/portindex

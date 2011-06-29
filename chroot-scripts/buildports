@@ -39,6 +39,7 @@ function uninstallPorts()
 {
    installedPorts=`${PREFIX}/bin/port echo active | /usr/bin/awk '{print $1}'`
    for uninstallPort in $installedPorts; do
+      echo "Deactivating $uninstallPort"
       portOutput=`${PREFIX}/bin/port -dvf deactivate $uninstallPort 2>&1`
       if [[ $? != 0 ]]; then
          echo $portOutput
@@ -94,10 +95,10 @@ for portName in ${portList}; do
    portVersion=`${PREFIX}/bin/port info --version ${portName} | awk '{print $2}'`
    portRevision=`${PREFIX}/bin/port info --revision ${portName} | awk '{print $2}'`
    portPackageBaseName="${portName}-${portVersion}_${portRevision}"
-   ls ${packageDir}/${portName}/${portPackageBaseName}[+.]*${tclOS}_${tclOSMajor}.${ACCEPT_ARCHS}${ARCHIVE_TYPE} > /dev/null 2>&1
-   if [[ $? == 0 ]]; then
-      echo "package found, not building again"
-   else
+   #ls ${packageDir}/${portName}/${portPackageBaseName}[+.]*${tclOS}_${tclOSMajor}.${ACCEPT_ARCHS}${ARCHIVE_TYPE} > /dev/null 2>&1
+   #if [[ $? == 0 ]]; then
+   #   echo "package found, not building again"
+   #else
       skipPort=""
       portDeps=`${PREFIX}/bin/port echo depof:${portName}`
       for oneDep in ${portDeps}; do
@@ -107,7 +108,7 @@ for portName in ${portList}; do
          fi
       done
       if [[ -z $skipPort ]]; then
-         ${PREFIX}/bin/port -dv install $portName > ${PORTRESULTSDIR}/${portName}.log 2>&1
+         ${PREFIX}/bin/port -dv install $portName | tee ${PORTRESULTSDIR}/${portName}.log 2>&1
          if [[ $? == 0 ]]; then
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/success
             echo "success"
@@ -125,7 +126,7 @@ for portName in ${portList}; do
          echo "skipping, ${skipPort} previously failed and is needed"
          echo "${portName} not built due to failed dependency ${skipPort}" > ${PORTRESULTSDIR}/fail/${portName}.log
       fi
-   fi
+   #fi
    currentCount=$((${currentCount}+1))
 done
 
