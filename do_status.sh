@@ -16,7 +16,7 @@ failed=0
 for portname in `cat $PORTLISTFILE`; do
     if ls logs-*/success/${portname}.log > /dev/null 2>&1 ; then
         echo "[OK] ${portname}" >> $STATUS_LOG
-    elif ls logs-*/failure/${portname}.log > /dev/null 2>&1 ; then
+    elif ls logs-*/fail/${portname}.log > /dev/null 2>&1 ; then
         echo "[FAIL] ${portname}" >> $STATUS_LOG
         let "failed = failed + 1"
         # send email to appropriate places

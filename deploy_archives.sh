@@ -35,6 +35,8 @@ for portname in `cat $PORTLISTFILE`; do
                 #rsync -av --ignore-existing ./${aname}.rmd160 ${archive} ${DLHOST}:${DLPATH}/${portname}
                 rm -f ./${aname}.rmd160
             done
+        else
+            echo $portname is not distributable
         fi
     fi
 done
