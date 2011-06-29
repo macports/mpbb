@@ -13,9 +13,11 @@ fi
 if [[ -z "$PREFIX" ]]; then
    PREFIX=/opt/local
 fi
+export PREFIX
 if [[ -z "$SRC_PREFIX" ]]; then
    SRC_PREFIX=/opt/mports
 fi
+export SRC_PREFIX
 
 chrootPath="${dataDir}/${CHROOTSUBDIR}"
 OSMajor=`uname -r | sed 's/\..*//'`
@@ -56,7 +58,7 @@ if [[ -n "$chrootPath" && ! -d "$chrootPath" ]] ; then
     umount=yes
 fi
 
-rsync -av --del --exclude '*~' --exclude '.svn' --exclude '/PortIndex*' \
+rsync -av --del --exclude '*~' --exclude '.svn' --exclude '/dports/PortIndex*' \
     ${dataDir}/${exportDir}/ \
     ${chrootPath}${SRC_PREFIX} || exit 1
 
