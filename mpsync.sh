@@ -56,7 +56,7 @@ if [[ -n "$chrootPath" && ! -d "$chrootPath" ]] ; then
     umount=yes
 fi
 
-rsync -r --del --exclude '*~' --exclude '.svn' \
+rsync -av --del --exclude '*~' --exclude '.svn' \
     ${dataDir}/${exportDir} \
     ${chrootPath}${SRC_PREFIX} || exit 1
 
