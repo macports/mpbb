@@ -109,7 +109,7 @@ for portName in ${portList}; do
       done
       if [[ -z $skipPort ]]; then
          ${PREFIX}/bin/port -dv install $portName | tee ${PORTRESULTSDIR}/${portName}.log 2>&1
-         if [[ $? == 0 ]]; then
+         if [[ ${PIPESTATUS[0]} == 0 ]]; then
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/success
             echo "success"
          else
