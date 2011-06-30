@@ -4,7 +4,7 @@ if [[ -z "$PORTLISTFILE" ]]; then
     PORTLISTFILE=portlist
 fi
 if [[ -z "$PREFIX" ]]; then
-    PREFIX="../opt/local"
+    PREFIX="/opt/local"
 fi
 if [[ -z "$STATUS_LOG" ]]; then
     STATUS_LOG=portstatus.log

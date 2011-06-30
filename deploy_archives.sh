@@ -4,12 +4,12 @@ if [[ -z "$PORTLISTFILE" ]]; then
     PORTLISTFILE=portlist
 fi
 if [[ -z "$PREFIX" ]]; then
-    PREFIX="../opt/local"
+    PREFIX="/opt/local"
 fi
 # FIXME: configure these
 # download server hostname
 if [[ -z "$DLHOST" ]]; then
-    DLHOST=mparchives.local
+    DLHOST=""
 fi
 # path where it keeps archives
 if [[ -z "$DLPATH" ]]; then
@@ -30,9 +30,13 @@ for portname in `cat $PORTLISTFILE`; do
             for archive in ${PREFIX}/var/macports/software/${portname}/${portname}-${portversion}_${portrevision}[+.]*; do
                 aname=$(basename $archive)
                 echo deploying archive: $aname
-                #openssl dgst -ripemd160 -sign "${PRIVKEY}" -out ./${aname}.rmd160 ${archive}
-                #ssh ${DLHOST} mkdir -p ${DLPATH}/${portname}
-                #rsync -av --ignore-existing ./${aname}.rmd160 ${archive} ${DLHOST}:${DLPATH}/${portname}
+                if [[ -n "$PRIVKEY" ]]; then
+                    openssl dgst -ripemd160 -sign "${PRIVKEY}" -out ./${aname}.rmd160 ${archive}
+                fi
+                if [[ -n "$DLHOST" ]]; then
+                    ssh ${DLHOST} mkdir -p ${DLPATH}/${portname}
+                    rsync -av --ignore-existing ./${aname}.rmd160 ${archive} ${DLHOST}:${DLPATH}/${portname}
+                fi
                 rm -f ./${aname}.rmd160
             done
         else
