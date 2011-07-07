@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# selfupdate MacPorts in the chroot
+#
+
+if [[ -z "$PREFIX" ]]; then
+    PREFIX=/opt/local
+fi
+
+${PREFIX}/bin/port selfupdate

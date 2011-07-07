@@ -45,12 +45,18 @@ function chroot_exec () {
 
 if [[ -d ${dataDir}/${exportDir} ]] ; then 
     svn update --non-interactive \
-	-r HEAD ${dataDir}/${exportDir}/* || exit 1
+	    -r HEAD ${dataDir}/${exportDir}/base || exit 1
+	svn update --non-interactive \
+	    -r HEAD ${dataDir}/${exportDir}/dports || exit 1
 else
     echo "Checking out macports from svn..."
+    mkdir -p ${dataDir}/${exportDir}
     svn checkout --non-interactive -r HEAD \
-	https://svn.macports.org/repository/macports/trunk \
-	${dataDir}/${exportDir} || exit 1
+	    https://svn.macports.org/repository/macports/trunk/base \
+	    ${dataDir}/${exportDir}/base || exit 1
+	svn checkout --non-interactive -r HEAD \
+	    https://svn.macports.org/repository/macports/trunk/dports \
+	    ${dataDir}/${exportDir}/dports || exit 1
 fi
 
 if [[ -n "$chrootPath" && ! -d "$chrootPath" ]] ; then
@@ -64,6 +70,12 @@ rsync -av --del --exclude '*~' --exclude '.svn' --exclude '/dports/PortIndex*' \
 
 echo "Re-creating portindex"
 chroot_exec recreateportindex
+
+if [[ "$BASE_UPDATE" == "selfupdate" ]]; then
+    chroot_exec selfupdate
+elif [[ "$BASE_UPDATE" == "svn" ]]; then
+    chroot_exec installmacports
+fi
 
 if [[ "${umount}" = yes ]] ; then
     sudo ${baseDir}/mpab umount || exit 1
