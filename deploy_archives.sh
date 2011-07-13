@@ -3,18 +3,26 @@
 if [[ -z "$PORTLISTFILE" ]]; then
     PORTLISTFILE=portlist
 fi
+
 if [[ -z "$PREFIX" ]]; then
     PREFIX="/opt/local"
 fi
-# FIXME: configure these
+
 # download server hostname
 if [[ -z "$DLHOST" ]]; then
     DLHOST=""
 fi
+
 # path where it keeps archives
 if [[ -z "$DLPATH" ]]; then
     DLPATH="/archives"
 fi
+
+# path where archives get uploaded to master
+if [[ -z "$ULPATH" ]]; then
+    ULPATH="${PREFIX}/var/macports/software"
+fi
+
 # private key to use for signing
 if [[ -z "$PRIVKEY" ]]; then
     PRIVKEY=""
@@ -27,15 +35,18 @@ for portname in `cat $PORTLISTFILE`; do
             echo $portname is distributable
             portversion=$(${PREFIX}/bin/port info --version --line ${portname})
             portrevision=$(${PREFIX}/bin/port info --revision --line ${portname})
-            for archive in ${PREFIX}/var/macports/software/${portname}/${portname}-${portversion}_${portrevision}[+.]*; do
+            for archive in ${ULPATH}/${portname}/${portname}-${portversion}_${portrevision}[+.]*; do
                 aname=$(basename $archive)
                 echo deploying archive: $aname
                 if [[ -n "$PRIVKEY" ]]; then
                     openssl dgst -ripemd160 -sign "${PRIVKEY}" -out ./${aname}.rmd160 ${archive}
                 fi
                 if [[ -n "$DLHOST" ]]; then
-                    ssh ${DLHOST} mkdir -p ${DLPATH}/${portname}
-                    rsync -av --ignore-existing ./${aname}.rmd160 ${archive} ${DLHOST}:${DLPATH}/${portname}
+                    ssh ${DLHOST} mkdir -p ${DLPATH}/${portname};
+                    rsync -av --ignore-existing ./${aname}.rmd160 ${archive} ${DLHOST}:${DLPATH}/${portname};
+		else
+                    mkdir -p ${DLPATH}/${portname};
+                    rsync -av --ignore-existing ./${aname}.rmd160 ${archive} ${DLPATH}/${portname};
                 fi
                 rm -f ./${aname}.rmd160
             done
