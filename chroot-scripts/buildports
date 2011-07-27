@@ -66,15 +66,12 @@ rm -rf ${PORTRESULTSDIR}
 /bin/mkdir -p ${PORTRESULTSDIR}/success ${PORTRESULTSDIR}/fail
 
 
-if [[ -f /var/tmp/portlist ]]; then
+if [[ -f /var/tmp/portlist && `head -n1 /var/tmp/portlist` != "all" ]]; then
    portList=`/bin/cat /var/tmp/portlist`
-   /bin/rm /var/tmp/portlist
-   if [[ `echo -n $portList` == "all" ]]; then
-      portList=`/usr/bin/tclsh /var/tmp/genportlist.tcl`
-   fi
 else
    portList=`/usr/bin/tclsh /var/tmp/genportlist.tcl`
 fi
+/bin/rm -f /var/tmp/portlist
 
 portCount=`echo ${portList} | /usr/bin/wc -w`
 portCount=$(($portCount))   # Get rid of wc's spacing
