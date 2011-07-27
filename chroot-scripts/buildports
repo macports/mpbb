@@ -69,6 +69,9 @@ rm -rf ${PORTRESULTSDIR}
 if [[ -f /var/tmp/portlist ]]; then
    portList=`/bin/cat /var/tmp/portlist`
    /bin/rm /var/tmp/portlist
+   if [[ `echo -n $portList` == "all" ]]; then
+      portList=`/usr/bin/tclsh /var/tmp/genportlist.tcl`
+   fi
 else
    portList=`/usr/bin/tclsh /var/tmp/genportlist.tcl`
 fi
