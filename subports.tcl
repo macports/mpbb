@@ -40,17 +40,21 @@ package require macports
 
 if {[catch {mportinit "" "" ""} result]} {
    ui_error "$errorInfo"
-   fatal "Failed to initialize ports sytem: $result"
+   ui_error "Failed to initialize ports sytem: $result"
+   exit 1
 }
 
 if {[llength $::argv] == 0} {
-    fatal "Usage: $argv0 <portname>"
+    puts stderr "Usage: $argv0 <portname>"
+    exit 1
 }
 
 set portname [lindex $::argv 0]
 
-if {[catch {set one_result [mportlookup $portname]}]} {
-    fatal "lookup failed for port: $portname"
+if {[catch {set one_result [mportlookup $portname]}] || [llength $one_result] < 2} {
+    # just pass it through, MPAB will complain about it later
+    puts $portname
+    exit 0
 }
 puts [lindex $one_result 0]
 array set portinfo [lindex $one_result 1]
