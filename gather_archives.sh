@@ -14,7 +14,13 @@ if [[ -z "$ULPATH" ]]; then
 fi
 
 mkdir -p $ULPATH
-for portname in `cat $PORTLISTFILE`; do
+if [[ `head -n1 $PORTLISTFILE` == "all" ]]; then
+    ports=`${PREFIX}/bin/port -q echo all | tr '\n' ' '`
+else
+    ports=`cat $PORTLISTFILE`
+fi
+
+for portname in $ports; do
     if ls logs-*/success/${portname}.log > /dev/null 2>&1 ; then
         if ./mpexport/base/portmgr/jobs/port_binary_distributable.tcl ${portname}; then
             echo $portname is distributable
