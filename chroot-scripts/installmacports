@@ -13,5 +13,5 @@ fi
 cd ${SRC_PREFIX}/base
 ./configure --prefix=${PREFIX} && make -j2 all && make install && make distclean
 if [[ $? == 0 ]]; then
-   echo "file://${SRC_PREFIX}/dports [default]" > ${PREFIX}/etc/macports/sources.conf
+   echo "file://${SRC_PREFIX}/dports [default,nosync]" > ${PREFIX}/etc/macports/sources.conf
 fi
