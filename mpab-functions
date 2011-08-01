@@ -266,6 +266,10 @@ function buildPorts()
 
    cp -p ${baseDir}/chroot-scripts/genportlist.tcl ${chrootPath}/var/tmp/
 
+   rm -f ${chrootPath}/var/tmp/progress.log ${baseDir}/progress.log
+   touch ${baseDir}/progress.log
+   ln ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log
+
    chrootExec buildports
 
    return 0

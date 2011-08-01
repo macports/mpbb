@@ -62,6 +62,7 @@ function cleanBuildStuff()
 
 cleanBuildStuff
 PORTRESULTSDIR="/var/tmp/portresults"
+PROGRESSLOG="/var/tmp/progress.log"
 rm -rf ${PORTRESULTSDIR}
 /bin/mkdir -p ${PORTRESULTSDIR}/success ${PORTRESULTSDIR}/fail
 
@@ -90,7 +91,7 @@ currentCount=1
 for portName in ${portList}; do
    trap "echo \"Canceled, cleaning up...\"; cleanBuildStuff" EXIT
 
-   echo "Building ${portName} (${currentCount} of ${portCount})...\c"
+   echo "Building ${portName} (${currentCount} of ${portCount})...\c" | tee -a ${PROGRESSLOG}
    # If there's a package, don't build again
    portVersion=`${PREFIX}/bin/port info --version --line ${portName}`
    portRevision=`${PREFIX}/bin/port info --revision --line ${portName}`
@@ -111,10 +112,10 @@ for portName in ${portList}; do
          ${PREFIX}/bin/port -dv install $portName | tee ${PORTRESULTSDIR}/${portName}.log 2>&1
          if [[ ${PIPESTATUS[0]} == 0 ]]; then
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/success
-            echo "success"
+            echo "success" | tee -a ${PROGRESSLOG}
          else
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/fail
-            echo "failure"
+            echo "failure" | tee -a ${PROGRESSLOG}
             ${PREFIX}/bin/port clean --work $portName
          fi
          uninstallPorts
@@ -123,7 +124,7 @@ for portName in ${portList}; do
             exit 2
          fi
       else
-         echo "skipping, ${skipPort} previously failed and is needed"
+         echo "skipping, ${skipPort} previously failed and is needed" | tee -a ${PROGRESSLOG}
          echo "${portName} not built due to failed dependency ${skipPort}" > ${PORTRESULTSDIR}/fail/${portName}.log
       fi
    #fi
