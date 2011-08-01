@@ -268,7 +268,9 @@ function buildPorts()
 
    rm -f ${chrootPath}/var/tmp/progress.log ${baseDir}/progress.log
    touch ${baseDir}/progress.log
-   ln ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log
+   if ! ln ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log; then
+      ln -s ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log
+   fi
 
    chrootExec buildports
 
