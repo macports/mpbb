@@ -272,7 +272,7 @@ function buildPorts()
 
    rm -f ${chrootPath}/var/tmp/progress.log ${baseDir}/progress.log
    touch ${baseDir}/progress.log
-   if ! ln ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log; then
+   if ! ln ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log 2>/dev/null ; then
       ln -s ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log
    fi
 
