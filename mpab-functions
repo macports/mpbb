@@ -261,6 +261,10 @@ function buildPorts()
 {
    local baseDir=$1
    local chrootPath=$2
+   
+   if [[ $baseDir == "." ]]; then
+      baseDir=`pwd`
+   fi
 
    echo "Building ports"
 
