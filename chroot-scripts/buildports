@@ -101,10 +101,11 @@ for portName in ${portList}; do
    #   echo "package found, not building again"
    #else
       skipPort=""
-      portDeps=`${PREFIX}/bin/port echo depof:${portName}`
+      portDeps=`${PREFIX}/bin/port info --depends --line ${portName} | /usr/bin/tr ',' ' '`
       for oneDep in ${portDeps}; do
-         if [[ -f ${PORTRESULTSDIR}/fail/${oneDep}.log ]]; then
-            skipPort=${oneDep}
+         depType=`echo ${oneDep} | /usr/bin/awk -F : '{print $1}'`
+         if [[ $depType == "port" && -f ${PORTRESULTSDIR}/fail/${oneDep}.log ]]; then
+            skipPort=`echo ${oneDep} | /usr/bin/awk -F : '{print $2}'`
             break
          fi
       done
