@@ -96,10 +96,10 @@ for portName in ${portList}; do
    portVersion=`${PREFIX}/bin/port info --version --line ${portName}`
    portRevision=`${PREFIX}/bin/port info --revision --line ${portName}`
    portPackageBaseName="${portName}-${portVersion}_${portRevision}"
-   #ls ${packageDir}/${portName}/${portPackageBaseName}[+.]*${tclOS}_${tclOSMajor}.${ACCEPT_ARCHS}${ARCHIVE_TYPE} > /dev/null 2>&1
-   #if [[ $? == 0 ]]; then
-   #   echo "package found, not building again"
-   #else
+   ls ${packageDir}/${portName}/${portPackageBaseName}[+.]*${tclOS}_${tclOSMajor}.${ACCEPT_ARCHS}${ARCHIVE_TYPE} > /dev/null 2>&1
+   if [[ $? == 0 ]]; then
+      echo "package found, not building again" | tee -a ${PROGRESSLOG} | tee ${PORTRESULTSDIR}/success/${portName}.log
+   else
       skipPort=""
       portDeps=`${PREFIX}/bin/port info --depends --line ${portName} | /usr/bin/tr ',' ' '`
       for oneDep in ${portDeps}; do
@@ -128,7 +128,7 @@ for portName in ${portList}; do
          echo "skipping, ${skipPort} previously failed and is needed" | tee -a ${PROGRESSLOG}
          echo "${portName} not built due to failed dependency ${skipPort}" > ${PORTRESULTSDIR}/fail/${portName}.log
       fi
-   #fi
+   fi
    currentCount=$((${currentCount}+1))
 done
 
