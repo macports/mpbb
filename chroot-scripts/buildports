@@ -93,15 +93,15 @@ for portName in ${portList}; do
 
    echo "Building ${portName} (${currentCount} of ${portCount})...\c" | tee -a ${PROGRESSLOG}
    # If there's a package, don't build again
-   portVersion=`${PREFIX}/bin/port info --version --line ${portName}`
-   portRevision=`${PREFIX}/bin/port info --revision --line ${portName}`
+   portVersion=`${PREFIX}/bin/port info --index --version --line ${portName}`
+   portRevision=`${PREFIX}/bin/port info --index --revision --line ${portName}`
    portPackageBaseName="${portName}-${portVersion}_${portRevision}"
    ls ${packageDir}/${portName}/${portPackageBaseName}[+.]*${tclOS}_${tclOSMajor}.${ACCEPT_ARCHS}${ARCHIVE_TYPE} > /dev/null 2>&1
    if [[ $? == 0 ]]; then
       echo "package found, not building again" | tee -a ${PROGRESSLOG} | tee ${PORTRESULTSDIR}/success/${portName}.log
    else
       skipPort=""
-      portDeps=`${PREFIX}/bin/port info --depends --line ${portName} | /usr/bin/tr ',' ' '`
+      portDeps=`${PREFIX}/bin/port info --index --depends --line ${portName} | /usr/bin/tr ',' ' '`
       for oneDep in ${portDeps}; do
          depType=`echo ${oneDep} | /usr/bin/awk -F : '{print $1}'`
          if [[ $depType == "port" ]]; then
