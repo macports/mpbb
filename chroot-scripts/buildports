@@ -104,9 +104,12 @@ for portName in ${portList}; do
       portDeps=`${PREFIX}/bin/port info --depends --line ${portName} | /usr/bin/tr ',' ' '`
       for oneDep in ${portDeps}; do
          depType=`echo ${oneDep} | /usr/bin/awk -F : '{print $1}'`
-         if [[ $depType == "port" && -f ${PORTRESULTSDIR}/fail/${oneDep}.log ]]; then
-            skipPort=`echo ${oneDep} | /usr/bin/awk -F : '{print $2}'`
-            break
+         if [[ $depType == "port" ]]; then
+            depName=`echo ${oneDep} | /usr/bin/awk -F : '{print $2}'`
+            if [[ -f ${PORTRESULTSDIR}/fail/${depName}.log ]]; then
+                skipPort=$depName
+                break
+            fi
          fi
       done
       if [[ -z $skipPort ]]; then
