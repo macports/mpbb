@@ -63,6 +63,7 @@ function cleanBuildStuff()
 cleanBuildStuff
 PORTRESULTSDIR="/var/tmp/portresults"
 PROGRESSLOG="/var/tmp/progress.log"
+FAILCACHE="/var/tmp/failcache"
 rm -rf ${PORTRESULTSDIR}
 /bin/mkdir -p ${PORTRESULTSDIR}/success ${PORTRESULTSDIR}/fail
 
@@ -101,35 +102,48 @@ for portName in ${portList}; do
       echo "package found, not building again" | tee -a ${PROGRESSLOG} | tee ${PORTRESULTSDIR}/success/${portName}.log
    else
       skipPort=""
-      portDeps=`${PREFIX}/bin/port info --index --depends --line ${portName} | /usr/bin/tr ',' ' '`
-      for oneDep in ${portDeps}; do
-         depType=`echo ${oneDep} | /usr/bin/awk -F : '{print $1}'`
-         if [[ $depType == "port" ]]; then
-            depName=`echo ${oneDep} | /usr/bin/awk -F : '{print $2}'`
-            if [[ -f ${PORTRESULTSDIR}/fail/${depName}.log ]]; then
-                skipPort=$depName
-                break
+      portFile=`${PREFIX}/bin/port file ${portName}`
+      if [[ ! "$portFile" -nt "${FAILCACHE}/${portName}" ]]; then
+         echo "skipping, portfile not modified since last failure" | tee -a ${PROGRESSLOG} | tee ${PORTRESULTSDIR}/fail/${portName}.log
+         skipPort=1
+      else
+         portDeps=`${PREFIX}/bin/port info --index --depends --line ${portName} | /usr/bin/tr ',' ' '`
+         nonPortDeps=""
+         for oneDep in ${portDeps}; do
+            depType=`echo ${oneDep} | /usr/bin/awk -F : '{print $1}'`
+            if [[ $depType == "port" ]]; then
+               depName=`echo ${oneDep} | /usr/bin/awk -F : '{print $2}'`
+               if [[ -f ${PORTRESULTSDIR}/fail/${depName}.log ]]; then
+                  skipPort=1
+                  echo "skipping, $depName previously failed and is needed" | tee -a ${PROGRESSLOG}
+                  echo "${portName} not built due to failed dependency $depName" > ${PORTRESULTSDIR}/fail/${portName}.log
+                  break
+               fi
+            else
+               nonPortDeps=1
             fi
-         fi
-      done
-      if [[ -z $skipPort ]]; then
+         done
+      fi
+      if [[ -z "$skipPort" ]]; then
          ${PREFIX}/bin/port -dv install $portName | tee ${PORTRESULTSDIR}/${portName}.log 2>&1
          if [[ ${PIPESTATUS[0]} == 0 ]]; then
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/success
             echo "success" | tee -a ${PROGRESSLOG}
+            rm -f ${FAILCACHE}/${portName}
          else
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/fail
             echo "failure" | tee -a ${PROGRESSLOG}
             ${PREFIX}/bin/port clean --work $portName
+            # check that it definitely failed in its own right before caching
+            if [[ -z "$nonPortDeps" ]]; then
+               touch -r ${portFile} ${FAILCACHE}/${portName}
+            fi
          fi
          uninstallPorts
          if [[ $? != 0 ]]; then
             echo "Uninstall failed, aborting"
             exit 2
          fi
-      else
-         echo "skipping, ${skipPort} previously failed and is needed" | tee -a ${PROGRESSLOG}
-         echo "${portName} not built due to failed dependency ${skipPort}" > ${PORTRESULTSDIR}/fail/${portName}.log
       fi
    fi
    currentCount=$((${currentCount}+1))

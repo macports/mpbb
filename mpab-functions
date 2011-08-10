@@ -275,8 +275,12 @@ function buildPorts()
    if ! ln ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log 2>/dev/null ; then
       ln -s ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log
    fi
+   mkdir -p ${baseDir}/failcache
+   rsync -a ${baseDir}/failcache ${chrootPath}/var/tmp
 
    chrootExec buildports
+
+   rsync -a ${chrootPath}/var/tmp/failcache ${baseDir}
 
    return 0
 }
