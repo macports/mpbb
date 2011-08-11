@@ -276,7 +276,7 @@ function buildPorts()
       ln -s ${baseDir}/progress.log ${chrootPath}/var/tmp/progress.log
    fi
    mkdir -p ${baseDir}/failcache
-   rsync -a --delete ${baseDir}/failcache ${chrootPath}/var/tmp
+   rsync -a ${baseDir}/failcache ${chrootPath}/var/tmp
 
    chrootExec buildports
 
