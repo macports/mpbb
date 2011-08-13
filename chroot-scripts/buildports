@@ -67,11 +67,12 @@ FAILCACHE="/var/tmp/failcache"
 rm -rf ${PORTRESULTSDIR}
 /bin/mkdir -p ${PORTRESULTSDIR}/success ${PORTRESULTSDIR}/fail
 
-
+useFailCache=""
 if [[ -f /var/tmp/portlist && `head -n1 /var/tmp/portlist` != "all" ]]; then
    portList=`/bin/cat /var/tmp/portlist`
 else
    portList=`/usr/bin/tclsh /var/tmp/genportlist.tcl`
+   useFailCache=1
 fi
 /bin/rm -f /var/tmp/portlist
 
@@ -103,7 +104,7 @@ for portName in ${portList}; do
    else
       skipPort=""
       portFile=`${PREFIX}/bin/port file ${portName}`
-      if [[ ! "$portFile" -nt "${FAILCACHE}/${portName}" ]]; then
+      if [[ -n "$useFailCache" && ! "$portFile" -nt "${FAILCACHE}/${portName}" ]]; then
          echo "skipping, portfile not modified since last failure" | tee -a ${PROGRESSLOG} | tee ${PORTRESULTSDIR}/fail/${portName}.log
          skipPort=1
       else
