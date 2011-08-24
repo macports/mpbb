@@ -134,7 +134,7 @@ for portName in ${portList}; do
          else
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/fail
             echo "failure" | tee -a ${PROGRESSLOG}
-            ${PREFIX}/bin/port clean --work $portName
+            ${PREFIX}/bin/port clean --work $portName rdepof:${portName}
             # check that it definitely failed in its own right before caching
             if [[ -z "$nonPortDeps" ]]; then
                touch -r ${portFile} ${FAILCACHE}/${portName}
