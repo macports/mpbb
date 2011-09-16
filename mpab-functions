@@ -215,6 +215,8 @@ function buildMacPorts()
    local chrootPath=$3
    local mpExport=$4
 
+   needIndex=""
+
    if [[ ! -d ${chrootPath}${SRC_PREFIX} ]]; then
       if [[ -f ${dataDir}/${mpExport} ]]; then
 	 mkdir -p ${chrootPath}${SRC_PREFIX}
@@ -240,13 +242,17 @@ function buildMacPorts()
          return 1
       fi
       chmod -R a+rX ${chrootPath}${SRC_PREFIX}
+      needIndex=1
    fi
 
    if [[ ! -f ${chrootPath}${PREFIX}/bin/port ]]; then
       chrootExec installmacports
+      needIndex=1
    fi
 
-   chrootExec recreateportindex
+   if [[ -n "$needIndex" ]]; then
+      chrootExec recreateportindex
+   fi
 
    return 0
 }

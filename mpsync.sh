@@ -68,6 +68,8 @@ rsync -av --del --exclude '*~' --exclude '.svn' --exclude '/dports/PortIndex*' \
     ${dataDir}/${exportDir}/ \
     ${chrootPath}${SRC_PREFIX} || exit 1
 
+chroot_exec recreateportindex
+
 if [[ "$BASE_UPDATE" == "selfupdate" ]]; then
     chroot_exec selfupdate
 elif [[ "$BASE_UPDATE" == "svn" ]]; then
