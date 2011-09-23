@@ -26,15 +26,6 @@ for portname in $ports; do
     elif ls logs-*/fail/${portname}.log > /dev/null 2>&1 ; then
         echo "[FAIL] ${portname}" >> $STATUS_LOG
         let "failed = failed + 1"
-        # send email to appropriate places
-        portmaintainers=$(${PREFIX}/bin/port info --index --maintainers --line ${portname} | tr ',' ' ')
-        for maint in $portmaintainers; do
-            if [[ "$maint" != "nomaintainer@macports.org" && "$maint" != "openmaintainer@macports.org" ]]; then
-                # email maintainer
-                echo "not emailing $maint (not set up yet)"
-            fi
-            # also send to some new mailing list?
-        done
     fi
 done
 exit $failed
