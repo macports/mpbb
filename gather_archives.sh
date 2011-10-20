@@ -47,8 +47,7 @@ fi
 
 for portname in $ports; do
     if ls logs-*/success/${portname}.log > /dev/null 2>&1 ; then
-        if ./mpexport/base/portmgr/jobs/port_binary_distributable.tcl ${portname}; then
-            echo $portname is distributable
+        if ./mpexport/base/portmgr/jobs/port_binary_distributable.tcl -v ${portname}; then
             portversion=$(${PREFIX}/bin/port info --index --version --line ${portname})
             portrevision=$(${PREFIX}/bin/port info --index --revision --line ${portname})
             for archive in ${PREFIX}/var/macports/software/${portname}/${portname}-${portversion}_${portrevision}[+.]*; do
@@ -57,8 +56,6 @@ for portname in $ports; do
                 mkdir -p ${ULPATH}/${portname}
                 cp $archive ${ULPATH}/${portname}/
             done
-        else
-            echo $portname is not distributable
         fi
     fi
 done
