@@ -28,6 +28,11 @@ if [[ -z "$ULPATH" ]]; then
     ULPATH="archive_staging"
 fi
 
+# site to check for existing archive
+if [[ -z "$ARCHIVE_SITE" ]]; then
+    ARCHIVE_SITE="http://packages.macports.org/"
+fi
+
 mkdir -p $ULPATH
 if [[ `head -n1 $PORTLISTFILE` == "all" ]]; then
     ports=`${PREFIX}/bin/port -q echo all | tr '\n' ' '`
@@ -47,15 +52,23 @@ fi
 
 for portname in $ports; do
     if ls logs-*/success/${portname}.log > /dev/null 2>&1 ; then
-        if ./mpexport/base/portmgr/jobs/port_binary_distributable.tcl -v ${portname}; then
-            portversion=$(${PREFIX}/bin/port info --index --version --line ${portname})
-            portrevision=$(${PREFIX}/bin/port info --index --revision --line ${portname})
-            for archive in ${PREFIX}/var/macports/software/${portname}/${portname}-${portversion}_${portrevision}[+.]*; do
-                aname=$(basename $archive)
-                echo preparing archive for upload: $aname
-                mkdir -p ${ULPATH}/${portname}
-                cp $archive ${ULPATH}/${portname}/
-            done
-        fi
+        distributable=""
+        portversion=$(${PREFIX}/bin/port info --index --version --revision --line ${portname} | tr '\t' '_')
+        for archive in ${PREFIX}/var/macports/software/${portname}/${portname}-${portversion}[+.]*; do
+            aname=$(basename $archive)
+            if ! /usr/bin/curl -fIs "${ARCHIVE_SITE}${portname}/${aname}" > /dev/null ; then
+                if [[ -z "$distributable" ]]; then
+                    ./mpexport/base/portmgr/jobs/port_binary_distributable.tcl -v ${portname}
+                    distributable=$?
+                fi
+                if [[ "$distributable" -eq 0 ]]; then
+                    echo "preparing archive for upload: $aname"
+                    mkdir -p ${ULPATH}/${portname}
+                    cp $archive ${ULPATH}/${portname}/
+                fi
+            else
+                echo "$aname already uploaded"
+            fi
+        done
     fi
 done
