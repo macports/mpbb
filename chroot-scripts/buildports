@@ -33,7 +33,6 @@
 if [[ -z "$PREFIX" ]]; then
     PREFIX=/opt/local
 fi
-ARCHIVE_TYPE=".tbz2"
 
 function uninstallPorts()
 {
@@ -79,15 +78,7 @@ fi
 portCount=`echo ${portList} | /usr/bin/wc -w`
 portCount=$(($portCount))   # Get rid of wc's spacing
 
-tclOS=`echo 'puts [string tolower $tcl_platform(os)]' | tclsh`
-tclOSMajor=`echo 'puts [lindex [split $tcl_platform(osVersion) .] 0]' | tclsh`
-packageDir="${PREFIX}/var/macports/software"
 shopt -s extglob
-if [[ $tclOSMajor -ge 10 ]]; then
-    ACCEPT_ARCHS="+(noarch|x86_64|i386|-)"
-else
-    ACCEPT_ARCHS="+(noarch|i386|ppc|-)"
-fi
 
 currentCount=1
 for portName in ${portList}; do
@@ -95,11 +86,7 @@ for portName in ${portList}; do
 
    echo "Building ${portName} (${currentCount} of ${portCount})...\c" | tee -a ${PROGRESSLOG}
    # If there's a package, don't build again
-   portVersion=`${PREFIX}/bin/port info --index --version --line ${portName}`
-   portRevision=`${PREFIX}/bin/port info --index --revision --line ${portName}`
-   portPackageBaseName="${portName}-${portVersion}_${portRevision}"
-   ls ${packageDir}/${portName}/${portPackageBaseName}[+.]*${tclOS}_${tclOSMajor}.${ACCEPT_ARCHS}${ARCHIVE_TYPE} > /dev/null 2>&1
-   if [[ $? == 0 ]]; then
+   if [[ -f `/usr/bin/tclsh /var/tmp/archivepath.tcl $portName` ]]; then
       echo "package found, not building again" | tee -a ${PROGRESSLOG} | tee ${PORTRESULTSDIR}/success/${portName}.log
    else
       skipPort=""

@@ -275,6 +275,7 @@ function buildPorts()
    echo "Building ports"
 
    cp -p ${baseDir}/chroot-scripts/genportlist.tcl ${chrootPath}/var/tmp/
+   cp -p ${baseDir}/chroot-scripts/archivepath.tcl ${chrootPath}/var/tmp/
 
    rm -f ${chrootPath}/var/tmp/progress.log ${baseDir}/progress.log
    touch ${baseDir}/progress.log
