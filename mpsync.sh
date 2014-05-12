@@ -43,9 +43,15 @@ function chroot_exec () {
     rm ${chrootPath}/var/tmp/$1
 }
 
-if [[ -d ${dataDir}/${exportDir} ]] ; then 
+if [[ -d ${dataDir}/${exportDir} ]] ; then
+    if [[ -e ${dataDir}/${exportDir}/base/.svn/lock ]]; then
+        svn --non-interactive cleanup ${dataDir}/${exportDir}/base
+    fi
     svn update --non-interactive \
 	    -r HEAD ${dataDir}/${exportDir}/base || exit 1
+    if [[ -e ${dataDir}/${exportDir}/dports/.svn/lock ]]; then
+        svn --non-interactive cleanup ${dataDir}/${exportDir}/dports
+    fi
 	svn update --non-interactive \
 	    -r HEAD ${dataDir}/${exportDir}/dports || exit 1
 else
