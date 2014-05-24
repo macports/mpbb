@@ -14,7 +14,7 @@ rm -vrf ${TOPDIR}/logs-*
 rm -vrf ${TOPDIR}/${ULPATH}
 rm -vrf ${PREFIX}/var/macports/distfiles/*
 
-oldports=`./oldports.tcl -t "${PREFIX}/share/macports/Tcl"`
+oldports=`./oldports.tcl -p "${PREFIX}"`
 if [[ -n "$oldports" ]]; then
     echo $oldports | xargs "${PREFIX}/bin/port" -f uninstall
 fi
