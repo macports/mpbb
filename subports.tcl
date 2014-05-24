@@ -52,6 +52,7 @@ if {[llength $::argv] == 0} {
         }
         exit 0
     }
+    set ::argv [lrange $::argv 2 end]
 }
 
 package require macports
