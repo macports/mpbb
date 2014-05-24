@@ -1,5 +1,7 @@
-#!/usr/bin/tclsh
+#!/bin/sh
 #
+# \
+if /usr/bin/which -s port-tclsh; then exec port-tclsh "$0" "$@"; else exec /usr/bin/tclsh "$0" "$@"; fi
 # Generates a list of the subports for the given port.
 #
 # Copyright (c) 2011 The MacPorts Project.
@@ -35,7 +37,9 @@ if {[info exists env(PREFIX)]} {
     set prefix /opt/local
 }
 
-source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
+if {[file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
+    source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
+}
 package require macports
 
 if {[catch {mportinit "" "" ""} result]} {
