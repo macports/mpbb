@@ -53,6 +53,8 @@ if {[llength $::argv] == 0} {
         exit 0
     }
     set ::argv [lrange $::argv 2 end]
+} elseif {[file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
+    source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
 }
 
 package require macports

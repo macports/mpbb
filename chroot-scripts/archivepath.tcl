@@ -1,4 +1,6 @@
-#!/usr/bin/tclsh
+#!/bin/sh
+# \
+if /usr/bin/which -s port-tclsh; then exec port-tclsh "$0" -i `which port-tclsh` "$@"; else exec /usr/bin/tclsh "$0" -i /usr/bin/tclsh "$@"; fi
 #
 # Prints the archive filename for the given port with the given variations.
 #
@@ -35,18 +37,32 @@ if {[info exists env(PREFIX)]} {
     set prefix /opt/local
 }
 
-source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
+if {[llength $::argv] == 0} {
+    puts stderr "Usage: $argv0 <portname>"
+    exit 1
+} elseif {[llength $::argv] >= 3 && [lindex $argv 0] eq "-i"} {
+    set prefixFromInterp [file dirname [file dirname [lindex $argv 1]]]
+    if {$prefixFromInterp eq "/usr" && [file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
+        source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
+    } elseif {$prefixFromInterp ne $prefix} {
+        if {[file executable ${prefix}/bin/port-tclsh]} {
+            exec ${prefix}/bin/port-tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
+        } else {
+            exec /usr/bin/tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
+        }
+        exit 0
+    }
+    set ::argv [lrange $::argv 2 end]
+} elseif {[file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
+    source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
+}
+
 package require macports
 
 if {[catch {mportinit "" "" ""} result]} {
    ui_error "$errorInfo"
    ui_error "Failed to initialize ports sytem: $result"
    exit 1
-}
-
-if {[llength $::argv] == 0} {
-    puts stderr "Usage: $argv0 <portname>"
-    exit 1
 }
 
 set portname [lindex $::argv 0]

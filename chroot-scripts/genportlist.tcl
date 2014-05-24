@@ -1,4 +1,6 @@
-#!/usr/bin/env tclsh
+#!/bin/sh
+# \
+if /usr/bin/which -s port-tclsh; then exec port-tclsh "$0" -i `which port-tclsh` "$@"; else exec /usr/bin/tclsh "$0" -i /usr/bin/tclsh "$@"; fi
 #
 # Generates a list of ports where a port is only listed after all of its
 # dependencies (sans variants) have already been listed
@@ -37,7 +39,23 @@ if {[info exists env(PREFIX)]} {
     set prefix /opt/local
 }
 
-source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
+if {[llength $::argv] >= 2 && [lindex $argv 0] eq "-i"} {
+    set prefixFromInterp [file dirname [file dirname [lindex $argv 1]]]
+    if {$prefixFromInterp eq "/usr" && [file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
+        source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
+    } elseif {$prefixFromInterp ne $prefix} {
+        if {[file executable ${prefix}/bin/port-tclsh]} {
+            exec ${prefix}/bin/port-tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
+        } else {
+            exec /usr/bin/tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
+        }
+        exit 0
+    }
+    set ::argv [lrange $::argv 2 end]
+} elseif {[file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
+    source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
+}
+
 package require macports
 
 
@@ -69,12 +87,12 @@ proc process_port_deps {portname portdeps_in portlist_in} {
 
 if {[catch {mportinit "" "" ""} result]} {
    puts "$errorInfo"
-   fatal "Failed to initialize ports sytem: $result"
+   error "Failed to initialize ports sytem: $result"
 }
 
 if {[catch {set search_result [mportlistall]} result]} {
    puts "$errorInfo"
-   fatal "Failed to find any ports: $result"
+   error "Failed to find any ports: $result"
 }
 
 array set portdepinfo {}
