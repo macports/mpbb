@@ -33,6 +33,10 @@
 if [[ -z "$PREFIX" ]]; then
     PREFIX=/opt/local
 fi
+TCLSH=${PREFIX}/bin/port-tclsh
+if [[ ! -x ${PREFIX}/bin/port-tclsh ]]; then
+    TCLSH=/usr/bin/tclsh
+fi
 
 function uninstallPorts()
 {
@@ -70,7 +74,7 @@ useFailCache=""
 if [[ -f /var/tmp/portlist && `head -n1 /var/tmp/portlist` != "all" ]]; then
    portList=`/bin/cat /var/tmp/portlist`
 else
-   portList=`/usr/bin/tclsh /var/tmp/genportlist.tcl`
+   portList=`$TCLSH /var/tmp/genportlist.tcl`
    useFailCache=1
 fi
 /bin/rm -f /var/tmp/portlist
@@ -86,7 +90,7 @@ for portName in ${portList}; do
 
    echo "Building ${portName} (${currentCount} of ${portCount})...\c" | tee -a ${PROGRESSLOG}
    # If there's a package, don't build again
-   if [[ -f `/usr/bin/tclsh /var/tmp/archivepath.tcl $portName` ]]; then
+   if [[ -f `$TCLSH /var/tmp/archivepath.tcl $portName` ]]; then
       echo "package found, not building again" | tee -a ${PROGRESSLOG} | tee ${PORTRESULTSDIR}/success/${portName}.log
    else
       skipPort=""
