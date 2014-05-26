@@ -23,6 +23,11 @@ if [[ -z "$PREFIX" ]]; then
     PREFIX="/opt/local"
 fi
 
+TCLSH=${PREFIX}/bin/port-tclsh
+if [[ ! -x $TCLSH ]]; then
+    TCLSH=/usr/bin/tclsh
+fi
+
 # path where archives should be staged before being uploaded to the master
 if [[ -z "$ULPATH" ]]; then
     ULPATH="archive_staging"
@@ -58,7 +63,7 @@ for portname in $ports; do
             aname=$(basename $archive)
             if ! /usr/bin/curl -fIs "${ARCHIVE_SITE}${portname}/${aname}" > /dev/null ; then
                 if [[ -z "$distributable" ]]; then
-                    ./mpexport/base/portmgr/jobs/port_binary_distributable.tcl -v ${portname}
+                    $TCLSH ./mpexport/base/portmgr/jobs/port_binary_distributable.tcl -v ${portname}
                     distributable=$?
                 fi
                 if [[ "$distributable" -eq 0 ]]; then
