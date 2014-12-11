@@ -42,19 +42,16 @@ if {[llength $::argv] == 0} {
     exit 1
 } elseif {[llength $::argv] >= 3 && [lindex $argv 0] eq "-i"} {
     set prefixFromInterp [file dirname [file dirname [lindex $argv 1]]]
-    if {$prefixFromInterp eq "/usr" && [file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
-        source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
-    } elseif {$prefixFromInterp ne $prefix} {
+    if {$prefixFromInterp ne $prefix} {
         if {[file executable ${prefix}/bin/port-tclsh]} {
             exec ${prefix}/bin/port-tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
+            exit 0
         } else {
-            exec /usr/bin/tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
+            puts stderr "No port-tclsh found in ${prefix}/bin"
+            exit 1
         }
-        exit 0
     }
     set ::argv [lrange $::argv 2 end]
-} elseif {[file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
-    source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
 }
 
 package require macports

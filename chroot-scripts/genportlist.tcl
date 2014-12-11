@@ -41,19 +41,16 @@ if {[info exists env(PREFIX)]} {
 
 if {[llength $::argv] >= 2 && [lindex $argv 0] eq "-i"} {
     set prefixFromInterp [file dirname [file dirname [lindex $argv 1]]]
-    if {$prefixFromInterp eq "/usr" && [file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
-        source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
-    } elseif {$prefixFromInterp ne $prefix} {
+    if {$prefixFromInterp ne $prefix} {
         if {[file executable ${prefix}/bin/port-tclsh]} {
             exec ${prefix}/bin/port-tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
+            exit 0
         } else {
-            exec /usr/bin/tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
+            puts stderr "No port-tclsh found in ${prefix}/bin"
+            exit 1
         }
-        exit 0
     }
     set ::argv [lrange $::argv 2 end]
-} elseif {[file isfile ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
-    source ${prefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
 }
 
 package require macports
@@ -86,12 +83,12 @@ proc process_port_deps {portname portdeps_in portlist_in} {
 
 
 if {[catch {mportinit "" "" ""} result]} {
-   puts "$errorInfo"
+   puts stderr "$errorInfo"
    error "Failed to initialize ports sytem: $result"
 }
 
 if {[catch {set search_result [mportlistall]} result]} {
-   puts "$errorInfo"
+   puts stderr "$errorInfo"
    error "Failed to find any ports: $result"
 }
 

@@ -56,18 +56,15 @@ if {![info exists userPrefix] && ![file isdirectory $macportsPrefix]} {
 if {[info exists interp_path]} {
     set prefixFromInterp [file dirname [file dirname $interp_path]]
     # make sure we're running in the port-tclsh associated with the correct prefix
-    if {$prefixFromInterp eq "/usr" && [file isfile ${macportsPrefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
-        source ${macportsPrefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
-    } elseif {$prefixFromInterp ne $macportsPrefix} {
+    if {$prefixFromInterp ne $macportsPrefix} {
         if {[file executable ${macportsPrefix}/bin/port-tclsh]} {
             exec ${macportsPrefix}/bin/port-tclsh $argv0 {*}[lrange $origArgv 2 end] <@stdin >@stdout 2>@stderr
+            exit 0
         } else {
-            exec /usr/bin/tclsh $argv0 {*}[lrange $origArgv 2 end] <@stdin >@stdout 2>@stderr
+            puts stderr "No port-tclsh found in ${macportsPrefix}/bin"
+            exit 1
         }
-        exit 0
     }
-} elseif {[file isfile ${macportsPrefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl]} {
-    source ${macportsPrefix}/share/macports/Tcl/macports1.0/macports_fastload.tcl
 }
 
 package require macports
