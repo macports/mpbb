@@ -99,20 +99,12 @@ for portName in ${portList}; do
          echo "skipping, portfile not modified since last failure" | tee -a ${PROGRESSLOG} | tee ${PORTRESULTSDIR}/fail/${portName}.log
          skipPort=1
       else
-         portDeps=`${PREFIX}/bin/port info --index --depends --line ${portName} | /usr/bin/tr ',' ' '`
-         nonPortDeps=""
-         for oneDep in ${portDeps}; do
-            depType=`echo ${oneDep} | /usr/bin/awk -F : '{print $1}'`
-            if [[ $depType == "port" ]]; then
-               depName=`echo ${oneDep} | /usr/bin/awk -F : '{print $2}'`
-               if [[ -f ${PORTRESULTSDIR}/fail/${depName}.log ]]; then
-                  skipPort=1
-                  echo "skipping, $depName previously failed and is needed" | tee -a ${PROGRESSLOG}
-                  echo "${portName} not built due to failed dependency $depName" > ${PORTRESULTSDIR}/fail/${portName}.log
-                  break
-               fi
-            else
-               nonPortDeps=1
+         for oneDep in `$TCLSH /var/tmp/dep_ports.tcl $portName`; do
+            if [[ -f ${PORTRESULTSDIR}/fail/${oneDep}.log ]]; then
+                skipPort=1
+                echo "skipping, $oneDep previously failed and is needed" | tee -a ${PROGRESSLOG}
+                echo "${portName} not built due to failed dependency $oneDep" > ${PORTRESULTSDIR}/fail/${portName}.log
+                break
             fi
          done
       fi
@@ -126,10 +118,7 @@ for portName in ${portList}; do
             /bin/mv ${PORTRESULTSDIR}/${portName}.log ${PORTRESULTSDIR}/fail
             echo "failure" | tee -a ${PROGRESSLOG}
             ${PREFIX}/bin/port clean --work $portName rdepof:${portName}
-            # check that it definitely failed in its own right before caching
-            if [[ -z "$nonPortDeps" ]]; then
-               touch -r ${portFile} ${FAILCACHE}/${portName}
-            fi
+            touch -r ${portFile} ${FAILCACHE}/${portName}
          fi
          uninstallPorts
          if [[ $? != 0 ]]; then
