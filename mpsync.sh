@@ -43,7 +43,7 @@ function chroot_exec () {
     rm ${chrootPath}/var/tmp/$1
 }
 
-if [[ -d ${dataDir}/${exportDir} ]] ; then
+if [[ -d ${dataDir}/${exportDir}/base && -d ${dataDir}/${exportDir}/dports ]] ; then
     if [[ -e ${dataDir}/${exportDir}/base/.svn/lock ]]; then
         svn --non-interactive cleanup ${dataDir}/${exportDir}/base
     fi
@@ -55,6 +55,7 @@ if [[ -d ${dataDir}/${exportDir} ]] ; then
 	svn update --non-interactive \
 	    -r HEAD ${dataDir}/${exportDir}/dports || exit 1
 else
+    rm -rf ${dataDir}/${exportDir}
     echo "Checking out macports from svn..."
     mkdir -p ${dataDir}/${exportDir}
     svn checkout --non-interactive -r HEAD \
