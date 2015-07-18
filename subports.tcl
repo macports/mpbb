@@ -69,10 +69,13 @@ if {[catch {set one_result [mportlookup $portname]}] || [llength $one_result] < 
     puts $portname
     exit 0
 }
-puts [lindex $one_result 0]
+
 array set portinfo [lindex $one_result 1]
+set portname $portinfo(name)
+puts $portname
+
 if {[info exists portinfo(porturl)]} {
-    if {[catch {set mport [mportopen $portinfo(porturl) "" ""]}]} {
+    if {[catch {set mport [mportopen $portinfo(porturl) [list subport $portname]  ""]}]} {
         ui_warn "failed to open port: $portname"
     } else {
         array unset portinfo
