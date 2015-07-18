@@ -87,25 +87,72 @@ if {[catch {mportinit "" "" ""} result]} {
    error "Failed to initialize ports sytem: $result"
 }
 
-if {[catch {set search_result [mportlistall]} result]} {
-   puts stderr "$errorInfo"
-   error "Failed to find any ports: $result"
-}
-
+set depstypes [list depends_fetch depends_extract depends_build depends_lib depends_run]
 array set portdepinfo {}
-foreach {name infoarray} $search_result {
-   array set portinfo $infoarray
-   set depstypes {depends_fetch depends_extract depends_build depends_lib depends_run}
-   set deplist [list]
-   foreach depstype $depstypes {
-      if {[info exists portinfo($depstype)] && $portinfo($depstype) != ""} {
-         foreach onedep $portinfo($depstype) {
-            lappend deplist [lindex [split [lindex $onedep 0] :] end]
-         }
-      }
-   }
-   set portdepinfo($portinfo(name)) $deplist
-   array unset portinfo
+
+if {[llength $argv] == 0} {
+    # do all ports
+    if {[catch {set search_result [mportlistall]} result]} {
+       puts stderr "$errorInfo"
+       error "Failed to find any ports: $result"
+    }
+
+    foreach {name infoarray} $search_result {
+       array set portinfo $infoarray
+       set deplist [list]
+       foreach depstype $depstypes {
+          if {[info exists portinfo($depstype)] && $portinfo($depstype) != ""} {
+             foreach onedep $portinfo($depstype) {
+                lappend deplist [lindex [split [lindex $onedep 0] :] end]
+             }
+          }
+       }
+       set portdepinfo($portinfo(name)) $deplist
+       array unset portinfo
+    }
+} else {
+    # do a specified list of ports
+    if {[lindex $argv 0] eq "-"} {
+        set todo [list]
+        while {[gets stdin line] >= 0} {
+            lappend todo [string trim $line]
+        }
+    } else {
+        set todo $argv
+    }
+    # save the ones that the caller actually wants to know about
+    foreach p $todo {
+        set inputports($p) 1
+    }
+    # process all recursive deps
+    while {$todo ne {}} {
+        set p [lindex $todo 0]
+        set todo [lrange $todo 1 end]
+        if {[catch {set lookup_result [mportlookup $p]} result]} {
+            puts stderr "$errorInfo"
+            error "Failed to find port '$p': $result"
+        }
+        if {[llength $lookup_result] < 2} {
+            puts stderr "port $p not found in the index"
+            continue
+        }
+
+        array set portinfo [lindex $lookup_result 1]
+        if {![info exists portdepinfo($portinfo(name))]} {
+            set deplist [list]
+            foreach depstype $depstypes {
+                if {[info exists portinfo($depstype)] && $portinfo($depstype) != ""} {
+                    foreach onedep $portinfo($depstype) {
+                        set depname [lindex [split [lindex $onedep 0] :] end]
+                        lappend deplist $depname
+                        lappend todo $depname
+                    }
+                }
+            }
+            set portdepinfo($portinfo(name)) $deplist
+        }
+        array unset portinfo
+    }
 }
 
 set portlist [list]
@@ -113,5 +160,13 @@ foreach portname [lsort -dictionary [array names portdepinfo]] {
    process_port_deps $portname portdepinfo portlist
 }
 
-puts [join $portlist "\n"]
+if {[info exists inputports]} {
+    foreach portname $portlist {
+        if {[info exists inputports($portname)]} {
+            puts $portname
+        }
+    }
+} else {
+    puts [join $portlist "\n"]
+}
 

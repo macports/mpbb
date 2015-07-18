@@ -72,7 +72,7 @@ rm -rf ${PORTRESULTSDIR}
 
 useFailCache=""
 if [[ -f /var/tmp/portlist && `head -n1 /var/tmp/portlist` != "all" ]]; then
-   portList=`/bin/cat /var/tmp/portlist`
+   portList=`< /var/tmp/portlist $TCLSH /var/tmp/genportlist.tcl -`
 else
    portList=`$TCLSH /var/tmp/genportlist.tcl`
    useFailCache=1
