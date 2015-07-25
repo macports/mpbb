@@ -53,8 +53,6 @@ if {[llength $::argv] >= 2 && [lindex $argv 0] eq "-i"} {
     set ::argv [lrange $::argv 2 end]
 }
 
-package require macports
-
 
 proc ui_prefix {priority} {
    return "OUT: "
@@ -82,6 +80,26 @@ proc process_port_deps {portname portdeps_in portlist_in} {
 }
 
 
+set todo [list]
+if {[llength $argv] >= 1} {
+    # caller specified a list of ports
+    if {[lindex $argv 0] eq "-"} {
+        while {[gets stdin line] >= 0} {
+            lappend todo [string trim $line]
+        }
+    } else {
+        set todo $argv
+    }
+    # no need to sort a length 1 list
+    if {[llength $todo] == 1} {
+        puts [lindex $todo 0]
+        exit 0
+    }
+}
+
+
+package require macports
+
 if {[catch {mportinit "" "" ""} result]} {
    puts stderr "$errorInfo"
    error "Failed to initialize ports sytem: $result"
@@ -90,7 +108,7 @@ if {[catch {mportinit "" "" ""} result]} {
 set depstypes [list depends_fetch depends_extract depends_build depends_lib depends_run]
 array set portdepinfo {}
 
-if {[llength $argv] == 0} {
+if {[llength $todo] == 0} {
     # do all ports
     if {[catch {set search_result [mportlistall]} result]} {
        puts stderr "$errorInfo"
@@ -111,15 +129,6 @@ if {[llength $argv] == 0} {
        array unset portinfo
     }
 } else {
-    # do a specified list of ports
-    if {[lindex $argv 0] eq "-"} {
-        set todo [list]
-        while {[gets stdin line] >= 0} {
-            lappend todo [string trim $line]
-        }
-    } else {
-        set todo $argv
-    }
     # save the ones that the caller actually wants to know about
     foreach p $todo {
         set inputports($p) 1
