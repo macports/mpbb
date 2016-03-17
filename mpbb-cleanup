@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Note:
+# This script is sourced by the its wrapper script.
+# Do not execute this directly!
+
+cleanup-help() {
+    echo "Clean up build remnants and leftovers caused by the build of port --port."
+    echo "Note that you should not have to run this explicitly, as it is automatically run after install-dependencies on error and in any case after install-port."
+}
+
+cleanup() {
+    if [ -z "${option_port}" ]; then
+        errmsg "--port is required"
+        return 1
+    fi
+
+    echo "Running cleanup..."
+    # Deactivate all ports
+    "${option_prefix}/bin/port" -f deactivate active
+    # Clean the ports we built and their dependencies
+    "${option_prefix}/bin/port" -f clean --dist --logs --work "${option_port}" rdepof:"${option_port}"
+    # Uninstall obsolete ports
+    "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/uninstall-old-ports.tcl"
+}

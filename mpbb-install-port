@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Note:
+# This script is sourced by the its wrapper script.
+# Do not execute this directly!
+
+
+install-port-help() {
+    echo "Builds and install the port --port itself."
+}
+
+install-port() {
+    if [ -z "${option_port}" ]; then
+        errmsg "--port is required"
+        return 1
+    fi
+
+    status=0
+    "${option_prefix}/bin/port" -d install "${option_port}" || status=$?
+
+    cleanup
+    return $status
+}

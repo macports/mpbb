@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Note: 
+# This script is sourced by the its wrapper script. 
+# Do not execute this directly!
+
+selfupdate-help() {
+    echo "Run selfupdate --nosync in the MacPorts installation specified by the --prefix flag"
+}
+
+selfupdate() {
+    "${option_prefix}/bin/port" -d selfupdate --nosync
+}

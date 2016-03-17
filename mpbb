@@ -1,0 +1,173 @@
+#!/bin/bash
+# -*- coding: utf-8; mode: sh; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=sh:et:sw=4:ts=4:sts=4
+
+# Abort on error and undefined variables. Enable debug output
+set -eu
+
+## Options and their defaults
+option_default_archive_site=http://packages.macports.org
+option_default_help=0
+option_default_port=
+option_default_prefix=/opt/local
+option_default_staging_dir=${PWD:-/tmp/mp-buildbot}/archive-staging
+option_default_svn=$(which svn)
+option_default_svn_revision=HEAD
+option_default_svn_url=https://svn.macports.org/repository/macports/trunk
+option_default_workdir=${PWD:-/tmp/mp-buildbot}
+option_archive_site=$option_default_archive_site
+option_help=$option_default_help
+option_port=$option_default_port
+option_prefix=$option_default_prefix
+option_staging_dir=$option_default_staging_dir
+option_svn=$option_default_svn
+option_svn_revision=$option_default_svn_revision
+option_svn_url=$option_default_svn_url
+option_workdir=$option_default_workdir
+
+errmsg() {
+    printf >&2 "Error: %s\n" "$1"
+}
+
+usage() {
+    cols=$(tput cols) || cols=80
+
+    fmt -w $(( cols - 8 )) >&2 <<-EOF
+Usage: $0 COMMAND [OPTION...]
+
+mpbb, a script to help build MacPorts ports in a continous integration
+environment.
+
+OPTIONS
+
+ --archive-site URL
+   Base URL of the packages archive to check whether an archive was not
+   published yet. Default is $option_default_archive_site.
+
+ --help
+   Print this usage message.
+
+ --port PORT
+   Name of the port to build in MacPorts. This is required for the steps that
+   build a port.
+
+ --prefix PREFIX
+   The prefix of the MacPorts installation that will build the ports. Defaults
+   to $option_default_prefix.
+
+ --svn BINARY
+   Absolute path to the svn binary that you want to use for SVN operations. The
+   default is to find svn in your path, which is currently $option_default_svn.
+
+ --svn-url SVNURL
+   URL to a Subversion repository in a format accepted by Subversion. The
+   referenced folder must contain a dports and a base folder. The default is
+   $option_default_svn_url.
+
+ --svn-revision REVISION
+   Revision number in the specified Subversion repository to checkout. Defaults
+   to $option_default_svn_revision.
+
+ --staging-dir DIR
+   Directory where new distributable archives should be copied for deployment
+   on the archive server. Defaults to the 'archive-staging' subfolder in the
+   current directory.
+
+ --workdir WORKDIR
+   A scratch area that mpbb will use to put temporary files, ideally kept
+   between builds. Your MacPorts installation in --prefix needs to be able to
+   access this location. Defaults to your current directory, or
+   /tmp/mp-buildbot if \$PWD isn't set.
+EOF
+
+    printf >&2 "\nCOMMANDS\n"
+    for command in "${commands[@]}"; do
+        printf >&2 " %s\n" "$command"
+        printf "   %s\n\n" "$(${command}-help | tr '\n' ' ')" | fmt -w $(( cols - 8 )) >&2
+    done
+
+    exit 2
+}
+
+## Load the mpbb-$command scripts and source them to load the actual implementations and help messages of available commands
+commands=()
+thisdir=$(cd "$(dirname "$0")" && pwd)
+for cmdfile in "$thisdir/mpbb-"*; do
+    . "$cmdfile"
+    commands+=(${cmdfile#$thisdir/mpbb-})
+done
+
+## The first argument should be the subcommand
+if [[ $# -lt 1 ]]; then
+    errmsg "No command specified"
+    usage
+fi
+
+command=$1
+shift
+if [ ! -f "$thisdir/mpbb-$command" ]; then
+    if [ "$command" != "--help" ]; then
+        errmsg "Unknown command $command"
+    fi
+    usage
+fi
+
+## Flag Parsing
+while [[ $# -gt 0 ]]; do
+    key=$1
+
+    case "$key" in
+        --*)
+            case "$key" in
+                --archive-site)
+                    option_archive_site=$2
+                    shift
+                    ;;
+                --help)
+                    option_help=1
+                    ;;
+                --port)
+                    option_port=$2
+                    shift
+                    ;;
+                --prefix)
+                    option_prefix=$2
+                    shift
+                    ;;
+                --staging-dir)
+                    option_staging_dir=$2
+                    shift
+                    ;;
+                --svn-url)
+                    option_svn_url=$2
+                    shift
+                    ;;
+                --svn-revision)
+                    option_svn_revision=$2
+                    shift
+                    ;;
+                --workdir)
+                    option_workdir=$2
+                    shift
+                    ;;
+                --)
+                    break
+                    ;;
+            esac
+
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+## If subcommand help is requested, print that
+if [[ $option_help -eq 1 ]]; then
+    usage
+fi
+## Otherwise, run the command and deal with errors
+if ! $command; then
+    errmsg "Failed to run $command"
+    exit 1
+fi

@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Note:
+# This script is sourced by the its wrapper script.
+# Do not execute this directly!
+
+
+checkout-help() {
+    cat <<EOF
+Update or checkout a working copy of the ports tree from --svn-url to specific
+SVN revision (--svn-revision), update or create the PortIndex and configure
+the MacPorts installation to use this ports tree.
+EOF
+}
+
+checkout() {
+    dports_svn=${option_workdir}/dports
+    tools_svn=${option_workdir}/tools
+	svn=${option_svn}
+    svn_url=${option_svn_url}
+    svn_rev=${option_svn_revision}
+
+    if [[ -d "${tools_svn}/.svn" ]] ; then
+        echo "Update macports tools from svn..."
+        if [[ -e "${tools_svn}/.svn/lock" ]]; then
+            "$svn" --non-interactive cleanup "${tools_svn}"
+        fi
+        "$svn" update --non-interactive \
+            -r HEAD \
+            "${tools_svn}"
+    else
+        echo "Checking out macports tools from svn..."
+        mkdir -p "${option_workdir}"
+        "$svn" checkout --non-interactive \
+            -r HEAD "${svn_url}/base/portmgr/jobs" \
+            "${tools_svn}"
+    fi
+
+    if [[ -d "${dports_svn}/.svn" ]] ; then
+        echo "Update macports from svn..."
+        # TODO: add switching of SVN server
+        if [[ -e "${dports_svn}/.svn/lock" ]]; then
+            "$svn" --non-interactive cleanup "${dports_svn}"
+        fi
+        "$svn" update --non-interactive \
+            -r "${svn_rev}" \
+            "${dports_svn}"
+    else
+        echo "Checking out macports from svn..."
+        mkdir -p "${option_workdir}"
+        "$svn" checkout --non-interactive \
+            -r "${svn_rev}" "${svn_url}/dports" \
+            "${dports_svn}"
+    fi
+
+    (cd "${dports_svn}" && "${option_prefix}/bin/portindex")
+
+    cat > "${option_prefix}/etc/macports/sources.conf" <<EOF
+# Automatically overwritten by mpbb-checkout
+# Do not edit !!!
+#
+file://${dports_svn} [default]
+EOF
+
+}

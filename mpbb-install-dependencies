@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Note:
+# This script is sourced by the its wrapper script.
+# Do not execute this directly!
+
+
+install-dependencies-help() {
+    echo "Builds and install all dependencies of port --port."
+}
+
+install-dependencies() {
+    if [ -z "${option_port}" ]; then
+        errmsg "--port is required"
+        return 1
+    fi
+
+    if ! "${option_prefix}/bin/port" -d install --unrequested depof:"${option_port}"; then
+
+        echo "Build failed, cleaning up..."
+        cleanup
+        return 1
+    fi
+}
