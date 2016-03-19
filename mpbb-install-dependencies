@@ -15,6 +15,11 @@ install-dependencies() {
         return 1
     fi
 
+    # skip if the port has no dependencies
+    if [ -z "$(${option_prefix}/bin/port echo depof:${option_port})" ]; then
+        return 0
+    fi
+
     if ! "${option_prefix}/bin/port" -d install --unrequested depof:"${option_port}"; then
 
         echo "Build failed, cleaning up..."
