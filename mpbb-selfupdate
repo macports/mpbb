@@ -9,5 +9,5 @@ selfupdate-help() {
 }
 
 selfupdate() {
-    "${option_prefix}/bin/port" -d selfupdate --nosync
+    "${option_prefix}/bin/port" -d selfupdate --nosync || return $?
 }

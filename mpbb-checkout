@@ -23,39 +23,39 @@ checkout() {
     if [[ -d "${tools_svn}/.svn" ]] ; then
         echo "Update macports tools from svn..."
         if [[ -e "${tools_svn}/.svn/lock" ]]; then
-            "$svn" --non-interactive cleanup "${tools_svn}"
+            "$svn" --non-interactive cleanup "${tools_svn}" || return $?
         fi
         "$svn" update --non-interactive \
             -r HEAD \
-            "${tools_svn}"
+            "${tools_svn}" || return $?
     else
         echo "Checking out macports tools from svn..."
         mkdir -p "${option_workdir}"
         "$svn" checkout --non-interactive \
             -r HEAD "${svn_url}/base/portmgr/jobs" \
-            "${tools_svn}"
+            "${tools_svn}" || return $?
     fi
 
     if [[ -d "${dports_svn}/.svn" ]] ; then
         echo "Update macports from svn..."
         # TODO: add switching of SVN server
         if [[ -e "${dports_svn}/.svn/lock" ]]; then
-            "$svn" --non-interactive cleanup "${dports_svn}"
+            "$svn" --non-interactive cleanup "${dports_svn}" || return $?
         fi
         "$svn" update --non-interactive \
             -r "${svn_rev}" \
-            "${dports_svn}"
+            "${dports_svn}" || return $?
     else
         echo "Checking out macports from svn..."
         mkdir -p "${option_workdir}"
         "$svn" checkout --non-interactive \
             -r "${svn_rev}" "${svn_url}/dports" \
-            "${dports_svn}"
+            "${dports_svn}" || return $?
     fi
 
-    (cd "${dports_svn}" && "${option_prefix}/bin/portindex")
+    (cd "${dports_svn}" && "${option_prefix}/bin/portindex") || return $?
 
-    cat > "${option_prefix}/etc/macports/sources.conf" <<EOF
+    cat || return $? > "${option_prefix}/etc/macports/sources.conf" <<EOF
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
 #

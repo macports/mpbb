@@ -12,7 +12,7 @@ gather-archives-help() {
 gather-archives() {
     curl=/usr/bin/curl
     tclsh=${option_prefix}/bin/port-tclsh
-    mkdir -p "${option_staging_dir}"
+    mkdir -p "${option_staging_dir}" || return $?
 
     archive_path=$("${option_prefix}/bin/port" -q location "${option_port}")
     archive_basename=$(basename "${archive_path}")
@@ -22,8 +22,8 @@ gather-archives() {
         # check for distributability
         if "${tclsh}" "${option_workdir}/tools/port_binary_distributable.tcl" -v "${option_port}"; then
             echo "Staging archive for upload: ${archive_basename}"
-            mkdir -p "${option_staging_dir}/${option_port}"
-            cp "${archive_path}" "${option_staging_dir}/${option_port}/${archive_basename}":w
+            mkdir -p "${option_staging_dir}/${option_port}" || return $?
+            cp "${archive_path}" "${option_staging_dir}/${option_port}/${archive_basename}" || return $?
         fi
     fi
 }
