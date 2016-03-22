@@ -81,7 +81,7 @@ foreach port [registry::installed] {
     set portindex_match [mportlookup $installed_name]
     if {[llength $portindex_match] < 2} {
         # Not found in index, classify as old
-		ui_msg "Removing $installed_name$installed_variants $installed_epoch@$installed_version-$installed_revision because it is no longer in the PortIndex"
+        ui_msg "Removing $installed_name$installed_variants $installed_epoch@$installed_version-$installed_revision because it is no longer in the PortIndex"
         set old yes
     } else {
         array unset portinfo
@@ -91,13 +91,13 @@ foreach port [registry::installed] {
         if {$result > 0} {
             # Port is outdated because the version in the index is newer than
             # the installed one
-			ui_msg "Removing $installed_name$installed_variants $installed_epoch@$installed_version-$installed_revision because there is a newer version in the PortIndex"
+            ui_msg "Removing $installed_name$installed_variants $installed_epoch@$installed_version-$installed_revision because there is a newer version in the PortIndex"
             set old yes
         }
         # If the version we have is newer than the one in the PortIndex, we are
         # probably building agaist an old version of the ports tree.
     }
     if {$old} {
-        registry::uninstall $installed_name $installed_version $installed_revision $installed_variants [list ports_force 1]
+        registry_uninstall::uninstall $installed_name $installed_version $installed_revision $installed_variants [list ports_force 1]
     }
 }
