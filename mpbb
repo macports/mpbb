@@ -5,7 +5,7 @@
 set -eu
 
 ## Options and their defaults
-option_default_archive_site=http://packages.macports.org
+option_default_archive_site=https://packages.macports.org
 option_default_help=0
 option_default_port=
 option_default_prefix=/opt/local
