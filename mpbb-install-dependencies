@@ -6,7 +6,7 @@
 
 
 install-dependencies-help() {
-    echo "Builds and install all dependencies of port --port."
+    echo "Builds and installs all dependencies of port --port."
 }
 
 install-dependencies() {
