@@ -6,7 +6,7 @@
 
 cleanup-help() {
     echo "Clean up build remnants and leftovers caused by the build of port --port."
-    echo "Note that you should not have to run this explicitly, as it is automatically run after install-dependencies on error and in any case after install-port."
+    echo "Note that you should not have to run this explicitly, as it is automatically run after install-dependencies and install-port on error and in any case after gather-archives."
 }
 
 cleanup() {

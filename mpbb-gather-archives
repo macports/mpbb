@@ -14,6 +14,7 @@ gather-archives() {
     tclsh=${option_prefix}/bin/port-tclsh
     mkdir -p "${option_staging_dir}" || return $?
 
+    status=0
     for archive_path in $("${option_prefix}/bin/port" -q location active); do
         archive_port=$(basename "$(dirname "${archive_path}")")
         archive_basename=$(basename "${archive_path}")
@@ -21,9 +22,12 @@ gather-archives() {
         if ! ${curl} -fIsL "${option_archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
             if "${tclsh}" "${option_workdir}/tools/port_binary_distributable.tcl" -v "${archive_port}"; then
                 echo "Staging archive for upload: ${archive_basename}"
-                mkdir -p "${option_staging_dir}/${archive_port}" || return $?
-                cp -p "${archive_path}" "${option_staging_dir}/${archive_port}/${archive_basename}" || return $?
+                mkdir -p "${option_staging_dir}/${archive_port}" || { status=$?; break; }
+                cp -p "${archive_path}" "${option_staging_dir}/${archive_port}/${archive_basename}" || { status=$?; break; }
             fi
         fi
     done
+    
+    cleanup
+    return $status
 }
