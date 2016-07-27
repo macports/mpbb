@@ -6,7 +6,7 @@
 
 
 install-port-help() {
-    echo "Builds and install the port --port itself."
+    echo "Build and install the port --port itself."
 }
 
 install-port() {

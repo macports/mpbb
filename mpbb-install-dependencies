@@ -6,7 +6,7 @@
 
 
 install-dependencies-help() {
-    echo "Builds and installs all dependencies of port --port."
+    echo "Build and install all dependencies of port --port."
 }
 
 install-dependencies() {
@@ -21,7 +21,6 @@ install-dependencies() {
     fi
 
     if ! "${option_prefix}/bin/port" -d install --unrequested depof:"${option_port}"; then
-
         echo "Build failed, cleaning up..."
         cleanup
         return 1
