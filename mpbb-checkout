@@ -55,13 +55,13 @@ checkout() {
 
     (cd "${dports_svn}" && "${option_prefix}/bin/portindex") || return $?
 
-    cat || return $? > "${option_workdir}/macports.conf" <<EOF
+    cat > "${option_workdir}/macports.conf" <<EOF || return $?
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
 sources_conf ${option_workdir}/sources.conf
 EOF
 
-    cat || return $? > "${option_workdir}/sources.conf" <<EOF
+    cat > "${option_workdir}/sources.conf" <<EOF || return $?
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
 file://${dports_svn} [default]
