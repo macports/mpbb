@@ -17,9 +17,9 @@ cleanup() {
 
     echo "Running cleanup..."
     # Deactivate all ports
-    "${option_prefix}/bin/port" -f deactivate active
+    "${option_prefix}/bin/port" -fp deactivate active
     # Clean the ports we built and their dependencies
-    "${option_prefix}/bin/port" -f clean --dist --logs --work "${option_port}" rdepof:"${option_port}"
+    "${option_prefix}/bin/port" -fp clean --dist --logs --work "${option_port}" rdepof:"${option_port}"
     # Uninstall obsolete ports
     "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/uninstall-old-ports.tcl"
 }
