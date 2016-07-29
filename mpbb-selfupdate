@@ -9,7 +9,7 @@ selfupdate-help() {
 }
 
 selfupdate() {
-    if [ ! -f "${option_port}/bin/port" ]; then
+    if [ ! -f "${option_prefix}/bin/port" ]; then
         macports_version=2.3.4
         macports_distname=MacPorts-${macports_version}
         macports_distfile=${macports_distname}.tar.bz2
@@ -17,7 +17,7 @@ selfupdate() {
             if [ ! -f ${macports_distfile} ]; then
                 curl -fIsLO https://distfiles.macports.org/MacPorts/${macports_distfile} || return $?
             fi
-            tar xJf ${macports_distfile} || return $?
+            tar -xJf ${macports_distfile} || return $?
         fi
         cd ${macports_distname} || return $?
         ./configure --prefix=${option_prefix} --enable-readline || return $?
