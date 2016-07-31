@@ -16,7 +16,7 @@ EOF
 checkout() {
     dports_svn=${option_workdir}/dports
     tools_svn=${option_workdir}/tools
-	svn=${option_svn}
+    svn=${option_svn}
     svn_url=${option_svn_url}
     svn_rev=${option_svn_revision}
 
