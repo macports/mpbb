@@ -30,7 +30,7 @@ gather-archives() {
             if "${tclsh}" "${option_workdir}/tools/port_binary_distributable.tcl" -v "${archive_port}"; then
                 echo "Staging archive for upload: ${archive_basename}"
                 mkdir -p "${option_staging_dir}/${archive_port}" || { status=$?; break; }
-                cp -p "${archive_path}" "${option_staging_dir}/${archive_port}/${archive_basename}" || { status=$?; break; }
+                ln "${archive_path}" "${option_staging_dir}/${archive_port}/${archive_basename}" || { status=$?; break; }
             fi
         fi
     done
