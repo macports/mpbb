@@ -12,6 +12,13 @@ gather-archives-help() {
 gather-archives() {
     curl=/usr/bin/curl
     tclsh=${option_prefix}/bin/port-tclsh
+
+    if [ -d "${option_staging_dir}" ]; then
+        find "${option_staging_dir}" -type f -delete -print | sed -E -e "s|^.*/||" -e 's/^/Deleting previously staged archive: /'
+        rm -rf "${option_staging_dir}"
+        echo
+    fi
+
     mkdir -p "${option_staging_dir}" || return $?
 
     status=0
