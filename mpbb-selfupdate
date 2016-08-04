@@ -17,7 +17,7 @@ selfupdate() {
             if [ ! -f ${macports_distfile} ]; then
                 curl -fsLO https://distfiles.macports.org/MacPorts/${macports_distfile} || return $?
             fi
-            tar -xJf ${macports_distfile} || return $?
+            tar -xjf ${macports_distfile} || return $?
         fi
         cd ${macports_distname} || return $?
         ./configure --prefix=${option_prefix} --enable-readline || return $?
