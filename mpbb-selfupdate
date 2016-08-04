@@ -15,7 +15,7 @@ selfupdate() {
         macports_distfile=${macports_distname}.tar.bz2
         if [ ! -d ${macports_distname} ]; then
             if [ ! -f ${macports_distfile} ]; then
-                curl -fIsLO https://distfiles.macports.org/MacPorts/${macports_distfile} || return $?
+                curl -fsLO https://distfiles.macports.org/MacPorts/${macports_distfile} || return $?
             fi
             tar -xJf ${macports_distfile} || return $?
         fi
