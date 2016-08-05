@@ -137,6 +137,10 @@ while [[ $# -gt 0 ]]; do
                     option_staging_dir=$2
                     shift
                     ;;
+                --svn)
+                    option_svn=$2
+                    shift
+                    ;;
                 --svn-url)
                     option_svn_url=$2
                     shift
