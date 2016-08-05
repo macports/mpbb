@@ -6,16 +6,32 @@
 
 
 list-subports-help() {
-    echo "Print the name of port --port and any subports."
+    echo "Print the name of port --port and its subports."
+	echo "Alternatively, print the name and subports of multiple ports given as positional arguments."
+}
+
+print-subports() {
+    local portname=$1
+    # test whether a port with this name exists
+    port file "${portname}" >/dev/null 2>/dev/null || return 0
+
+    echo "${portname}"
+    for subport in $("${option_prefix}/bin/port" echo "subportof:${portname}" 2>/dev/null); do
+        echo "${subport}"
+    done
 }
 
 list-subports() {
-    if [ -z "${option_port}" ]; then
-        errmsg "--port is required"
+    if [ $# -le 0 -a -z "${option_port}" ]; then
+        errmsg "Either --port or a list of positional arguments with port names is required."
         return 1
     fi
 
-    for subport in "${option_port}" $(port echo subportof:"${option_port}" 2>/dev/null); do
-        echo $subport
+    if [ -n "${option_port}" ]; then
+        print-subports "${option_port}"
+    fi
+
+    for p in "$@"; do
+        print-subports "$p"
     done
 }
