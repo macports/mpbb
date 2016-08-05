@@ -59,7 +59,7 @@ package require macports
 
 if {[catch {mportinit "" "" ""} result]} {
    ui_error "$errorInfo"
-   ui_error "Failed to initialize ports sytem: $result"
+   ui_error "Failed to initialize ports system: $result"
    exit 1
 }
 

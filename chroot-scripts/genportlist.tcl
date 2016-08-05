@@ -102,7 +102,7 @@ package require macports
 
 if {[catch {mportinit "" "" ""} result]} {
    puts stderr "$errorInfo"
-   error "Failed to initialize ports sytem: $result"
+   error "Failed to initialize ports system: $result"
 }
 
 set depstypes [list depends_fetch depends_extract depends_build depends_lib depends_run]
