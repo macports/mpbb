@@ -7,18 +7,12 @@
 
 list-subports-help() {
     echo "Print the name of port --port and its subports."
-	echo "Alternatively, print the name and subports of multiple ports given as positional arguments."
+    echo "Alternatively, print the name and subports of multiple ports given as positional arguments."
 }
 
 print-subports() {
     local portname=$1
-    # test whether a port with this name exists
-    port file "${portname}" >/dev/null 2>/dev/null || return 0
-
-    echo "${portname}"
-    for subport in $("${option_prefix}/bin/port" echo "subportof:${portname}" 2>/dev/null); do
-        echo "${subport}"
-    done
+    "${option_prefix}/bin/port" -q info --index --line --name "subportof:${portname}" "${portname}" 2>/dev/null || return $?
 }
 
 list-subports() {
@@ -27,11 +21,18 @@ list-subports() {
         return 1
     fi
 
+    success=0
+
     if [ -n "${option_port}" ]; then
-        print-subports "${option_port}"
+        print-subports "${option_port}" && success=1
     fi
 
     for p in "$@"; do
-        print-subports "$p"
+        print-subports "$p" && success=1
     done
+
+    if [ $success -eq 0 ]; then
+        errmsg "None of the specified ports were found in the port index."
+        return 1
+    fi
 }
