@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Note:
+# This script is sourced by the its wrapper script.
+# Do not execute this directly!
+
+
+list-subports-help() {
+    echo "Print the name of port --port and any subports."
+}
+
+list-subports() {
+    if [ -z "${option_port}" ]; then
+        errmsg "--port is required"
+        return 1
+    fi
+
+    for subport in "${option_port}" $(port echo subportof:"${option_port}" 2>/dev/null); do
+        echo $subport
+    done
+}
