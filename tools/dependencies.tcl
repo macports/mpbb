@@ -47,7 +47,7 @@ if {[catch {mportinit "" "" ""} result]} {
 
 # look up the path of the Portfile for the given port
 set portname [lindex $::argv 0]
-#try -pass_signal {
+#try -pass_signal {...}
 try {
     set result [mportlookup $portname]
     if {[llength $result] < 2} {
@@ -61,7 +61,7 @@ try {
 
 # open the port so we can run dependency calculation
 array set portinfo [lindex $result 1]
-#try -pass_signal {
+#try -pass_signal {...}
 try {
     set mport [mportopen $portinfo(porturl) [list subport $portname] {}]
 } catch {{*} eCode eMessage} {
@@ -90,14 +90,14 @@ foreach ditem $dlist {
 
 # close all open ports
 foreach ditem $dlist {
-    #try -pass_signal {
+    #try -pass_signal {...}
     try {
         mportclose $ditem
     } catch {{*} eCode eMessage} {
         ui_warn "mportclose [ditem_key $ditem provides] failed: $eMessage"
     }
 }
-#try -pass_signal {
+#try -pass_signal {...}
 try {
     mportclose $mport
 } catch {{*} eCode eMessage} {
@@ -106,7 +106,7 @@ try {
 }
 
 # shut down MacPorts
-#try -pass_signal {
+#try -pass_signal {...}
 try {
     mportshutdown
 } catch {{*} eCode eMessage} {
