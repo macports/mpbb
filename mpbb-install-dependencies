@@ -10,19 +10,40 @@ install-dependencies-help() {
 }
 
 install-dependencies() {
+    local dependencies
+
     if [ -z "${option_port}" ]; then
         errmsg "--port is required"
         return 1
     fi
 
-    # skip if the port has no dependencies
-    if [ -z "$(${option_prefix}/bin/port echo depof:${option_port})" ]; then
-        return 0
-    fi
-
-    if ! "${option_prefix}/bin/port" -d install --unrequested depof:"${option_port}"; then
-        echo "Build failed, cleaning up..."
+    # calculate list of dependencies in-order
+    dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}")
+    if [ $? -ne 0 ]; then
+        echo "Calculating dependencies for '${option_port}' failed, cleaning up..." >&2
         cleanup
         return 1
     fi
+
+    if [ -z "$dependencies" ]; then
+        echo "'${option_port}' has no dependencies, continuing..."
+        return 0
+    fi
+
+    echo "Installing dependencies:"
+    echo "$dependencies" | sed -E 's/^/ - /'
+
+    echo "$dependencies" | while read dependency; do
+        # Split portname +variant1+variant2 into portname and variants, where
+        # the variants are optional.
+        depname=${dependency%% *}
+        depvariants=${dependency:${#depname}}
+
+        echo "Installing dependency '${depname}', variants: '${depvariants}'"
+        if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
+            echo "Build of dependency '${depname}' failed, cleaning up..." >&2
+            cleanup
+            return 1
+        fi
+    done
 }
