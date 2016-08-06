@@ -16,17 +16,37 @@ print-subports() {
     local portgroup
     local ports
     local exclude
+    local exclude_reasons
+    local reason
 
-    ports=$("${option_prefix}/bin/port" -q info --index --line --name "subportof:${portname}" "${portname}" 2>/dev/null) || return $?
+    ports=$("${option_prefix}/bin/port" -q info --index --line --name "${portname}" "subportof:${portname}" 2>/dev/null) || return $?
     for port in $ports; do
         exclude=0
+        exclude_reasons=()
+
+        if [[ "$port" =~ graveyard ]]; then
+            exclude=1
+            exclude_reasons+=("its name contains 'graveyard'")
+        fi
+
         for portgroup in $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/portgroups.tcl" "$port"); do
             if [ "$portgroup" = "obsolete-1.0" ]; then
                 exclude=1
+                exclude_reasons+=("it includes the obsolete 1.0 PortGroup")
             fi
         done
-        if [ $exclude -ne 1 ]; then
+
+        if [ $exclude -eq 0 ]; then
             echo "$port"
+        else
+            if [ ${#exclude_reasons[@]} -eq 1 ]; then
+                echo >&2 "Excluding '${port}' because ${exclude_reasons[0]}."
+            else
+                echo >&2 "Excluding '${port}' for the following reasons:"
+                for reason in "${exclude_reasons[@]}"; do
+                    echo >&2 " - ${reason}"
+                done
+            fi
         fi
     done
 }
