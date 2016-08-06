@@ -37,9 +37,9 @@ install-dependencies() {
         # Split portname +variant1+variant2 into portname and variants, where
         # the variants are optional.
         depname=${dependency%% *}
-        depvariants=${dependency:${#depname}}
+        depvariants=${dependency:${#depname}+1}
 
-        echo "Installing dependency '${depname}', variants: '${depvariants}'"
+        echo "----> Installing dependency '${depname}', variants: '${depvariants}'"
         if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
             echo "Build of dependency '${depname}' failed, cleaning up..." >&2
             cleanup
