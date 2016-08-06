@@ -14,17 +14,21 @@ needed to be executed to build are the following ones:
        mpbb selfupdate --prefix /opt/local
     2. checkout ports tree (at specific rev, should update portindex)
        mpbb checkout --prefix /opt/local --workdir "$workdir" --svn-url "$svnurl" --svn-revision "$svnrev"
-    3. install all dependencies of a given port
+    3. get a list of all subports to build for a given list of ports
+       mpbb list-subports --prefix /opt/local --port "$port", or
+       mpbb list-subports --prefix /opt/local "$port1" "$port2" "$port3" ...
+       for each port listed on stdout:
+    4. install all dependencies of a given port
        mpbb install-dependencies --prefix /opt/local --port "$port"
-    4. install a given port
+    5. install a given port
        mpbb install-port --prefix /opt/local --port "$port"
-    5. gather archives
+    6. gather archives
        mpbb gather-archives --prefix /opt/local --port "$port" --workdir "$workdir" --archive-site "$archive_site" --staging-dir "$(pwd)/archive-staging"
-    6. upload
+    7. upload
        Must be implemented in the buildmaster
-    7. deploy
+    8. deploy
        Must be implemented in the buildmaster
-    8. cleanup
+    9. cleanup
        You do not have to run this, because install-dependencies runs it on
        error and install-port always runs it. You can run it manually to clean
        up any problems that might have occurred on the buildslave.
@@ -48,7 +52,7 @@ Some shell variables are available for usage in your subcommand:
     - $option_port is the port that should be installed in the run of mpbb.
     - $option_prefix is the path to the MacPorts installation to use, as passed
       with --prefix.
-	- $option_svn is the path to the svn binary to use.
+    - $option_svn is the path to the svn binary to use.
     - $option_svn_revision is the revision number to checkout in the given
       Subversion repository.
     - $option_svn_url is a URL pointing to a Subversion repository that
