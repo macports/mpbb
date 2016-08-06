@@ -81,28 +81,21 @@ set dlist [dlist_append_dependents $macports::open_mports $mport {}]
 dlist_delete dlist $mport
 
 ## print dependencies with variants
-foreach ditem $dlist {
-    set depname [ditem_key $ditem provides]
+proc printdependency {ditem} {
     array set depinfo [mportinfo $ditem]
 
-    puts [string trim "$depname $depinfo(canonical_active_variants)"]
+    puts [string trim "$depinfo(name) $depinfo(canonical_active_variants)"]
 }
+dlist_eval $dlist {} [list printdependency]
 
 # close all open ports
-foreach ditem $dlist {
+foreach ditem $macports::open_mports {
     #try -pass_signal {...}
     try {
         mportclose $ditem
     } catch {{*} eCode eMessage} {
         ui_warn "mportclose [ditem_key $ditem provides] failed: $eMessage"
     }
-}
-#try -pass_signal {...}
-try {
-    mportclose $mport
-} catch {{*} eCode eMessage} {
-    ui_error "mportclose $portname failed: $eMessage"
-    exit 1
 }
 
 # shut down MacPorts
