@@ -12,7 +12,23 @@ list-subports-help() {
 
 print-subports() {
     local portname=$1
-    "${option_prefix}/bin/port" -q info --index --line --name "subportof:${portname}" "${portname}" 2>/dev/null || return $?
+    local port
+    local portgroup
+    local ports
+    local exclude
+
+    ports=$("${option_prefix}/bin/port" -q info --index --line --name "subportof:${portname}" "${portname}" 2>/dev/null) || return $?
+    for port in $ports; do
+        exclude=0
+        for portgroup in $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/portgroups.tcl" "$port"); do
+            if [ "$portgroup" = "obsolete-1.0" ]; then
+                exclude=1
+            fi
+        done
+        if [ $exclude -ne 1 ]; then
+            echo "$port"
+        fi
+    done
 }
 
 list-subports() {
