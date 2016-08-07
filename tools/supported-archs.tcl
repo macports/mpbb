@@ -70,7 +70,7 @@ array set portinfo [lindex $one_result 1]
 set portname $portinfo(name)
 
 if {[info exists portinfo(porturl)]} {
-    if {[catch {set mport [mportopen $portinfo(porturl)]}]} {
+    if {[catch {set mport [mportopen $portinfo(porturl) [list subport $portname] {}]}]} {
         ui_warn "failed to open port: $portname"
     } else {
         puts [_mportkey $mport supported_archs]
