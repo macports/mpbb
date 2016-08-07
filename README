@@ -29,7 +29,7 @@ needed to be executed to build are the following ones:
     8. deploy
        Must be implemented in the buildmaster
     9. cleanup
-       mpbb cleanup --prefix /opt/local --port "$port"
+       mpbb cleanup --prefix /opt/local
        You will have to run this even if one of the previous steps failed.
 
 ## Step Implementation API
