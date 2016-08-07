@@ -29,10 +29,8 @@ needed to be executed to build are the following ones:
     8. deploy
        Must be implemented in the buildmaster
     9. cleanup
-       You do not have to run this, because install-dependencies runs it on
-       error and install-port always runs it. You can run it manually to clean
-       up any problems that might have occurred on the buildslave.
        mpbb cleanup --prefix /opt/local --port "$port"
+       You will have to run this even if one of the previous steps failed.
 
 ## Step Implementation API
 

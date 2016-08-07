@@ -20,13 +20,12 @@ install-dependencies() {
     # calculate list of dependencies in-order
     dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}")
     if [ $? -ne 0 ]; then
-        echo "Calculating dependencies for '${option_port}' failed, cleaning up..." >&2
-        cleanup
+        echo "Calculating dependencies for '${option_port}' failed, aborting." >&2
         return 1
     fi
 
     if [ -z "$dependencies" ]; then
-        echo "'${option_port}' has no dependencies, continuing..."
+        echo "'${option_port}' has no dependencies, continuing." >&2
         return 0
     fi
 
@@ -41,8 +40,7 @@ install-dependencies() {
 
         echo "----> Installing dependency '${depname}', variants: '${depvariants}'"
         if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
-            echo "Build of dependency '${depname}' failed, cleaning up..." >&2
-            cleanup
+            echo "Build of dependency '${depname}' failed, aborting." >&2
             return 1
         fi
     done

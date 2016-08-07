@@ -16,8 +16,7 @@ install-port() {
     fi
 
     if ! "${option_prefix}/bin/port" -d install "${option_port}"; then
-        echo "Build failed, cleaning up..."
-        cleanup
+        echo "Build of '${option_port}' failed."
         return 1
     fi
 }
