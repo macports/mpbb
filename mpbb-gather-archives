@@ -35,6 +35,5 @@ gather-archives() {
         fi
     done
     
-    cleanup
     return $status
 }
