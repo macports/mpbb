@@ -19,6 +19,8 @@ print-subports() {
     local exclude_reasons
     local reason
 
+    os_version="$(sw_vers -productVersion | cut -d . -f 1-2)"
+    is_64bit_capable="$(sysctl -n hw.cpu64bit_capable)"
     ports=$("${option_prefix}/bin/port" -q info --index --line --name "${portname}" "subportof:${portname}" 2>/dev/null) || return $?
     for port in $ports; do
         exclude=0
@@ -36,8 +38,7 @@ print-subports() {
             fi
         done
 
-        os_version="$(sw_vers -productVersion | cut -d . -f 1-2)"
-        if [[ "${os_version}" = "10.6" && "$(sysctl -n hw.cpu64bit_capable)" = "0" ]]; then
+        if [[ "${os_version}" = "10.6" && "${is_64bit_capable}" = "0" ]]; then
             supported_archs=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/supported-archs.tcl" "${port}")
             if [[ -n "${supported_archs}" && !("${supported_archs}" == *"x86_64"* && "${supported_archs}" == *"i386"*) ]]; then
                 exclude=1
