@@ -5,18 +5,22 @@
 # Do not execute this directly!
 
 cleanup-help() {
-    echo "Clean up build remnants and leftovers caused by previous builds."
+    echo "Clean up remnants from previous builds."
 }
 
 cleanup() {
-    echo "Running cleanup..."
-    # Deactivate active ports
-    "${option_prefix}/bin/port" -fp deactivate active
-    # Uninstall obsolete ports
+    echo "----> Deactivating ports"
+    if [ -n "$("${option_prefix}/bin/port" -q installed active)" ]; then
+        "${option_prefix}/bin/port" -fp deactivate active
+    fi
+
+    echo "----> Uninstalling obsolete ports"
     "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/uninstall-old-ports.tcl"
-    # Delete old distfiles
+
+    echo "----> Deleting distfiles"
     find "${option_prefix}/var/macports/distfiles/" -type f -mtime +1 -print -delete
     find "${option_prefix}/var/macports/distfiles/" -type d -mindepth 1 -empty -print -delete
-    # Delete work directories and logs
+
+    echo "----> Deleting build files and logs"
     find "${option_prefix}/var/macports/build/" "${option_prefix}/var/macports/logs/" -mindepth 1 -print -delete
 }
