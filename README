@@ -11,18 +11,25 @@ the separated steps, using mpbb <step>. The single steps are provided by
 separate scripts using the following scheme: mpbb-<step>. The steps that are
 needed to be executed to build are the following ones:
 
-    1. selfupdate --nosync
+    1. Update base without updating the portindex.
 
-       mpbb selfupdate --prefix /opt/local
+            mpbb selfupdate --prefix /opt/local
 
-    2. checkout ports tree (at specific rev, should update portindex)
+    2. Checkout ports tree and update the portindex.
 
-       mpbb checkout --prefix /opt/local --workdir "$workdir" --svn-url "$svnurl" --svn-revision "$svnrev"
+            mpbb checkout \
+                --prefix /opt/local \
+                --workdir "$workdir" \
+                --svn-url "$svnurl" \
+                --svn-revision "$svnrev"
 
-    3. get a list of all subports to build for a given list of ports
+    3. Print to standard out a list of all subports for one port...
 
-       mpbb list-subports --prefix /opt/local --port "$port", or
-       mpbb list-subports --prefix /opt/local "$port1" "$port2" "$port3" ...
+            mpbb list-subports --prefix /opt/local --port "$port"
+
+       ...or for several.
+
+            mpbb list-subports --prefix /opt/local "$port1" "$port2" ...
 
        for each port listed on stdout:
 
