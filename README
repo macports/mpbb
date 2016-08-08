@@ -3,32 +3,49 @@
 This folder contains a collection of scripts that will be run by the MacPorts
 buildbot buildslaves for continuous integration and package precompilation.
 
+
 ## General structure
 
-There is a driver script mpbb (Macports buildbot) would call the scripts for 
-the separated steps, using mpbb <step>. The single steps are provided by 
+There is a driver script mpbb (Macports buildbot) would call the scripts for
+the separated steps, using mpbb <step>. The single steps are provided by
 separate scripts using the following scheme: mpbb-<step>. The steps that are
 needed to be executed to build are the following ones:
 
     1. selfupdate --nosync
+
        mpbb selfupdate --prefix /opt/local
+
     2. checkout ports tree (at specific rev, should update portindex)
+
        mpbb checkout --prefix /opt/local --workdir "$workdir" --svn-url "$svnurl" --svn-revision "$svnrev"
+
     3. get a list of all subports to build for a given list of ports
+
        mpbb list-subports --prefix /opt/local --port "$port", or
        mpbb list-subports --prefix /opt/local "$port1" "$port2" "$port3" ...
+
        for each port listed on stdout:
+
     4. install all dependencies of a given port
+
        mpbb install-dependencies --prefix /opt/local --port "$port"
+
     5. install a given port
+
        mpbb install-port --prefix /opt/local --port "$port"
+
     6. gather archives
+
        mpbb gather-archives --prefix /opt/local --port "$port" --workdir "$workdir" --archive-site "$archive_site" --staging-dir "$(pwd)/archive-staging"
+
     7. upload
        Must be implemented in the buildmaster
+
     8. deploy
        Must be implemented in the buildmaster
+
     9. cleanup
+
        mpbb cleanup --prefix /opt/local
        You will have to run this even if one of the previous steps failed.
 
