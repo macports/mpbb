@@ -29,16 +29,16 @@ print-subports() {
         if [[ "$port" =~ graveyard ]]; then
             exclude=1
             exclude_reasons+=("its name contains 'graveyard'")
+        else
+            for portgroup in $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/portgroups.tcl" "$port"); do
+                if [ "$portgroup" = "obsolete-1.0" ]; then
+                    exclude=1
+                    exclude_reasons+=("it includes the obsolete 1.0 PortGroup")
+                fi
+            done
         fi
 
-        for portgroup in $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/portgroups.tcl" "$port"); do
-            if [ "$portgroup" = "obsolete-1.0" ]; then
-                exclude=1
-                exclude_reasons+=("it includes the obsolete 1.0 PortGroup")
-            fi
-        done
-
-        if [[ "${os_version}" = "10.6" && "${is_64bit_capable}" = "0" ]]; then
+        if [[ $exclude -eq 0 && "${os_version}" = "10.6" && "${is_64bit_capable}" = "0" ]]; then
             supported_archs=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/supported-archs.tcl" "${port}")
             if [[ -n "${supported_archs}" && !("${supported_archs}" == *"x86_64"* && "${supported_archs}" == *"i386"*) ]]; then
                 exclude=1
