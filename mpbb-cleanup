@@ -13,14 +13,22 @@ cleanup() {
     if [ -n "$("${option_prefix}/bin/port" -q installed active)" ]; then
         "${option_prefix}/bin/port" -fp deactivate active
     fi
-
+    echo
     echo "----> Uninstalling obsolete ports"
     "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/uninstall-old-ports.tcl"
-
+    echo
     echo "----> Deleting distfiles"
-    find "${option_prefix}/var/macports/distfiles/" -type f -mtime +1 -print -delete
-    find "${option_prefix}/var/macports/distfiles/" -type d -mindepth 1 -empty -print -delete
-
-    echo "----> Deleting build files and logs"
-    find "${option_prefix}/var/macports/build/" "${option_prefix}/var/macports/logs/" -mindepth 1 -print -delete
-}
+    find "${option_prefix}/var/macports/distfiles/" -type f -mtime +1 -print | sed -E 's/^/Deleting distfile /'
+    find "${option_prefix}/var/macports/distfiles/" -type d -mindepth 1 -empty -print | sed -E 's/^/Deleting directory /'
+    echo
+    for dir in build logs; do
+        echo "----> Deleting ${dir}"
+        ports="$(find ${option_prefix}/var/macports/${dir} -name '.*' -prune -o -depth 2 -type d -print | sed 's,^.*/,,' | sort -fu)"
+        for port in ${ports}; do
+            echo "Deleting ${dir} for ${port}"
+            echo rm -rf ${option_prefix}/var/macports/${dir}/*/${port}
+        done
+        echo rm -rf "${option_prefix}/var/macports/${dir}/*"
+        echo
+    done
+  }
