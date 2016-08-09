@@ -26,9 +26,9 @@ cleanup() {
         ports="$(find ${option_prefix}/var/macports/${dir} -name '.*' -prune -o -depth 2 -type d -print | sed 's,^.*/,,' | sort -fu)"
         for port in ${ports}; do
             echo "Deleting ${dir} for ${port}"
-            echo rm -rf ${option_prefix}/var/macports/${dir}/*/${port}
+            rm -rf ${option_prefix}/var/macports/${dir}/*/${port}
         done
-        echo rm -rf "${option_prefix}/var/macports/${dir}/*"
+        rm -rf "${option_prefix}/var/macports/${dir}/*"
         echo
     done
   }
