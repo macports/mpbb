@@ -1,15 +1,18 @@
 # MacPorts Buildbot Scripts #
 
-This folder contains a collection of scripts that will be run by the MacPorts
-buildbot buildslaves for continuous integration and package precompilation.
+This is a collection of scripts that will be run by the MacPorts
+Project's Buildbot buildslaves for continuous integration and
+precompilation of binary archives.
 
+## General Structure ##
 
-## General structure ##
+The `mpbb` ("MacPorts Buildbot") driver script defines a subcommand for
+each step of a build. These subcommands are implemented as separate
+scripts named `mpbb-SUBCOMMAND`, but they are not intended to be
+standalone programs and should not be executed as such. Build steps
+should only be run using the `mpbb` driver.
 
-There is a driver script mpbb (Macports buildbot) would call the scripts for
-the separated steps, using mpbb <step>. The single steps are provided by
-separate scripts using the following scheme: mpbb-<step>. The steps that are
-needed to be executed to build are the following ones:
+The defined build steps are:
 
 1.  Update base without updating the portindex.
 
@@ -23,7 +26,7 @@ needed to be executed to build are the following ones:
             --svn-url "$svnurl" \
             --svn-revision "$svnrev"
 
-3.  Print to standard out a list of all subports for one port...
+3.  Print to standard output a list of all subports for one port...
 
         mpbb list-subports --prefix /opt/local --port "$port"
 
