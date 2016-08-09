@@ -65,40 +65,43 @@ The defined build steps are:
             mpbb cleanup --prefix /opt/local
 
 
-## Step Implementation API ##
+## Subcommand API ##
 
-Step provider scripts are sourced and should provide a number of functions:
+Subcommand scripts are sourced by the `mpbb` driver. A script named
+`mpbb-SUBCOMMAND` must define these two shell functions:
+
+-   `SUBCOMMAND()`:
+      Perform the subcommand's work when invoked by the driver.
+-   `SUBCOMMAND-help()`:
+      Print a brief summary of the subcommand's purpose to standard
+      output, but do not `exit`. The driver converts newlines to spaces
+      in the final output.
+
+Scripts may define additional functions as desired. For example, the
+`mpbb-list-subports` script defines the required `list-subports` and
+`list-subports-help` functions, as well as a `print-subports` helper.
+
+Subcommand scripts may use but not modify these global shell parameters:
 
 -   `$command`:
-      Run the actual command.
--   `help`:
-      Should print a help message to stderr. Does not need to deal with
-      ending the execution.
-
-Some shell variables are available for usage in your subcommand:
-
--   `$command`:
-      is the name of the subcommand
+      The name of the subcommand.
 -   `$option_archive_site`:
-      is the URL to the packages archive that will be used
-      to check for existing uploaded packages.
+      The URL of the mirror to check for preexisting archives.
 -   `$option_port`:
-      is the port that should be installed in the run of mpbb.
+      The name of the port to install.
 -   `$option_prefix`:
-      is the path to the MacPorts installation to use, as passed
-      with --prefix.
+      The prefix of the MacPorts installation.
 -   `$option_staging_dir`:
-      is the folder where archives that are distributable
-      and should be upload must be put.
+      The directory for staging distributable archives for upload.
 -   `$option_svn`:
-      is the path to the svn binary to use.
+      The path to the Subversion executable.
 -   `$option_svn_revision`:
-      is the revision number to checkout in the given
-      Subversion repository.
+      The revision to checkout from the `$option_svn_url` repository.
 -   `$option_svn_url`:
-      is a URL pointing to a Subversion repository that
-      contains the dports and base subdirectories.
+      The URL of a Subversion repository containing the MacPorts `base`
+      and `dports` directory trees.
 -   `$option_workdir`:
-      is a path to a directory that can be used to store
-      temporary data. This data is retained between builds. You can, for
-      example, store a Subversion checkout there.
+      A directory for storing temporary data. It is guaranteed to
+      persist for the duration of an `mpbb` run, so it may be used to
+      share ancillary files (e.g., a Subversion checkout of the ports
+      tree) between builds of different ports.
