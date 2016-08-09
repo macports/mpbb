@@ -69,25 +69,36 @@ The defined build steps are:
 
 Step provider scripts are sourced and should provide a number of functions:
 
--   $command: Run the actual command.
--   help: Should print a help message to stderr. Does not need to deal with
+-   `$command`:
+      Run the actual command.
+-   `help`:
+      Should print a help message to stderr. Does not need to deal with
       ending the execution.
 
 Some shell variables are available for usage in your subcommand:
 
--   $command is the name of the subcommand
--   $option_archive_site is the URL to the packages archive that will be used
+-   `$command`:
+      is the name of the subcommand
+-   `$option_archive_site`:
+      is the URL to the packages archive that will be used
       to check for existing uploaded packages.
--   $option_port is the port that should be installed in the run of mpbb.
--   $option_prefix is the path to the MacPorts installation to use, as passed
+-   `$option_port`:
+      is the port that should be installed in the run of mpbb.
+-   `$option_prefix`:
+      is the path to the MacPorts installation to use, as passed
       with --prefix.
--   $option_staging_dir is the folder where archives that are distributable
+-   `$option_staging_dir`:
+      is the folder where archives that are distributable
       and should be upload must be put.
--   $option_svn is the path to the svn binary to use.
--   $option_svn_revision is the revision number to checkout in the given
+-   `$option_svn`:
+      is the path to the svn binary to use.
+-   `$option_svn_revision`:
+      is the revision number to checkout in the given
       Subversion repository.
--   $option_svn_url is a URL pointing to a Subversion repository that
+-   `$option_svn_url`:
+      is a URL pointing to a Subversion repository that
       contains the dports and base subdirectories.
--   $option_workdir is a path to a directory that can be used to store
+-   `$option_workdir`:
+      is a path to a directory that can be used to store
       temporary data. This data is retained between builds. You can, for
       example, store a Subversion checkout there.
