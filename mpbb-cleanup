@@ -18,8 +18,8 @@ cleanup() {
     "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/uninstall-old-ports.tcl"
     echo
     echo "----> Deleting distfiles"
-    find "${option_prefix}/var/macports/distfiles" -type f -mtime +1 -print | sed -E 's/^/Deleting distfile /'
-    find "${option_prefix}/var/macports/distfiles" -type d -mindepth 1 -empty -print | sed -E 's/^/Deleting directory /'
+    find "${option_prefix}/var/macports/distfiles" -type f -mtime +1 -print -delete | sed -E 's/^/Deleting distfile /'
+    find "${option_prefix}/var/macports/distfiles" -type d -mindepth 1 -empty -print -delete | sed -E 's/^/Deleting directory /'
     echo
     for dir in build logs; do
         echo "----> Deleting ${dir}"
