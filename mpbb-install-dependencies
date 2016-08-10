@@ -20,13 +20,10 @@ install-dependencies() {
         return 1
     fi
 
-    # prepare the log file
-    if ! [[ -d "${option_logdir}" ]] ; then
-        mkdir -p "${option_logdir}"
-    fi
-    log_status_dependencies=${option_logdir}/dependencies-progress.txt
-    # make ure to start with an empty file
-    echo -n "" > $log_status_dependencies
+    # prepare the log file and make sure to start with an empty one
+    mkdir -p "${option_logdir}"
+    log_status_dependencies="${option_logdir}/dependencies-progress.txt"
+    > "$log_status_dependencies"
 
     # calculate list of dependencies in-order
     dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}")
@@ -44,10 +41,10 @@ install-dependencies() {
     dependencies_counter=1
 
     echo "Installing $dependencies_count dependencies:"
-    echo "Installing $dependencies_count dependencies:" >> $log_status_dependencies
+    echo "Installing $dependencies_count dependencies:" >> "$log_status_dependencies"
     echo "$dependencies" | sed -E 's/^/ - /'
-    echo "$dependencies" | sed -E 's/^/ - /' >> $log_status_dependencies
-    echo "" >> $log_status_dependencies
+    echo "$dependencies" | sed -E 's/^/ - /' >> "$log_status_dependencies"
+    echo >> "$log_status_dependencies"
 
     echo "$dependencies" | while read dependency; do
         # Split portname +variant1+variant2 into portname and variants, where
@@ -55,15 +52,15 @@ install-dependencies() {
         depname=${dependency%% *}
         depvariants=${dependency:${#depname}+1}
 
-        text="Installing dependency ($dependencies_counter of $dependencies_count) '${depname}', variants: '${depvariants}'"
+        text="Installing dependency ($dependencies_counter of $dependencies_count) '${depname}' with variants '${depvariants}'"
         echo "----> ${text}"
-        echo -n "${text}' ... " >> $log_status_dependencies
+        echo -n "${text} ... " >> "$log_status_dependencies"
         if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
             echo "Build of dependency '${depname}' failed, aborting." >&2
-            echo " [FAIL]" >> $log_status_dependencies
+            echo " [FAIL]" >> "$log_status_dependencies"
             return 1
         else
-            echo " [OK]" >> $log_status_dependencies
+            echo " [OK]" >> "$log_status_dependencies"
             dependencies_counter=$((dependencies_counter + 1))
         fi
     done
