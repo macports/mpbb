@@ -51,7 +51,6 @@ The defined build steps are:
 
             mpbb gather-archives \
                 --prefix /opt/local \
-                --port "$port" \
                 --workdir "$workdir" \
                 --archive-site "$archive_site" \
                 --staging-dir "$(pwd)/archive-staging"
