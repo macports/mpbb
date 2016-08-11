@@ -10,13 +10,22 @@ install-port-help() {
 }
 
 install-port() {
+    local log_port_contents="${option_logdir}/port-contents.txt"
+
     if [ -z "${option_port}" ]; then
         errmsg "--port is required"
         return 1
     fi
 
+    # prepare the log file and make sure to start with an empty one
+    mkdir -p "${option_logdir}"
+    #log_port_contents="${option_logdir}/port-contents.txt"
+
+
     if ! "${option_prefix}/bin/port" -d install "${option_port}"; then
         echo "Build of '${option_port}' failed."
         return 1
     fi
+
+    "${option_prefix}/bin/port" contents "${option_port}" > "$log_port_contents"
 }
