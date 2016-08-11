@@ -11,21 +11,49 @@ install-port-help() {
 
 install-port() {
     local log_port_contents="${option_logdir}/port-contents.txt"
+    local log_port_stats="${option_logdir}/port-statistics.txt"
+    local log_port_main="${option_logdir}/main.log"
 
     if [ -z "${option_port}" ]; then
         errmsg "--port is required"
         return 1
     fi
 
-    # prepare the log file and make sure to start with an empty one
+    # prepare the log files and make sure to start with empty ones
     mkdir -p "${option_logdir}"
-    #log_port_contents="${option_logdir}/port-contents.txt"
+    #> "$log_port_contents"
+    > "$log_port_stats"
 
 
-    if ! "${option_prefix}/bin/port" -d install "${option_port}"; then
+    local time_start=$(date +%s)
+    if ! "${option_prefix}/bin/port" -dk install "${option_port}"; then
         echo "Build of '${option_port}' failed."
         return 1
     fi
+    local time_stop=$(date +%s)
 
-    "${option_prefix}/bin/port" contents "${option_port}" > "$log_port_contents"
+    # log: contents
+    "${option_prefix}/bin/port" -q contents "${option_port}" > "$log_port_contents"
+
+    # TODO: printing statistics (and installing the port + dependencies)
+    #       only makes sense when the port hasn't been installed previously
+    # log: statistics
+    echo "time:    $(($time_stop - $time_start))s" >> "$log_port_stats"
+
+    local port_workdir=$("${option_prefix}/bin/port" work "${option_port}")
+    local port_workdir_size=$(du -ks "$port_workdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
+    echo "workdir: ${port_workdir_size}k" >> "$log_port_stats"
+    local port_destdir="$port_workdir/destroot"
+    if [ -d "$port_destdir" ]; then 
+        local port_destdir_size=$(du -ks "$port_destdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
+        echo "destdir: ${port_destdir_size}k" >> "$log_port_stats"
+    else
+        echo "destdir: -" >> "$log_port_stats"
+    fi
+
+    # log: main.log
+    local port_mainlog=$("${option_prefix}/bin/port" logfile "${option_port}")
+    if [ -f $port_mainlog ]; then
+        cp -f "$port_mainlog" "$log_port_main"
+    fi
 }
