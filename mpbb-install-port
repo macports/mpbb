@@ -13,6 +13,7 @@ install-port() {
     local log_port_contents="${option_logdir}/port-contents.txt"
     local log_port_stats="${option_logdir}/port-statistics.txt"
     local log_port_main="${option_logdir}/main.log"
+    local log_subports_progress="${option_logdir}/ports-progress.txt"
 
     if [ -z "${option_port}" ]; then
         errmsg "--port is required"
@@ -24,13 +25,18 @@ install-port() {
     #> "$log_port_contents"
     > "$log_port_stats"
 
+    # log: summary for the portwatcher
+    echo -n "- Installing ${option_port} ... " >> "$log_subports_progress"
 
     local time_start=$(date +%s)
     if ! "${option_prefix}/bin/port" -dk install "${option_port}"; then
         echo "Build of '${option_port}' failed."
+        echo "[FAIL]" >> "$log_subports_progress"
         return 1
     fi
     local time_stop=$(date +%s)
+
+    echo "[OK]" >> "$log_subports_progress"
 
     # log: contents
     "${option_prefix}/bin/port" -q contents "${option_port}" > "$log_port_contents"

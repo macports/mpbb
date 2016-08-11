@@ -13,7 +13,8 @@ install-dependencies() {
     local dependencies
     local dependencies_count
     local dependencies_counter
-    local log_status_dependencies
+    local log_status_dependencies="${option_logdir}/dependencies-progress.txt"
+    local log_subports_progress="${option_logdir}/ports-progress.txt"
 
     if [ -z "${option_port}" ]; then
         errmsg "--port is required"
@@ -22,13 +23,13 @@ install-dependencies() {
 
     # prepare the log file and make sure to start with an empty one
     mkdir -p "${option_logdir}"
-    log_status_dependencies="${option_logdir}/dependencies-progress.txt"
     > "$log_status_dependencies"
 
     # calculate list of dependencies in-order
     dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}")
     if [ $? -ne 0 ]; then
         echo "Calculating dependencies for '${option_port}' failed, aborting." >&2
+        echo "[FAIL dependencies]" >> "$log_subports_progress"
         return 1
     fi
 
@@ -61,10 +62,11 @@ install-dependencies() {
         echo -n "${text} ... " >> "$log_status_dependencies"
         if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
             echo "Build of dependency '${depname}' failed, aborting." >&2
-            echo " [FAIL]" >> "$log_status_dependencies"
+            echo "[FAIL]" >> "$log_status_dependencies"
+            echo "[FAIL dependency '${depname}']" >> "$log_subports_progress"
             return 1
         else
-            echo " [OK]" >> "$log_status_dependencies"
+            echo "[OK]" >> "$log_status_dependencies"
             dependencies_counter=$((dependencies_counter + 1))
         fi
     done

@@ -18,6 +18,7 @@ print-subports() {
     local exclude
     local exclude_reasons
     local reason
+    local log_subports_progress="${option_logdir}/ports-progress.txt"
 
     os_version="$(sw_vers -productVersion | cut -d . -f 1-2)"
     is_64bit_capable="$(sysctl -n hw.cpu64bit_capable)"
@@ -48,13 +49,17 @@ print-subports() {
 
         if [ $exclude -eq 0 ]; then
             echo "$port"
+            echo "- $port: added" >> "$log_subports_progress"
         else
             if [ ${#exclude_reasons[@]} -eq 1 ]; then
                 echo >&2 "Excluding '${port}' because ${exclude_reasons[0]}."
+                echo "- $port: SKIPPED because ${exclude_reasons[0]}" >> "$log_subports_progress"
             else
                 echo >&2 "Excluding '${port}' for the following reasons:"
+                echo "- $port: SKIPPED for the following reasons" >> "$log_subports_progress"
                 for reason in "${exclude_reasons[@]}"; do
                     echo >&2 " - ${reason}"
+                    echo "  - ${reason}" >> "$log_subports_progress"
                 done
             fi
         fi
@@ -62,12 +67,18 @@ print-subports() {
 }
 
 list-subports() {
+    local log_subports_progress="${option_logdir}/ports-progress.txt"
+
     if [ $# -le 0 -a -z "${option_port}" ]; then
         errmsg "Either --port or a list of positional arguments with port names is required."
         return 1
     fi
 
     success=0
+
+    # prepare the log file and make sure to start with an empty one
+    mkdir -p "$option_logdir"
+    echo "== Adding subports ==" > "$log_subports_progress"
 
     if [ -n "${option_port}" ]; then
         print-subports "${option_port}" && success=1
@@ -81,4 +92,6 @@ list-subports() {
         errmsg "None of the specified ports were found in the port index."
         return 1
     fi
+
+    echo "== Building subports ==" >> "$log_subports_progress"
 }
