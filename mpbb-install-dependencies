@@ -40,10 +40,14 @@ install-dependencies() {
     dependencies_count=$(echo "$dependencies" | wc -l | sed 's/ *//g')
     dependencies_counter=1
 
-    echo "Installing $dependencies_count dependencies:"
-    echo "Installing $dependencies_count dependencies:" >> "$log_status_dependencies"
-    echo "$dependencies" | sed -E 's/^/ - /'
-    echo "$dependencies" | sed -E 's/^/ - /' >> "$log_status_dependencies"
+    text="Installing $dependencies_count dependencies of $option_port:"
+    echo "$text"
+    echo "$text" >> "$log_status_dependencies"
+
+    text=$(echo "$dependencies" | sed -E 's/^/ - /')
+    echo "$text"
+    echo "$text" >> "$log_status_dependencies"
+
     echo >> "$log_status_dependencies"
 
     echo "$dependencies" | while read dependency; do
