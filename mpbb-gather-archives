@@ -32,6 +32,8 @@ gather-archives() {
                 mkdir -p "${option_staging_dir}/${archive_port}" || { status=$?; break; }
                 ln "${archive_path}" "${option_staging_dir}/${archive_port}/${archive_basename}" || { status=$?; break; }
             fi
+        else
+            echo "Archive was already uploaded: ${archive_basename}"
         fi
     done
     
