@@ -14,7 +14,6 @@ option_default_svn=$(which svn)
 option_default_svn_revision=HEAD
 option_default_svn_url=https://svn.macports.org/repository/macports/trunk
 option_default_workdir=${PWD:-/tmp/mp-buildbot}
-option_default_logdir=${option_default_workdir}/logs
 option_archive_site=$option_default_archive_site
 option_help=$option_default_help
 option_port=$option_default_port
@@ -24,7 +23,7 @@ option_svn=$option_default_svn
 option_svn_revision=$option_default_svn_revision
 option_svn_url=$option_default_svn_url
 option_workdir=$option_default_workdir
-option_logdir=$option_default_logdir
+option_logdir="${option_workdir}/logs"
 
 errmsg() {
     printf >&2 "Error: %s\n" "$1"
@@ -79,10 +78,6 @@ OPTIONS
    between builds. Your MacPorts installation in --prefix needs to be able to
    access this location. Defaults to your current directory, or
    /tmp/mp-buildbot if \$PWD isn't set.
-
- --logdir LOGDIR
-   A temporary folder for storing log files to be read by the master. Defaults to
-   WORKDIR/logs. 
 EOF
 
     printf >&2 "\nCOMMANDS\n"
@@ -157,10 +152,7 @@ while [[ $# -gt 0 ]]; do
                     ;;
                 --workdir)
                     option_workdir=$2
-                    shift
-                    ;;
-                --logdir)
-                    option_logdir=$2
+                    option_logdir="${option_workdir}/logs"
                     shift
                     ;;
                 --)
