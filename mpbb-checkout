@@ -14,10 +14,17 @@ EOF
 }
 
 checkout() {
+    # $option_workdir is set in mpbb, which sources this script
+    # shellcheck disable=SC2154
     dports_svn=${option_workdir}/dports
     tools_svn=${option_workdir}/tools
+    # $option_svn is set in mpbb
+    # shellcheck disable=SC2154
     svn=${option_svn}
+    # $option_svn_url and $option_svn_revision are set in mpbb
+    # shellcheck disable=SC2154
     svn_url=${option_svn_url}
+    # shellcheck disable=SC2154
     svn_rev=${option_svn_revision}
 
     if [[ -d "${tools_svn}/.svn" ]] ; then
@@ -53,6 +60,8 @@ checkout() {
             "${dports_svn}" || return $?
     fi
 
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
     (cd "${dports_svn}" && "${option_prefix}/bin/portindex") || return $?
 
     cat > "${option_workdir}/macports.conf" <<EOF || return $?
