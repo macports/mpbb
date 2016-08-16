@@ -9,6 +9,8 @@ selfupdate-help() {
 }
 
 selfupdate() {
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
     if [ ! -f "${option_prefix}/bin/port" ]; then
         macports_version=2.3.4
         macports_distname=MacPorts-${macports_version}
@@ -20,8 +22,8 @@ selfupdate() {
             tar -xjf ${macports_distfile} || return $?
         fi
         cd ${macports_distname} || return $?
-        ./configure --prefix=${option_prefix} --enable-readline || return $?
-        make -j$(sysctl -n hw.activecpu) || return $?
+        ./configure --prefix="${option_prefix}" --enable-readline || return $?
+        make -j"$(sysctl -n hw.activecpu)" || return $?
         make install || return $?
         cd .. || return $?
         rm -rf ${macports_distfile} ${macports_distname} || return $?

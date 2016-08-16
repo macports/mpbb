@@ -11,8 +11,12 @@ gather-archives-help() {
 
 gather-archives() {
     curl=/usr/bin/curl
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
     tclsh=${option_prefix}/bin/port-tclsh
 
+    # $option_staging_dir is set in mpbb
+    # shellcheck disable=SC2154
     if [ -d "${option_staging_dir}" ]; then
         find "${option_staging_dir}" -type f -delete -print | sed -E -e "s|^.*/||" -e 's/^/Deleting previously staged archive: /'
         rm -rf "${option_staging_dir}"
@@ -26,7 +30,11 @@ gather-archives() {
         archive_port=$(basename "$(dirname "${archive_path}")")
         archive_basename=$(basename "${archive_path}")
 
+        # $option_archive_site is set in mpbb
+        # shellcheck disable=SC2154
         if ! ${curl} -fIsL "${option_archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
+            # $option_workdir is set in mpbb
+            # shellcheck disable=SC2154
             if "${tclsh}" "${option_workdir}/tools/port_binary_distributable.tcl" -v "${archive_port}"; then
                 echo "Staging archive for upload: ${archive_basename}"
                 mkdir -p "${option_staging_dir}/${archive_port}" || { status=$?; break; }

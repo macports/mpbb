@@ -13,10 +13,12 @@ install-dependencies() {
     local dependencies
     local dependencies_count
     local dependencies_counter
+    # $option_logdir is set in mpbb
+    # shellcheck disable=SC2154
     local log_status_dependencies="${option_logdir}/dependencies-progress.txt"
     local log_subports_progress="${option_logdir}/ports-progress.txt"
 
-    if [ -z "${option_port}" ]; then
+    if [ -z "${option_port:-}" ]; then
         errmsg "--port is required"
         return 1
     fi
@@ -26,6 +28,8 @@ install-dependencies() {
     > "$log_status_dependencies"
 
     # calculate list of dependencies in-order
+    # $option_prefix and $thisdir are set in mpbb
+    # shellcheck disable=SC2154
     dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}")
     if [ $? -ne 0 ]; then
         echo "Calculating dependencies for '${option_port}' failed, aborting." >&2
@@ -51,7 +55,7 @@ install-dependencies() {
 
     echo >> "$log_status_dependencies"
 
-    echo "$dependencies" | while read dependency; do
+    echo "$dependencies" | while read -r dependency; do
         # Split portname +variant1+variant2 into portname and variants, where
         # the variants are optional.
         depname=${dependency%% *}
@@ -60,6 +64,8 @@ install-dependencies() {
         text="Installing dependency ($dependencies_counter of $dependencies_count) '${depname}' with variants '${depvariants}'"
         echo "----> ${text}"
         echo -n "${text} ... " >> "$log_status_dependencies"
+        # $depvariants isn't quoted on purpose
+        # shellcheck disable=SC2086
         if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
             echo "Build of dependency '${depname}' failed, aborting." >&2
             echo "[FAIL]" >> "$log_status_dependencies"

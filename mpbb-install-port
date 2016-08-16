@@ -10,12 +10,14 @@ install-port-help() {
 }
 
 install-port() {
+    # $option_logdir is set in mpbb
+    # shellcheck disable=SC2154
     local log_port_contents="${option_logdir}/port-contents.txt"
     local log_port_stats="${option_logdir}/port-statistics.txt"
     local log_port_main="${option_logdir}/main.log"
     local log_subports_progress="${option_logdir}/ports-progress.txt"
 
-    if [ -z "${option_port}" ]; then
+    if [ -z "${option_port:-}" ]; then
         errmsg "--port is required"
         return 1
     fi
@@ -28,13 +30,17 @@ install-port() {
     # log: summary for the portwatcher
     echo -n "- Installing ${option_port} ... " >> "$log_subports_progress"
 
-    local time_start=$(date +%s)
+    local time_start
+    local time_stop
+    time_start=$(date +%s)
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
     if ! "${option_prefix}/bin/port" -dk install "${option_port}"; then
         echo "Build of '${option_port}' failed."
         echo "[FAIL]" >> "$log_subports_progress"
         return 1
     fi
-    local time_stop=$(date +%s)
+    time_stop=$(date +%s)
 
     echo "[OK]" >> "$log_subports_progress"
 
@@ -44,22 +50,41 @@ install-port() {
     # TODO: printing statistics (and installing the port + dependencies)
     #       only makes sense when the port hasn't been installed previously
     # log: statistics
-    echo "time:    $(($time_stop - $time_start))s" >> "$log_port_stats"
+    echo "time:    $((time_stop - time_start))s" >> "$log_port_stats"
 
-    local port_workdir=$("${option_prefix}/bin/port" work "${option_port}")
-    local port_workdir_size=$(du -ks "$port_workdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
-    echo "workdir: ${port_workdir_size}k" >> "$log_port_stats"
-    local port_destdir="$port_workdir/destroot"
-    if [ -d "$port_destdir" ]; then 
-        local port_destdir_size=$(du -ks "$port_destdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
-        echo "destdir: ${port_destdir_size}k" >> "$log_port_stats"
-    else
-        echo "destdir: -" >> "$log_port_stats"
+    local port_workdir
+    local port_workdir_size=""
+    local port_destdir_size=""
+    local print_arg_workdir="ERROR"
+    local print_arg_destdir="ERROR"
+    # First, compute port_workdir_size and port_destdir_size
+    port_workdir=$("${option_prefix}/bin/port" work "${option_port}")
+    if [ -n "$port_workdir" ]; then
+        port_workdir_size=$(du -ks "$port_workdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
+        if [ $? -eq 0 ] && [ -n "$port_workdir_size" ]; then
+            print_arg_workdir="${port_workdir_size}k"
+        fi
+
+        local port_destdir="$port_workdir/destroot"
+        # if we arrive here, 'port work $option_port' was successful, so we're
+        # at least going to print 'destdir: -'
+        print_arg_destdir="-"
+        if [ -d "$port_destdir" ]; then 
+            port_destdir_size=$(du -ks "$port_destdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
+            if [ $? -eq 0 ] && [ -n "$port_destdir_size" ]; then
+                print_arg_destdir="${port_destdir_size}k"
+            fi
+        fi
     fi
+    # Then print them, or on error (or if destdir doesn't exist), print the
+    # appropriate message
+    echo "workdir: $print_arg_workdir" >> "$log_port_stats"
+    echo "destdir: $print_arg_destdir" >> "$log_port_stats"
 
     # log: main.log
-    local port_mainlog=$("${option_prefix}/bin/port" logfile "${option_port}")
-    if [ -f $port_mainlog ]; then
+    local port_mainlog
+    port_mainlog=$("${option_prefix}/bin/port" logfile "${option_port}")
+    if [ $? -eq 0 ] && [ -f "$port_mainlog" ]; then
         cp -f "$port_mainlog" "$log_port_main"
     fi
 }
