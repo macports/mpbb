@@ -14,6 +14,7 @@ option_default_svn=$(which svn)
 option_default_svn_revision=HEAD
 option_default_svn_url=https://svn.macports.org/repository/macports/trunk
 option_default_workdir=${PWD:-/tmp/mp-buildbot}
+
 option_archive_site=$option_default_archive_site
 option_help=$option_default_help
 option_port=$option_default_port
@@ -83,7 +84,7 @@ EOF
     printf >&2 "\nCOMMANDS\n"
     for command in "${commands[@]}"; do
         printf >&2 " %s\n" "$command"
-        printf "   %s\n\n" "$(${command}-help | tr '\n' ' ')" | fmt -w $(( cols - 8 )) >&2
+        printf "   %s\n\n" "$("${command}-help" | tr '\n' ' ')" | fmt -w $(( cols - 8 )) >&2
     done
 
     exit 2
@@ -93,6 +94,9 @@ EOF
 commands=()
 thisdir=$(cd "$(dirname "$0")" && pwd)
 for cmdfile in "$thisdir/mpbb-"*; do
+    # Unfortunately ShellCheck does not currently support following multiple
+    # files, so we'll just disable the warning.
+    # shellcheck disable=SC1090
     . "$cmdfile"
     commands+=(${cmdfile#$thisdir/mpbb-})
 done
@@ -118,6 +122,11 @@ while [[ $# -gt 0 ]]; do
 
     case "$key" in
         --*)
+            # Shellcheck doesn't see the invocations in the sourced
+            # scripts, so we'll have to disable a number of false
+            # positives here.
+
+            # shellcheck disable=SC2034
             case "$key" in
                 --archive-site)
                     option_archive_site=$2
