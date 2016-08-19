@@ -27,9 +27,6 @@ install-port() {
     #> "$log_port_contents"
     > "$log_port_stats"
 
-    # log: summary for the portwatcher
-    echo -n "- Installing ${option_port} ... " >> "$log_subports_progress"
-
     local time_start
     local time_stop
     time_start=$(date +%s)
@@ -37,12 +34,14 @@ install-port() {
     # shellcheck disable=SC2154
     if ! "${option_prefix}/bin/port" -dk install "${option_port}"; then
         echo "Build of '${option_port}' failed."
-        echo "[FAIL]" >> "$log_subports_progress"
+        # log: summary for the portwatcher
+        echo "Building '${option_port}' ... [ERROR]" >> "$log_subports_progress"
         return 1
     fi
     time_stop=$(date +%s)
 
-    echo "[OK]" >> "$log_subports_progress"
+    # log: summary for the portwatcher
+    echo "Building '${option_port}' ... [OK]" >> "$log_subports_progress"
 
     # log: contents
     "${option_prefix}/bin/port" -q contents "${option_port}" > "$log_port_contents"

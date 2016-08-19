@@ -33,7 +33,7 @@ install-dependencies() {
     dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}")
     if [ $? -ne 0 ]; then
         echo "Calculating dependencies for '${option_port}' failed, aborting." >&2
-        echo "[FAIL dependencies]" >> "$log_subports_progress"
+        echo "Building '${option_port}' ... [ERROR] (failed to calculate dependencies)" >> "$log_subports_progress"
         return 1
     fi
 
@@ -63,7 +63,7 @@ install-dependencies() {
         if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
             echo "Build of dependency '${depname}' failed, aborting." >&2
             echo "[FAIL]" >> "$log_status_dependencies"
-            echo "[FAIL dependency '${depname}']" >> "$log_subports_progress"
+            echo "Building '${option_port}' ... [ERROR] (failed to install dependency '${depname}')" >> "$log_subports_progress"
             return 1
         else
             echo "[OK]" >> "$log_status_dependencies"
