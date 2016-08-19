@@ -32,7 +32,7 @@ install-port() {
     time_start=$(date +%s)
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    if ! "${option_prefix}/bin/port" -dk install "${option_port}"; then
+    if ! "${option_prefix}/bin/port" -dk install "${option_port}" ${option_variants}; then
         echo "Build of '${option_port}' failed."
         # log: summary for the portwatcher
         echo "Building '${option_port}' ... [ERROR]" >> "$log_subports_progress"

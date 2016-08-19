@@ -30,7 +30,7 @@ install-dependencies() {
     # calculate list of dependencies in-order
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
-    dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}")
+    dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}" "${option_variants}")
     if [ $? -ne 0 ]; then
         echo "Calculating dependencies for '${option_port}' failed, aborting." >&2
         echo "Building '${option_port}' ... [ERROR] (failed to calculate dependencies)" >> "$log_subports_progress"
@@ -60,7 +60,7 @@ install-dependencies() {
         echo -n "${text} ... " >> "$log_status_dependencies"
         # $depvariants isn't quoted on purpose
         # shellcheck disable=SC2086
-        if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
+        if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants ${option_variants}; then
             echo "Build of dependency '${depname}' failed, aborting." >&2
             echo "[FAIL]" >> "$log_status_dependencies"
             echo "Building '${option_port}' ... [ERROR] (failed to install dependency '${depname}')" >> "$log_subports_progress"
