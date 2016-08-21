@@ -9,6 +9,12 @@ install-port-help() {
     echo "Build and install the port --port itself."
 }
 
+get-maintainers() {
+    ${option_prefix}/bin/port info --index --maintainers --line $1 | tr ',' '\n' | sort | uniq | tr '\n' ',' | \
+        awk '{gsub(/(open|no)maintainer(@macports.org)?,/, ""); print}' | \
+        tr '$' '\n' | sed 's/,$//' | tr '@' ';'
+}
+
 install-port() {
     # $option_logdir is set in mpbb
     # shellcheck disable=SC2154
@@ -35,7 +41,7 @@ install-port() {
     if ! "${option_prefix}/bin/port" -dk install "${option_port}" ${option_variants}; then
         echo "Build of '${option_port}' failed."
         # log: summary for the portwatcher
-        echo "Building '${option_port}' ... [ERROR]" >> "$log_subports_progress"
+        echo "Building '${option_port}' ... [ERROR] maintainers: $(get-maintainers "${option_port}")." >> "$log_subports_progress"
         return 1
     fi
     time_stop=$(date +%s)

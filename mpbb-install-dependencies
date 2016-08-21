@@ -9,6 +9,12 @@ install-dependencies-help() {
     echo "Build and install all dependencies of port --port."
 }
 
+get-maintainers() {
+    ${option_prefix}/bin/port info --index --maintainers --line $1 | tr ',' '\n' | sort | uniq | tr '\n' ',' | \
+        awk '{gsub(/(open|no)maintainer(@macports.org)?,/, ""); print}' | \
+        tr '$' '\n' | sed 's/,$//' | tr '@' ';'
+}
+
 install-dependencies() {
     local dependencies
     local dependencies_count
@@ -33,7 +39,7 @@ install-dependencies() {
     dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "${option_port}" "${option_variants}")
     if [ $? -ne 0 ]; then
         echo "Calculating dependencies for '${option_port}' failed, aborting." >&2
-        echo "Building '${option_port}' ... [ERROR] (failed to calculate dependencies)" >> "$log_subports_progress"
+        echo "Building '${option_port}' ... [ERROR] (failed to calculate dependencies) maintainers: $(get-maintainers "${option_port}")." >> "$log_subports_progress"
         return 1
     fi
 
@@ -63,7 +69,7 @@ install-dependencies() {
         if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants ${option_variants}; then
             echo "Build of dependency '${depname}' failed, aborting." >&2
             echo "[FAIL]" >> "$log_status_dependencies"
-            echo "Building '${option_port}' ... [ERROR] (failed to install dependency '${depname}')" >> "$log_subports_progress"
+            echo "Building '${option_port}' ... [ERROR] (failed to install dependency '${depname}') maintainers: $(get-maintainers "${option_port} ${depname}")." >> "$log_subports_progress"
             return 1
         else
             echo "[OK]" >> "$log_status_dependencies"
