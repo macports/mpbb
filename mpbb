@@ -177,6 +177,11 @@ while [[ $# -gt 0 ]]; do
                 --)
                     break
                     ;;
+                *)
+                    errmsg "Unknown option: ${key}"
+                    echo
+                    usage
+                    ;;
             esac
 
             shift
