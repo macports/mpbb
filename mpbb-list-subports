@@ -68,6 +68,8 @@ print-subports() {
 }
 
 list-subports() {
+    # $option_logdir is set in mpbb
+    # shellcheck disable=SC2154
     local log_subports_progress="${option_logdir}/ports-progress.txt"
 
     if [ $# -le 0 ] && [ -z "${option_port:-}" ]; then
