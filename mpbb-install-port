@@ -10,7 +10,9 @@ install-port-help() {
 }
 
 get-maintainers() {
-    ${option_prefix}/bin/port info --index --maintainers --line $1 | tr ',' '\n' | sort | uniq | tr '\n' ',' | \
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    "${option_prefix}/bin/port" info --index --maintainers --line "$@" | tr ',' '\n' | sort | uniq | tr '\n' ',' | \
         awk '{gsub(/(open|no)maintainer(@macports.org)?,/, ""); print}' | \
         tr '$' '\n' | sed 's/,$//' | tr '@' ';'
 }
