@@ -68,6 +68,7 @@ checkout() {
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
 sources_conf ${option_workdir}/sources.conf
+host_blacklist aarnet.au.distfiles.macports.org aarnet.au.packages.macports.org cjj.kr.distfiles.macports.org cjj.kr.packages.macports.org fco.it.distfiles.macports.org fco.it.packages.macports.org her.gr.distfiles.macports.org her.gr.packages.macports.org jnb.za.distfiles.macports.org jnb.za.packages.macports.org jog.id.distfiles.macports.org jog.id.packages.macports.org lil.fr.distfiles.macports.org lil.fr.packages.macports.org mse.uk.distfiles.macports.org mse.uk.packages.macports.org nou.nc.distfiles.macports.org nou.nc.packages.macports.org nue.de.distfiles.macports.org nue.de.packages.macports.org osl.no.distfiles.macports.org osl.no.packages.macports.org sea.us.distfiles.macports.org sea.us.packages.macports.org ykf.ca.distfiles.macports.org ykf.ca.packages.macports.org
 EOF
 
     cat > "${option_workdir}/sources.conf" <<EOF || return $?
