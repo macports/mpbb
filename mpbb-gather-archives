@@ -45,6 +45,6 @@ gather-archives() {
             echo "Archive was already uploaded: ${archive_basename}"
         fi
     done
-    
+
     return $status
 }

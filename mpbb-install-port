@@ -77,7 +77,7 @@ install-port() {
         # if we arrive here, 'port work $option_port' was successful, so we're
         # at least going to print 'destdir: -'
         print_arg_destdir="-"
-        if [ -d "$port_destdir" ]; then 
+        if [ -d "$port_destdir" ]; then
             port_destdir_size=$(du -ks "$port_destdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
             if [ $? -eq 0 ] && [ -n "$port_destdir_size" ]; then
                 print_arg_destdir="${port_destdir_size}k"
