@@ -28,6 +28,9 @@ option_svn_url=$option_default_svn_url
 option_workdir=$option_default_workdir
 option_logdir="${option_workdir}/logs"
 
+# Print $0 and arguments to standard error.
+# Unset IFS to ensure "$*" uses spaces as separators.
+msg() (unset IFS; printf >&2 '%s: %s\n' "$0" "$*")
 errmsg() {
     printf >&2 "Error: %s\n" "$1"
 }
