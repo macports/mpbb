@@ -14,10 +14,10 @@ EOF
 }
 
 checkout() {
-    # $option_workdir is set in mpbb, which sources this script
+    # $option_work_dir is set in mpbb, which sources this script
     # shellcheck disable=SC2154
-    dports_svn=${option_workdir}/dports
-    tools_svn=${option_workdir}/tools
+    dports_svn=${option_work_dir}/dports
+    tools_svn=${option_work_dir}/tools
     # $option_svn is set in mpbb
     # shellcheck disable=SC2154
     svn=${option_svn}
@@ -37,7 +37,7 @@ checkout() {
             "${tools_svn}" || return $?
     else
         echo "Checking out macports tools from svn..."
-        mkdir -p "${option_workdir}"
+        mkdir -p "${option_work_dir}"
         "$svn" checkout --non-interactive \
             -r HEAD "${svn_url}/base/portmgr/jobs" \
             "${tools_svn}" || return $?
@@ -54,7 +54,7 @@ checkout() {
             "${dports_svn}" || return $?
     else
         echo "Checking out macports from svn..."
-        mkdir -p "${option_workdir}"
+        mkdir -p "${option_work_dir}"
         "$svn" checkout --non-interactive \
             -r "${svn_rev}" "${svn_url}/dports" \
             "${dports_svn}" || return $?
@@ -64,14 +64,14 @@ checkout() {
     # shellcheck disable=SC2154
     (cd "${dports_svn}" && "${option_prefix}/bin/portindex") || return $?
 
-    cat > "${option_workdir}/macports.conf" <<EOF || return $?
+    cat > "${option_work_dir}/macports.conf" <<EOF || return $?
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
-sources_conf ${option_workdir}/sources.conf
+sources_conf ${option_work_dir}/sources.conf
 host_blacklist aarnet.au.distfiles.macports.org aarnet.au.packages.macports.org cjj.kr.distfiles.macports.org cjj.kr.packages.macports.org fco.it.distfiles.macports.org fco.it.packages.macports.org her.gr.distfiles.macports.org her.gr.packages.macports.org jnb.za.distfiles.macports.org jnb.za.packages.macports.org jog.id.distfiles.macports.org jog.id.packages.macports.org lil.fr.distfiles.macports.org lil.fr.packages.macports.org mse.uk.distfiles.macports.org mse.uk.packages.macports.org nou.nc.distfiles.macports.org nou.nc.packages.macports.org nue.de.distfiles.macports.org nue.de.packages.macports.org osl.no.distfiles.macports.org osl.no.packages.macports.org sea.us.distfiles.macports.org sea.us.packages.macports.org ykf.ca.distfiles.macports.org ykf.ca.packages.macports.org
 EOF
 
-    cat > "${option_workdir}/sources.conf" <<EOF || return $?
+    cat > "${option_work_dir}/sources.conf" <<EOF || return $?
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
 file://${dports_svn} [default]

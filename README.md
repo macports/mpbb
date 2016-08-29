@@ -23,7 +23,7 @@ The defined build steps are:
 
         mpbb checkout \
             --prefix /opt/local \
-            --workdir /tmp/scratch \
+            --work-dir /tmp/scratch \
             --svn-url https://svn.macports.org/repository/macports/trunk \
             --svn-revision 123456
 
@@ -51,7 +51,7 @@ The defined build steps are:
 
             mpbb gather-archives \
                 --prefix /opt/local \
-                --workdir /tmp/scratch \
+                --work-dir /tmp/scratch \
                 --archive-site https://packages.macports.org \
                 --staging-dir /tmp/scratch/staging
 
@@ -100,7 +100,7 @@ Subcommand scripts may use but not modify these global shell parameters:
 -   `$option_svn_url`:
       The URL of a Subversion repository containing the MacPorts `base`
       and `dports` directory trees.
--   `$option_workdir`:
+-   `$option_work_dir`:
       A directory for storing temporary data. It is guaranteed to
       persist for the duration of an `mpbb` run, so it may be used to
       share ancillary files (e.g., a Subversion checkout of the ports

@@ -14,7 +14,7 @@ option_default_staging_dir=${PWD:-/tmp/mp-buildbot}/archive-staging
 option_default_svn=$(which svn)
 option_default_svn_revision=HEAD
 option_default_svn_url=https://svn.macports.org/repository/macports/trunk
-option_default_workdir=${PWD:-/tmp/mp-buildbot}
+option_default_work_dir=${PWD:-/tmp/mp-buildbot}
 
 option_archive_site=$option_default_archive_site
 option_help=$option_default_help
@@ -25,8 +25,8 @@ option_staging_dir=$option_default_staging_dir
 option_svn=$option_default_svn
 option_svn_revision=$option_default_svn_revision
 option_svn_url=$option_default_svn_url
-option_workdir=$option_default_workdir
-option_logdir="${option_workdir}/logs"
+option_work_dir=$option_default_work_dir
+option_logdir="${option_work_dir}/logs"
 
 # Print $0 and arguments to standard error.
 # Unset IFS to ensure "$*" uses spaces as separators.
@@ -82,7 +82,7 @@ OPTIONS
    on the archive server. Defaults to the 'archive-staging' subfolder in the
    current directory.
 
- --workdir WORKDIR
+ --work-dir WORKDIR
    A scratch area that mpbb will use to put temporary files, ideally kept
    between builds. Your MacPorts installation in --prefix needs to be able to
    access this location. Defaults to your current directory, or
@@ -171,9 +171,9 @@ while [[ $# -gt 0 ]]; do
                     option_svn_revision=$2
                     shift
                     ;;
-                --workdir)
-                    option_workdir=$2
-                    option_logdir="${option_workdir}/logs"
+                --work-dir)
+                    option_work_dir=$2
+                    option_logdir="${option_work_dir}/logs"
                     shift
                     ;;
                 --)
@@ -200,7 +200,7 @@ if [[ $option_help -eq 1 ]]; then
     usage
 fi
 ## Otherwise, run the command and deal with errors
-export PORTSRC="${option_workdir}/macports.conf"
+export PORTSRC="${option_work_dir}/macports.conf"
 if ! $command "$@"; then
     err "Failed to run $command"
     exit 1
