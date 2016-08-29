@@ -27,7 +27,7 @@ install-dependencies() {
     local log_subports_progress="${option_logdir}/ports-progress.txt"
 
     if [ -z "${option_port:-}" ]; then
-        errmsg "--port is required"
+        err "--port is required"
         return 1
     fi
 

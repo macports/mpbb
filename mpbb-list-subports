@@ -73,7 +73,7 @@ list-subports() {
     local log_subports_progress="${option_logdir}/ports-progress.txt"
 
     if [ $# -le 0 ] && [ -z "${option_port:-}" ]; then
-        errmsg "Either --port or a list of positional arguments with port names is required."
+        err "Either --port or a list of positional arguments with port names is required."
         return 1
     fi
 
@@ -92,7 +92,7 @@ list-subports() {
     done
 
     if [ $success -eq 0 ]; then
-        errmsg "None of the specified ports were found in the port index."
+        err "None of the specified ports were found in the port index."
         return 1
     fi
 }

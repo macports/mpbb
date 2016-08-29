@@ -31,9 +31,8 @@ option_logdir="${option_workdir}/logs"
 # Print $0 and arguments to standard error.
 # Unset IFS to ensure "$*" uses spaces as separators.
 msg() (unset IFS; printf >&2 '%s: %s\n' "$0" "$*")
-errmsg() {
-    printf >&2 "Error: %s\n" "$1"
-}
+err() { msg error: "$@"; }
+warn() { msg warning: "$@"; }
 
 usage() {
     cols=$(tput cols) || cols=80
@@ -112,7 +111,7 @@ done
 
 ## The first argument should be the subcommand
 if [[ $# -lt 1 ]]; then
-    errmsg "No command specified"
+    err "No command specified"
     usage
 fi
 
@@ -120,7 +119,7 @@ command=$1
 shift
 if [ ! -f "$thisdir/mpbb-$command" ]; then
     if [ "$command" != "--help" ]; then
-        errmsg "Unknown command $command"
+        err "Unknown command $command"
     fi
     usage
 fi
@@ -182,7 +181,7 @@ while [[ $# -gt 0 ]]; do
                     break
                     ;;
                 *)
-                    errmsg "Unknown option: ${key}"
+                    err "Unknown option: ${key}"
                     echo
                     usage
                     ;;
@@ -203,6 +202,6 @@ fi
 ## Otherwise, run the command and deal with errors
 export PORTSRC="${option_workdir}/macports.conf"
 if ! $command "$@"; then
-    errmsg "Failed to run $command"
+    err "Failed to run $command"
     exit 1
 fi
