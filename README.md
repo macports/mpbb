@@ -23,17 +23,17 @@ The defined build steps are:
 
         mpbb checkout \
             --prefix /opt/local \
-            --workdir "$workdir" \
-            --svn-url "$svnurl" \
-            --svn-revision "$svnrev"
+            --workdir /tmp/scratch \
+            --svn-url https://svn.macports.org/repository/macports/trunk \
+            --svn-revision 123456
 
 3.  Print to standard output a list of all subports for one port...
 
-        mpbb list-subports --prefix /opt/local --port "$port"
+        mpbb list-subports --prefix /opt/local --port php
 
     ...or for several.
 
-        mpbb list-subports --prefix /opt/local "$port1" "$port2" ...
+        mpbb list-subports --prefix /opt/local cmake llvm-3.8 ...
 
 4.  For each subport listed in step 3:
 
@@ -41,19 +41,19 @@ The defined build steps are:
 
             mpbb install-dependencies \
                 --prefix /opt/local \
-                --port "$subport"
+                --port php71
 
     b.  Install the subport itself.
 
-            mpbb install-port --prefix /opt/local --port "$subport"
+            mpbb install-port --prefix /opt/local --port php71
 
     c.  Gather archives.
 
             mpbb gather-archives \
                 --prefix /opt/local \
-                --workdir "$workdir" \
-                --archive-site "$archive_site" \
-                --staging-dir "$(pwd)/archive-staging"
+                --workdir /tmp/scratch \
+                --archive-site https://packages.macports.org \
+                --staging-dir /tmp/scratch/staging
 
     d.  Upload. Must be implemented in the buildmaster.
 
