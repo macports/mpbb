@@ -19,7 +19,7 @@ print-subports() {
     local exclude
     local exclude_reasons
     local reason
-    # $option_logdir is set in mpbb
+    # $option_log_dir is set in mpbb
     # shellcheck disable=SC2154
 
     os_version="$(sw_vers -productVersion | cut -d . -f 1-2)"
@@ -69,9 +69,9 @@ print-subports() {
 }
 
 list-subports() {
-    # $option_logdir is set in mpbb
+    # $option_log_dir is set in mpbb
     # shellcheck disable=SC2154
-    local log_subports_progress="${option_logdir}/ports-progress.txt"
+    local log_subports_progress="${option_log_dir}/ports-progress.txt"
 
     if [ $# -le 0 ] && [ -z "${option_port:-}" ]; then
         err "Must specify at least one port"
@@ -81,7 +81,7 @@ list-subports() {
     success=0
 
     # prepare the log file and make sure to start with an empty one
-    mkdir -p "$option_logdir"
+    mkdir -p "$option_log_dir"
     > "$log_subports_progress"
 
     if [ -n "${option_port}" ]; then

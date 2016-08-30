@@ -24,15 +24,15 @@ install-port() {
         err "Must specify a port"
         return 1
     fi
-    # $option_logdir is set in mpbb
+    # $option_log_dir is set in mpbb
     # shellcheck disable=SC2154
-    local log_port_contents="${option_logdir}/port-contents.txt"
-    local log_port_stats="${option_logdir}/port-statistics.txt"
-    local log_port_main="${option_logdir}/main.log"
-    local log_subports_progress="${option_logdir}/ports-progress.txt"
+    local log_port_contents="${option_log_dir}/port-contents.txt"
+    local log_port_stats="${option_log_dir}/port-statistics.txt"
+    local log_port_main="${option_log_dir}/main.log"
+    local log_subports_progress="${option_log_dir}/ports-progress.txt"
 
     # prepare the log files and make sure to start with empty ones
-    mkdir -p "${option_logdir}"
+    mkdir -p "${option_log_dir}"
     #> "$log_port_contents"
     > "$log_port_stats"
 

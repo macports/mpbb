@@ -27,13 +27,13 @@ install-dependencies() {
     local dependencies
     local dependencies_count
     local dependencies_counter
-    # $option_logdir is set in mpbb
+    # $option_log_dir is set in mpbb
     # shellcheck disable=SC2154
-    local log_status_dependencies="${option_logdir}/dependencies-progress.txt"
-    local log_subports_progress="${option_logdir}/ports-progress.txt"
+    local log_status_dependencies="${option_log_dir}/dependencies-progress.txt"
+    local log_subports_progress="${option_log_dir}/ports-progress.txt"
 
     # prepare the log file and make sure to start with an empty one
-    mkdir -p "${option_logdir}"
+    mkdir -p "${option_log_dir}"
     > "$log_status_dependencies"
 
     # calculate list of dependencies in-order

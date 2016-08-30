@@ -24,7 +24,7 @@ option_svn=$option_default_svn
 option_svn_revision=$option_default_svn_revision
 option_svn_url=$option_default_svn_url
 option_work_dir=$option_default_work_dir
-option_logdir="${option_work_dir}/logs"
+option_log_dir="${option_work_dir}/logs"
 
 # Print $0 and arguments to standard error.
 # Unset IFS to ensure "$*" uses spaces as separators.
@@ -160,7 +160,7 @@ while [[ $# -gt 0 ]]; do
                     ;;
                 --work-dir)
                     option_work_dir=$2
-                    option_logdir="${option_work_dir}/logs"
+                    option_log_dir="${option_work_dir}/logs"
                     shift
                     ;;
                 --)
