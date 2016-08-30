@@ -8,7 +8,6 @@ set -eu
 option_default_archive_site=https://packages.macports.org
 option_default_help=0
 option_default_port=
-option_default_variants=
 option_default_prefix=/opt/local
 option_default_staging_dir=${PWD:-/tmp/mp-buildbot}/archive-staging
 option_default_svn=$(which svn)
@@ -19,7 +18,6 @@ option_default_work_dir=${PWD:-/tmp/mp-buildbot}
 option_archive_site=$option_default_archive_site
 option_help=$option_default_help
 option_port=$option_default_port
-option_variants=$option_default_variants
 option_prefix=$option_default_prefix
 option_staging_dir=$option_default_staging_dir
 option_svn=$option_default_svn
@@ -51,10 +49,6 @@ OPTIONS
 
  --help
    Print this usage message.
-
- --variants VARIANTS
-   An optional string with port variants (empty by default; not fully
-   functional yet).
 
  --prefix PREFIX
    The prefix of the MacPorts installation that will build the ports. Defaults
@@ -142,10 +136,6 @@ while [[ $# -gt 0 ]]; do
                 --port)
                     # Deprecated and will be removed in the near future.
                     option_port=$2
-                    shift
-                    ;;
-                --variants)
-                    option_variants=$2
                     shift
                     ;;
                 --prefix)
