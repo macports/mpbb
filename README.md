@@ -27,25 +27,19 @@ The defined build steps are:
             --svn-url https://svn.macports.org/repository/macports/trunk \
             --svn-revision 123456
 
-3.  Print to standard output a list of all subports for one port...
+3.  Print one or more ports' subports to standard output.
 
-        mpbb list-subports --prefix /opt/local --port php
-
-    ...or for several.
-
-        mpbb list-subports --prefix /opt/local cmake llvm-3.8 ...
+        mpbb list-subports --prefix /opt/local php cmake llvm-3.8 [...]
 
 4.  For each subport listed in step 3:
 
     a.  Install dependencies.
 
-            mpbb install-dependencies \
-                --prefix /opt/local \
-                --port php71
+            mpbb install-dependencies --prefix /opt/local php71
 
     b.  Install the subport itself.
 
-            mpbb install-port --prefix /opt/local --port php71
+            mpbb install-port --prefix /opt/local php71
 
     c.  Gather archives.
 
@@ -87,8 +81,6 @@ Subcommand scripts may use but not modify these global shell parameters:
       The name of the subcommand.
 -   `$option_archive_site`:
       The URL of the mirror to check for preexisting archives.
--   `$option_port`:
-      The name of the port to install.
 -   `$option_prefix`:
       The prefix of the MacPorts installation.
 -   `$option_staging_dir`:

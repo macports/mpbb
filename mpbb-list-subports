@@ -74,7 +74,7 @@ list-subports() {
     local log_subports_progress="${option_logdir}/ports-progress.txt"
 
     if [ $# -le 0 ] && [ -z "${option_port:-}" ]; then
-        err "Either --port or a list of positional arguments with port names is required."
+        err "Must specify at least one port"
         return 1
     fi
 

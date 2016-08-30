@@ -52,10 +52,6 @@ OPTIONS
  --help
    Print this usage message.
 
- --port PORT
-   Name of the port to build in MacPorts. This is required for the steps that
-   build a port.
-
  --variants VARIANTS
    An optional string with port variants (empty by default; not fully
    functional yet).
@@ -144,6 +140,7 @@ while [[ $# -gt 0 ]]; do
                     option_help=1
                     ;;
                 --port)
+                    # Deprecated and will be removed in the near future.
                     option_port=$2
                     shift
                     ;;
