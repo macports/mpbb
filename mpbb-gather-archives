@@ -11,7 +11,6 @@ gather-archives-help() {
 }
 
 gather-archives() {
-    curl=/usr/bin/curl
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     tclsh=${option_prefix}/bin/port-tclsh
@@ -33,7 +32,7 @@ gather-archives() {
 
         # $option_archive_site is set in mpbb
         # shellcheck disable=SC2154
-        if ! ${curl} -fIsL "${option_archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
+        if ! curl -fIsL "${option_archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
             # $option_work_dir is set in mpbb
             # shellcheck disable=SC2154
             if "${tclsh}" "${option_work_dir}/tools/port_binary_distributable.tcl" -v "${archive_port}"; then
