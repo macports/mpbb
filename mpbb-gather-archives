@@ -23,7 +23,7 @@ gather-archives() {
         echo
     fi
 
-    mkdir -p "${option_staging_dir}" || return $?
+    mkdir -p "${option_staging_dir}" || return
 
     status=0
     for archive_path in $("${option_prefix}/bin/port" -q location active); do

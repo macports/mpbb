@@ -31,39 +31,39 @@ checkout() {
     if [[ -d "${tools_svn}/.svn" ]] ; then
         echo "Update macports tools from svn..."
         if [[ -e "${tools_svn}/.svn/lock" ]]; then
-            "$svn" --non-interactive cleanup "${tools_svn}" || return $?
+            "$svn" --non-interactive cleanup "${tools_svn}" || return
         fi
         "$svn" update --non-interactive \
             -r HEAD \
-            "${tools_svn}" || return $?
+            "${tools_svn}" || return
     else
         echo "Checking out macports tools from svn..."
         mkdir -p "${option_work_dir}"
         "$svn" checkout --non-interactive \
             -r HEAD "${svn_url}/base/portmgr/jobs" \
-            "${tools_svn}" || return $?
+            "${tools_svn}" || return
     fi
 
     if [[ -d "${dports_svn}/.svn" ]] ; then
         echo "Update macports from svn..."
         # TODO: add switching of SVN server
         if [[ -e "${dports_svn}/.svn/lock" ]]; then
-            "$svn" --non-interactive cleanup "${dports_svn}" || return $?
+            "$svn" --non-interactive cleanup "${dports_svn}" || return
         fi
         "$svn" update --non-interactive \
             -r "${svn_rev}" \
-            "${dports_svn}" || return $?
+            "${dports_svn}" || return
     else
         echo "Checking out macports from svn..."
         mkdir -p "${option_work_dir}"
         "$svn" checkout --non-interactive \
             -r "${svn_rev}" "${svn_url}/dports" \
-            "${dports_svn}" || return $?
+            "${dports_svn}" || return
     fi
 
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    (cd "${dports_svn}" && "${option_prefix}/bin/portindex") || return $?
+    (cd "${dports_svn}" && "${option_prefix}/bin/portindex") || return
 
     local -ar mirrors=(aarnet.au cjj.kr fco.it her.gr jnb.za jog.id
                        lil.fr mse.uk nou.nc nue.de osl.no sea.us ykf.ca)
@@ -77,7 +77,7 @@ host_blacklist ${mirrors[*]/%/.distfiles.macports.org} \
 EOF
 ) || return
 
-    cat > "${option_work_dir}/sources.conf" <<EOF || return $?
+    cat > "${option_work_dir}/sources.conf" <<EOF || return
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
 file://${dports_svn} [default]

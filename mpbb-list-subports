@@ -26,7 +26,7 @@ print-subports() {
     is_64bit_capable="$(sysctl -n hw.cpu64bit_capable)"
     # $optoin_prefix is set in mpbb
     # shellcheck disable=SC2154
-    ports=$("${option_prefix}/bin/port" -q info --index --line --name "${portname}" "subportof:${portname}" 2>/dev/null) || return $?
+    ports=$("${option_prefix}/bin/port" -q info --index --line --name "${portname}" "subportof:${portname}" 2>/dev/null) || return
     for port in $ports; do
         exclude=0
         exclude_reasons=()

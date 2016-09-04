@@ -18,17 +18,17 @@ selfupdate() {
         macports_distfile=${macports_distname}.tar.bz2
         if [ ! -d ${macports_distname} ]; then
             if [ ! -f ${macports_distfile} ]; then
-                curl -fsLO https://distfiles.macports.org/MacPorts/${macports_distfile} || return $?
+                curl -fsLO https://distfiles.macports.org/MacPorts/${macports_distfile} || return
             fi
-            tar -xjf ${macports_distfile} || return $?
+            tar -xjf ${macports_distfile} || return
         fi
-        cd ${macports_distname} || return $?
-        ./configure --prefix="${option_prefix}" --enable-readline || return $?
-        make -j"$(sysctl -n hw.activecpu)" || return $?
-        make install || return $?
-        cd .. || return $?
-        rm -rf ${macports_distfile} ${macports_distname} || return $?
+        cd ${macports_distname} || return
+        ./configure --prefix="${option_prefix}" --enable-readline || return
+        make -j"$(sysctl -n hw.activecpu)" || return
+        make install || return
+        cd .. || return
+        rm -rf ${macports_distfile} ${macports_distname} || return
     fi
 
-    "${option_prefix}/bin/port" -d selfupdate --nosync || return $?
+    "${option_prefix}/bin/port" -d selfupdate --nosync || return
 }
