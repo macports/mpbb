@@ -186,9 +186,15 @@ done
 if [[ $option_help -eq 1 ]]; then
     usage
 fi
+
 ## Otherwise, run the command and deal with errors
-export PORTSRC="${option_work_dir}/macports.conf"
-if ! $command "$@"; then
-    err "Failed to run $command"
-    exit 1
-fi
+PORTSRC=${option_work_dir}/macports.conf "$command" "$@"
+readonly rc=$?
+case $rc in
+    0)
+        ;;
+    *)
+        err "\`$command' failed to run successfully"
+        ;;
+esac
+exit $rc
