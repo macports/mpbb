@@ -73,7 +73,7 @@ list-subports() {
     # shellcheck disable=SC2154
     local log_subports_progress="${option_log_dir}/ports-progress.txt"
 
-    if [ $# -le 0 ] && [ -z "${option_port:-}" ]; then
+    if [ $# -le 0 ]; then
         err "Must specify at least one port"
         return 1
     fi
@@ -83,10 +83,6 @@ list-subports() {
     # prepare the log file and make sure to start with an empty one
     mkdir -p "$option_log_dir"
     > "$log_subports_progress"
-
-    if [ -n "${option_port}" ]; then
-        print-subports "${option_port}" && success=1
-    fi
 
     for p in "$@"; do
         print-subports "$p" && success=1
