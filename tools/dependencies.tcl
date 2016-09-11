@@ -34,7 +34,7 @@
 package require macports
 
 if {[llength $::argv] == 0} {
-    puts stderr "Usage: $argv0 <portname>"
+    puts stderr "Usage: $argv0 <portname> \[(+|-)variant...\]"
     exit 1
 }
 
@@ -59,11 +59,19 @@ try {
     exit 1
 }
 
+# parse the given variants from the command line
+array set variants {}
+foreach item [lrange $::argv 1 end] {
+    foreach {_ sign variant} [regexp -all -inline -- {([-+])([[:alpha:]_]+[\w\.]*)} $item] {
+        set variants($variant) $sign
+    }
+}
+
 # open the port so we can run dependency calculation
 array set portinfo [lindex $result 1]
 #try -pass_signal {...}
 try {
-    set mport [mportopen $portinfo(porturl) [list subport $portname] {}]
+    set mport [mportopen $portinfo(porturl) [list subport $portname] [array get variants]]
 } catch {{*} eCode eMessage} {
     ui_error "mportopen ${portinfo(porturl)} failed: $eMessage"
     exit 1
@@ -82,9 +90,59 @@ dlist_delete dlist $mport
 
 ## print dependencies with variants
 proc printdependency {ditem} {
+    global variants
+
     array set depinfo [mportinfo $ditem]
 
-    puts [string trim "$depinfo(name) $depinfo(canonical_active_variants)"]
+    # There's a conceptual problem here: We need to calculate the string to
+    # pass to port(1) to build this exact port with its variants, but the
+    # active_variants array does not contain an entry for explicitly
+    # deactivated default_variants.
+    #
+    # To calculate the correct string with the explicitly disabled default
+    # variants, if any, we need the default variants first. Unfortunately the
+    # only way to get the set of default variants is opening the port without
+    # any.
+    #
+    # Given the active_variants of the current dependency calculation and the
+    # ones from a pristine port without variants, calculate the required
+    # string.
+
+    # open the port without variants to determine the default variants
+    if {[llength [array get variants]] > 0} {
+        #try -pass_signal {...}
+        try {
+            set result [mportlookup $depinfo(name)]
+            if {[llength $result] < 2} {
+                ui_error "No such port: $depinfo(name)"
+                exit 1
+            }
+
+            # open the port so we can calculate the default variants
+            array set defaultvariant_portinfo [lindex $result 1]
+            set defaultvariant_mport [mportopen $defaultvariant_portinfo(porturl) [list subport $depinfo(name)] {}]
+            array set defaultvariant_info [mportinfo $defaultvariant_mport]
+            array set default_variants $defaultvariant_info(active_variants)
+            mportclose $defaultvariant_mport
+        }
+    } else {
+        array set default_variants {}
+    }
+
+    set variantstring ""
+    array set active_variants $depinfo(active_variants)
+
+    set relevant_variants [lsort -unique [concat [array names active_variants] [array names default_variants]]]
+    foreach variant $relevant_variants {
+        if {[info exists active_variants($variant)]} {
+            append variantstring "$active_variants($variant)$variant"
+        } else {
+            # the only case where this situation can occur is a default variant that was explicitly disabled
+            append variantstring "-$variant"
+        }
+    }
+
+    puts [string trim "$depinfo(name) $variantstring"]
 }
 dlist_eval $dlist {} [list printdependency]
 
