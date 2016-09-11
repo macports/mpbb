@@ -10,6 +10,15 @@ cleanup-help() {
 }
 
 cleanup() {
+    # if this is the very first build, selfupdate did not install port yet
+    # $option_prefix is set by mpbb
+    # shellcheck disable=SC2154
+    if [ ! -e "${option_prefix}/bin/port" ]; then
+        echo "---> Skipping cleanup"
+        echo "port not installed at ${option_prefix}/bin/port"
+        return
+    fi
+
     echo "----> Deactivating ports"
     # $option_prefix is set by mpbb
     # shellcheck disable=SC2154
