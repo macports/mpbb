@@ -8,11 +8,10 @@ set -u
 # Don't inherit any option variables from the calling environment.
 unset "${!option_@}"
 
-# Print $0 and arguments to standard error.
-# Unset IFS to ensure "$*" uses spaces as separators.
-msg() (unset IFS; printf >&2 '%s: %s\n' "$0" "$*")
-err() { msg error: "$@"; }
-warn() { msg warning: "$@"; }
+# Load function library
+thisdir=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=functions
+. "$thisdir/functions"
 
 mpbb-usage() {
     # "prog" is defined in mpbb-help.
@@ -126,6 +125,7 @@ parseopt prefix:,work-dir: "$@" || exit
     option_jobs_dir=${option_work_dir}/infrastructure/jobs
     option_log_dir=${option_work_dir}/logs
 }
+option_failcache_dir=${option_work_dir}/failcache
 
 # Inform the user if old repositories are still present.
 if [[ -d ${option_work_dir}/tools/.svn ]]; then
@@ -146,7 +146,6 @@ set -- ${args+"${args[@]}"}
 # must define functions "FOO" and "FOO-usage".
 cmds=()
 usages=(mpbb-usage)
-thisdir=$(cd "$(dirname "$0")" && pwd)
 for cmdfile in "$thisdir/mpbb-"*; do
     # Unfortunately ShellCheck does not currently support following multiple
     # files, so we'll just disable the warning.

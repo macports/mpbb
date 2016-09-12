@@ -91,3 +91,6 @@ Subcommand scripts may use but not modify these global shell parameters:
       persist for the duration of an `mpbb` run, so it may be used to
       share ancillary files (e.g., a Subversion checkout of the ports
       tree) between builds of different ports.
+-   `$option_failcache_dir`:
+      A directory for storing information about previously failed builds which
+      saves time because builds that are known to fail will not be attempted.

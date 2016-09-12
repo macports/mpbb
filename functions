@@ -1,0 +1,134 @@
+#!/bin/bash
+# -*- coding: utf-8; mode: sh; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=sh:et:sw=4:ts=4:sts=4
+
+# Helper functions for mp-buildbot
+
+# Print $0 and arguments to standard error.
+# Unset IFS to ensure "$*" uses spaces as separators.
+msg() (unset IFS; printf >&2 '%s: %s\n' "$0" "$*")
+err() { msg error: "$@"; }
+warn() { msg warning: "$@"; }
+
+## Compute a failcache hash for the given port
+#
+# Computes and prints a hash uniquely identifying a specific state of a port's
+# definition files, including the Portfile's hash as well as the port's
+# patchfiles. To build the hash, this function executes the following
+# algorithm:
+#  - For the Portfile, and each file in files/ (if any), calculate a SHA256
+#    hash
+#  - Sort the hash values alphabetically
+#  - Hash the result using SHA256
+# This means a failcache entry will not match if a patchfile changes. A common
+# case where this is the desired behavior is a port committed without
+# a required patchfile.
+#
+# Valid arguments are all arguments accepted by "port dir".
+compute_failcache_hash() {
+    local portdir
+    local -a filelist
+
+    portdir=$("${option_prefix}/bin/port" dir "$@")
+    if [ $? -ne 0 ] || [ -z "$portdir" ]; then
+        err "Could not compute failcache hash: port dir" "$@" "failed"
+        return 1
+    fi
+
+    if [ ! -d "$portdir" ]; then
+        err "Port directory $portdir does not exist"
+        return 2
+    fi
+
+    filelist=("$portdir/Portfile")
+    if [ -d "$portdir/files" ]; then
+        filelist+=("$portdir/files")
+    fi
+
+    find "${filelist[@]}" -type f -exec openssl dgst -sha256 {} \; |\
+        cut -d' ' -f2 |\
+        sort |\
+        openssl dgst -sha256 |\
+        cut -d' ' -f2
+}
+
+## Compute a key that uniquely identifies a (port, variants, portfile-hash) tuple
+#
+# Valid arguments are a port name, optionally followed by a variant
+# specification. Invokes "port dir" to find the Portfile and patchfiles and
+# computes a checksum of these files that will become part of the hash.
+failcache_key() {
+    local port=$1
+    if [ -z "$port" ]; then
+        err "failcache_key expects a port argument, but none was given."
+        return 1
+    fi
+
+    local checksum
+    checksum=$(compute_failcache_hash "$port")
+    if [ $? -ne 0 ]; then
+        err "compute_failcache_hash $port failed"
+        return 2
+    fi
+
+    local canonical_variants
+    canonical_variants=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/canonical_variants.tcl" "$@")
+    if [ $? -ne 0 ]; then
+        err "tools/canonical_variants.tcl" "$@" "failed"
+        return 4
+    fi
+
+    echo "$port $canonical_variants $checksum"
+}
+
+## Test whether a given port with variants has previously failed.
+#
+# Valid arguments are a port name, optionally followed by a variant
+# specification. Succeeds if the port did not previsouly fail to build,
+# fails if the port is known to fail.
+failcache_test() {
+    local key
+    key=$(failcache_key "$@")
+    if [ $? -ne 0 ]; then
+        err "Could not determine failcache key for" "$@"
+        return 1
+    fi
+
+    if [ -f "${option_failcache_dir}/${key}" ]; then
+        printf "port %s previously failed in build %s\n" "${key}" "$(<"${option_failcache_dir}/${key}")"
+        return 1
+    else
+        return 0
+    fi
+}
+
+## Mark a build of a given port with variants as successful.
+#
+# Valid arguments are a port name, optionally followed by a variant
+# specification. Removes any database entries that marked a port as failed.
+failcache_success() {
+    local key
+    key=$(failcache_key "$@")
+    if [ $? -ne 0 ]; then
+        err "Could not determine failcache key for" "$@"
+        return 1
+    fi
+
+    rm -f "${option_failcache_dir}/${key}"
+}
+
+## Mark a build of a given port with variants as failed.
+#
+# Valid arguments are a port name, optionally followed by a variant
+# specification. Creates or updates the timestamp of a database entry that
+# marks a port as failed.
+failcache_failure() {
+    local key
+    key=$(failcache_key "$@")
+    if [ $? -ne 0 ]; then
+        err "Could not determine failcache key for" "$@"
+        return 1
+    fi
+
+    mkdir -p "${option_failcache_dir}"
+    echo "${BUILDBOT_BUILDURL:-unknown}" > "${option_failcache_dir}/${key}"
+}

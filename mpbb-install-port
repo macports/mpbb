@@ -55,10 +55,23 @@ install-port() {
     time_start=$(date +%s)
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    if ! "${option_prefix}/bin/port" -dk install "$port"; then
+    if "${option_prefix}/bin/port" -dk install "$@"; then
+        # Remove failcache if it exists
+        failcache_success "$@"
+        if [ $? -ne 0 ]; then
+            err "failcache_success" "$@" "failed."
+            return 1
+        fi
+    else
         echo "Build of '$port' failed."
         # log: summary for the portwatcher
         echo "Building '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
+        # update failcache
+        failcache_failure "$@"
+        if [ $? -ne 0 ]; then
+            err "failcache_failure" "$@" "failed."
+            return 1
+        fi
         return 1
     fi
     time_stop=$(date +%s)
