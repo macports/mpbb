@@ -170,7 +170,7 @@ for cmd in "${cmds[@]}"; do
     [[ $cmd == "$subcmd" ]] && break
 done
 if (( $? != 0 || ${#cmds[@]} == 0 )); then
-    err "Unknown command \`$command'"
+    err "Unknown command \`$cmd'"
     echo >&2 "Try \`$0 help' for more information."
     exit 2
 fi
