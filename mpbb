@@ -119,8 +119,18 @@ parseopt prefix:,work-dir: "$@" || exit
 
 # shellcheck disable=SC2034 disable=SC2154
 # Not really options, but pretend they are because they're global.
-option_jobs_dir=${option_work_dir}/tools
+option_jobs_dir=${option_work_dir}/infrastructure/jobs
 option_log_dir=${option_work_dir}/logs
+
+# Inform the user if old repositories are still present.
+if [[ -d ${option_work_dir}/tools/.svn ]]; then
+    msg "\`${option_work_dir}/tools' is no longer used for the jobs" \
+        'tools and may be deleted'
+fi
+if [[ -d ${option_work_dir}/dports/.svn ]]; then
+    msg "\`${option_work_dir}/dports' is no longer used for the ports" \
+        'tree and may be deleted'
+fi
 
 # shellcheck disable=SC2086
 # Set up the positional arguments for the subcommand. With "set -u"
