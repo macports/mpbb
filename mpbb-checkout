@@ -95,7 +95,7 @@ checkout() {
     # shellcheck disable=SC2100 disable=SC2154
     if svn=${option_svn:-$(command -v svn)}; then
         checkout=svn-checkout
-        jobs_dir=${option_work_dir}/tools
+        jobs_dir=${option_jobs_dir}
         if [[ -n ${option_svn_url+_} ]]; then
             : "${option_jobs_url=${option_svn_url}/base/portmgr/jobs}"
             : "${option_ports_url=${option_svn_url}/dports}"

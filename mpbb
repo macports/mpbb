@@ -119,6 +119,7 @@ parseopt prefix:,work-dir: "$@" || exit
 
 # shellcheck disable=SC2034 disable=SC2154
 # Not really options, but pretend they are because they're global.
+option_jobs_dir=${option_work_dir}/tools
 option_log_dir=${option_work_dir}/logs
 
 # shellcheck disable=SC2086
