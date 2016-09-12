@@ -155,16 +155,20 @@ option_log_dir=${option_work_dir}/logs
 # enabled, "${foo[@]}" doesn't work if foo is empty.
 set -- ${args+"${args[@]}"}
 
-# Load the mpbb-$command scripts and source them to load the actual
-# implementations and help messages of available commands.
+# Load the subcommand implementations. Each sourced script "mpbb-FOO"
+# must define functions "FOO" and "FOO-help".
 cmds=()
 thisdir=$(cd "$(dirname "$0")" && pwd)
 for cmdfile in "$thisdir/mpbb-"*; do
     # Unfortunately ShellCheck does not currently support following multiple
     # files, so we'll just disable the warning.
     # shellcheck disable=SC1090
-    . "$cmdfile"
-    cmds+=("${cmdfile#$thisdir/mpbb-}")
+    if . "$cmdfile"; then
+        cmds+=("${cmdfile##*/mpbb-}")
+    else
+        err "failed to load subcommand script \`$cmdfile'"
+        exit 3
+    fi
 done
 
 if (( $# < 1 )); then
