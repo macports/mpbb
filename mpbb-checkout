@@ -16,19 +16,25 @@ MacPorts to use the latter as a port source.
 
 Options:
 
-  --svn=<path>
-    A command-line Subversion client. Defaults to the first \`svn'
-    executable found in \$PATH.
+  --jobs-url=<URL>
+    URL to a repository containing the jobs tools. Only used when
+    checking out a new working copy. Defaults to
+    \`https://svn.macports.org/repository/macports/trunk/base/portmgr/jobs'.
 
-  --svn-url=<URL>
-    URL to a Subversion repository that contains \`dports' and
-    \`base/portmgr/jobs' subdirectories. Only used when checking out
-    a new working copy. Defaults to
-    \`https://svn.macports.org/repository/macports/trunk'.
-
-  --svn-revision=<rev>
-    Revision number at which the ports tree will be checked out.
+  --ports-commit=<commit>
+    A commit or revision at which the ports tree will be checked out.
+    Any specifier understood by the version-control client may be used.
     Defaults to \`HEAD'.
+
+  --ports-url=<URL>
+    URL to a repository containing the ports tree. Only used when
+    checking out a new working copy. Defaults to
+    \`https://svn.macports.org/repository/macports/trunk/dports'.
+
+  --svn[=<path>]
+    Use Subversion to obtain the jobs tools and ports tree; this is the
+    default behavior. The path to a Subversion client may be provided
+    explicitly, otherwise \`svn' is used.
 
 Run \`$prog help' for global options and a list of other subcommands.
 EOF
@@ -36,57 +42,71 @@ EOF
 
 checkout() {
     local args
-    parseopt prefix:,svn:,svn-revision:,svn-url: "$@" || return
-    : "${option_svn=$(which svn)}"
-    : "${option_svn_revision=HEAD}"
-    : "${option_svn_url=https://svn.macports.org/repository/macports/trunk}"
+    parseopt jobs-url:,ports-commit:,ports-url:,prefix:,svn::,svn-url: "$@" \
+        || return
     # shellcheck disable=SC2086
     set -- ${args+"${args[@]}"}
 
-    # $option_work_dir is set in mpbb, which sources this script
     # shellcheck disable=SC2154
-    dports_svn=${option_work_dir}/dports
-    tools_svn=${option_work_dir}/tools
-    svn=${option_svn}
-    svn_url=${option_svn_url}
-    svn_rev=${option_svn_revision}
+    # To maintain backwards compatibility, --svn-url implies --svn.
+    if [[ -n ${option_svn_url+_} ]]; then
+        : "${option_svn=}"
+    fi
 
-    if [[ -d "${tools_svn}/.svn" ]] ; then
+    # shellcheck disable=SC2154
+    local -r ports_dir=${option_work_dir}/dports
+
+    local jobs_dir svn
+    # shellcheck disable=SC2154
+    if svn=${option_svn:-$(command -v svn)}; then
+        jobs_dir=${option_work_dir}/tools
+        if [[ -n ${option_svn_url+_} ]]; then
+            : "${option_jobs_url=${option_svn_url}/base/portmgr/jobs}"
+            : "${option_ports_url=${option_svn_url}/dports}"
+        else
+            : "${option_jobs_url=https://svn.macports.org/repository/macports/trunk/base/portmgr/jobs}"
+            : "${option_ports_url=https://svn.macports.org/repository/macports/trunk/dports}"
+        fi
+    if [[ -d "${jobs_dir}/.svn" ]] ; then
         echo "Update macports tools from svn..."
-        if [[ -e "${tools_svn}/.svn/lock" ]]; then
-            "$svn" --non-interactive cleanup "${tools_svn}" || return
+        if [[ -e "${jobs_dir}/.svn/lock" ]]; then
+            "$svn" --non-interactive cleanup "${jobs_dir}" || return
         fi
         "$svn" update --non-interactive \
             -r HEAD \
-            "${tools_svn}" || return
+            "${jobs_dir}" || return
     else
         echo "Checking out macports tools from svn..."
-        mkdir -p "${option_work_dir}"
+        mkdir -p "$(dirname "${jobs_dir}")"
         "$svn" checkout --non-interactive \
-            -r HEAD "${svn_url}/base/portmgr/jobs" \
-            "${tools_svn}" || return
+            -r HEAD "${option_jobs_url}" \
+            "${jobs_dir}" || return
     fi
 
-    if [[ -d "${dports_svn}/.svn" ]] ; then
+    if [[ -d "${ports_dir}/.svn" ]] ; then
         echo "Update macports from svn..."
         # TODO: add switching of SVN server
-        if [[ -e "${dports_svn}/.svn/lock" ]]; then
-            "$svn" --non-interactive cleanup "${dports_svn}" || return
+        if [[ -e "${ports_dir}/.svn/lock" ]]; then
+            "$svn" --non-interactive cleanup "${ports_dir}" || return
         fi
         "$svn" update --non-interactive \
-            -r "${svn_rev}" \
-            "${dports_svn}" || return
+            -r "${option_ports_commit-HEAD}" \
+            "${ports_dir}" || return
     else
         echo "Checking out macports from svn..."
-        mkdir -p "${option_work_dir}"
+        mkdir -p "$(dirname "${ports_dir}")"
         "$svn" checkout --non-interactive \
-            -r "${svn_rev}" "${svn_url}/dports" \
-            "${dports_svn}" || return
+            -r "${option_ports_commit-HEAD}" "${option_ports_url}" \
+            "${ports_dir}" || return
+    fi
+    else
+        err 'cannot find a Subversion client'
+        return 1
     fi
 
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    (cd "${dports_svn}" && "${option_prefix}/bin/portindex") || return
+    (cd "${ports_dir}" && "${option_prefix}/bin/portindex") || return
 
     local -ar mirrors=(aarnet.au cjj.kr fco.it her.gr jnb.za jog.id
                        lil.fr mse.uk nou.nc nue.de osl.no sea.us ykf.ca)
@@ -103,7 +123,7 @@ EOF
     cat > "${option_work_dir}/sources.conf" <<EOF || return
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
-file://${dports_svn} [default]
+file://${ports_dir} [default]
 EOF
 
 }
