@@ -25,36 +25,36 @@ environment.
 
 OPTIONS
 
- --archive-site URL
+ --archive-site=URL
    Base URL of the packages archive to check whether an archive was not
    published yet. Default is "https://packages.macports.org".
 
  --help
    Print this usage message.
 
- --prefix PREFIX
+ --prefix=PREFIX
    The prefix of the MacPorts installation that will build the ports. Defaults
    to "/opt/local".
 
- --svn BINARY
+ --svn=BINARY
    Absolute path to the svn binary that you want to use for SVN operations. The
    default is to find svn in your path.
 
- --svn-url SVNURL
+ --svn-url=SVNURL
    URL to a Subversion repository in a format accepted by Subversion. The
    referenced folder must contain a dports and a base folder. The default is
    "https://svn.macports.org/repository/macports/trunk".
 
- --svn-revision REVISION
+ --svn-revision=REVISION
    Revision number in the specified Subversion repository to checkout. Defaults
    to "HEAD".
 
- --staging-dir DIR
+ --staging-dir=DIR
    Directory where new distributable archives should be copied for deployment
    on the archive server. Defaults to the 'archive-staging' subfolder in the
    current directory.
 
- --work-dir WORKDIR
+ --work-dir=WORKDIR
    A scratch area that mpbb will use to put temporary files, ideally kept
    between builds. Your MacPorts installation in --prefix needs to be able to
    access this location. Defaults to your current directory, or
@@ -96,72 +96,75 @@ if [ ! -f "$thisdir/mpbb-$command" ]; then
     usage
 fi
 
-## Flag Parsing
-while [[ $# -gt 0 ]]; do
-    key=$1
+# TODO Documentation, obviously :)
+parseopt() {
+    # Be stricter about this than getopt(1) is.
+    if ! [[ ${1-} =~ ^[[:alnum:]-]+:{0,2}(,[[:alnum:]-]+:{0,2})*$ ]]; then
+        err 'Invalid argument given to parseopt'
+        return 3
+    fi
 
-    case "$key" in
-        --*)
-            # Shellcheck doesn't see the invocations in the sourced
-            # scripts, so we'll have to disable a number of false
-            # positives here.
-
-            # shellcheck disable=SC2034
-            case "$key" in
-                --archive-site)
-                    option_archive_site=$2
-                    shift
-                    ;;
-                --help)
-                    option_help=1
-                    ;;
-                --port)
-                    # Deprecated and will be removed in the near future.
-                    option_port=$2
-                    shift
-                    ;;
-                --prefix)
-                    option_prefix=$2
-                    shift
-                    ;;
-                --staging-dir)
-                    option_staging_dir=$2
-                    shift
-                    ;;
-                --svn)
-                    option_svn=$2
-                    shift
-                    ;;
-                --svn-url)
-                    option_svn_url=$2
-                    shift
-                    ;;
-                --svn-revision)
-                    option_svn_revision=$2
-                    shift
-                    ;;
-                --work-dir)
-                    option_work_dir=$2
-                    shift
-                    ;;
-                --)
-                    shift
-                    break
-                    ;;
-                *)
-                    err "Unknown option: ${key}"
-                    option_help=1
-                    break
-                    ;;
-            esac
-
-            shift
+    # Use "--options +" to prevent arguments from being rearranged.
+    local opts
+    opts=$(getopt --name "$0" --opt + --longopt "$1" -- "${@:2}")
+    case $? in
+        0)
+            ;;
+        1)
+            # getopt(1) will print the bad argument to standard error.
+            echo >&2 "Try \`$0 --help' for more information."
+            return 2
             ;;
         *)
-            break
+            err 'getopt encountered an internal error'
+            return 3
             ;;
     esac
-done
+    readonly opts
+
+    local -a validopts
+    IFS=, read -ra validopts <<<"$1"
+    readonly validopts=("${validopts[@]/#/--}")
+
+    eval set -- "$opts"
+
+    local opt validopt
+    # getopt(1) ensures that the options are always terminated with "--".
+    while [[ $1 != -- ]]; do
+        opt=$1
+        shift
+        # XXX Do NOT touch anything below unless you know exactly what
+        # you're doing (http://mywiki.wooledge.org/BashFAQ/006#eval).
+        for validopt in "${validopts[@]}"; do
+            if [[ $validopt == "$opt:" || $validopt == "$opt::" ]]; then
+                opt=${opt#--}
+                # $1 is null for omitted optional arguments.
+                eval option_"${opt//-/_}"'=$1'
+                shift
+                continue 2
+            fi
+            if [[ $validopt == "$opt" ]]; then
+                opt=${opt#--}
+                eval option_"${opt//-/_}"'=1'
+                continue 2
+            fi
+        done
+        # Unreachable unless there is a bug in this function or in getopt(1).
+        err 'parseopt encountered an internal error'
+        return 3
+    done
+    args=("${@:2}")
+}
+
+unset GETOPT_COMPATIBLE
+if getopt -T >/dev/null; then
+    # http://frodo.looijaard.name/project/getopt
+    err "Cannot find an enhanced getopt(1)"
+    exit 3
+fi
+
+# Process options.
+parseopt archive-site:,help,port:,prefix:,svn:,svn_revision:,svn_url:,staging-dir:,work-dir: "$@" || exit
 
 # Use sensible defaults for options that weren't set on the command line.
 : "${option_port=}"
@@ -177,6 +180,11 @@ done
 # shellcheck disable=SC2034 disable=SC2154
 # Not really options, but pretend they are because they're global.
 option_log_dir=${option_work_dir}/logs
+
+# shellcheck disable=SC2086
+# Set up the positional arguments for the subcommand. With "set -u"
+# enabled, "${foo[@]}" doesn't work if foo is empty.
+set -- ${args+"${args[@]}"}
 
 ## If subcommand help is requested, print that
 if [[ $option_help -eq 1 ]]; then
