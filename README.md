@@ -81,6 +81,11 @@ Subcommand scripts may use but not modify these global shell parameters:
       The name of the subcommand.
 -   `$option_prefix`:
       The prefix of the MacPorts installation.
+-   `$option_jobs_dir`:
+      The path to a local copy of the
+      [jobs tools](https://trac.macports.org/browser/trunk/base/portmgr/jobs).
+-   `$option_log_dir`:
+      A directory for storing build logs.
 -   `$option_work_dir`:
       A directory for storing temporary data. It is guaranteed to
       persist for the duration of an `mpbb` run, so it may be used to
