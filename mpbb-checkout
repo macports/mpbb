@@ -15,17 +15,20 @@ EOF
 }
 
 checkout() {
+    local args
+    parseopt prefix:,svn:,svn-revision:,svn-url: "$@" || return
+    : "${option_svn=$(which svn)}"
+    : "${option_svn_revision=HEAD}"
+    : "${option_svn_url=https://svn.macports.org/repository/macports/trunk}"
+    # shellcheck disable=SC2086
+    set -- ${args+"${args[@]}"}
+
     # $option_work_dir is set in mpbb, which sources this script
     # shellcheck disable=SC2154
     dports_svn=${option_work_dir}/dports
     tools_svn=${option_work_dir}/tools
-    # $option_svn is set in mpbb
-    # shellcheck disable=SC2154
     svn=${option_svn}
-    # $option_svn_url and $option_svn_revision are set in mpbb
-    # shellcheck disable=SC2154
     svn_url=${option_svn_url}
-    # shellcheck disable=SC2154
     svn_rev=${option_svn_revision}
 
     if [[ -d "${tools_svn}/.svn" ]] ; then

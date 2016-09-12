@@ -70,32 +70,6 @@ EOF
     exit 2
 }
 
-## Load the mpbb-$command scripts and source them to load the actual implementations and help messages of available commands
-commands=()
-thisdir=$(cd "$(dirname "$0")" && pwd)
-for cmdfile in "$thisdir/mpbb-"*; do
-    # Unfortunately ShellCheck does not currently support following multiple
-    # files, so we'll just disable the warning.
-    # shellcheck disable=SC1090
-    . "$cmdfile"
-    commands+=(${cmdfile#$thisdir/mpbb-})
-done
-
-## The first argument should be the subcommand
-if [[ $# -lt 1 ]]; then
-    err "No command specified"
-    usage
-fi
-
-command=$1
-shift
-if [ ! -f "$thisdir/mpbb-$command" ]; then
-    if [ "$command" != "--help" ]; then
-        err "Unknown command $command"
-    fi
-    usage
-fi
-
 # TODO Documentation, obviously :)
 parseopt() {
     # Be stricter about this than getopt(1) is.
@@ -164,17 +138,12 @@ if getopt -T >/dev/null; then
 fi
 
 # Process options.
-parseopt archive-site:,help,port:,prefix:,svn:,svn_revision:,svn_url:,staging-dir:,work-dir: "$@" || exit
+parseopt help,prefix:,work-dir: "$@" || exit
 
 # Use sensible defaults for options that weren't set on the command line.
 : "${option_port=}"
 : "${option_prefix=/opt/local}"
 : "${option_work_dir=${PWD:-/tmp/mp-buildbot}}"
-: "${option_archive_site=https://packages.macports.org}"
-: "${option_staging_dir=${option_work_dir}/archive-staging}"
-: "${option_svn=$(which svn)}"
-: "${option_svn_revision=HEAD}"
-: "${option_svn_url=https://svn.macports.org/repository/macports/trunk}"
 : "${option_help=0}"
 
 # shellcheck disable=SC2034 disable=SC2154
@@ -185,6 +154,30 @@ option_log_dir=${option_work_dir}/logs
 # Set up the positional arguments for the subcommand. With "set -u"
 # enabled, "${foo[@]}" doesn't work if foo is empty.
 set -- ${args+"${args[@]}"}
+
+# Load the mpbb-$command scripts and source them to load the actual
+# implementations and help messages of available commands.
+cmds=()
+thisdir=$(cd "$(dirname "$0")" && pwd)
+for cmdfile in "$thisdir/mpbb-"*; do
+    # Unfortunately ShellCheck does not currently support following multiple
+    # files, so we'll just disable the warning.
+    # shellcheck disable=SC1090
+    . "$cmdfile"
+    cmds+=("${cmdfile#$thisdir/mpbb-}")
+done
+
+if (( $# < 1 )); then
+    err "No command specified"
+    usage
+fi
+
+command=$1
+shift
+if [[ ! -f "$thisdir/mpbb-$command" ]]; then
+    err "Unknown command \`$command'"
+    usage
+fi
 
 ## If subcommand help is requested, print that
 if [[ $option_help -eq 1 ]]; then

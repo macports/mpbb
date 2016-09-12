@@ -10,8 +10,13 @@ cleanup-help() {
 }
 
 cleanup() {
+    local args
+    parseopt prefix: "$@" || return
+    # shellcheck disable=SC2086
+    set -- ${args+"${args[@]}"}
+
     # if this is the very first build, selfupdate did not install port yet
-    # $option_prefix is set by mpbb
+    # $option_prefix is set by parseopt
     # shellcheck disable=SC2154
     if [ ! -e "${option_prefix}/bin/port" ]; then
         echo "---> Skipping cleanup"

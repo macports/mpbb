@@ -19,7 +19,14 @@ get-maintainers() {
 }
 
 install-dependencies() {
-    local port=${1-${option_port-}}
+    local args
+    parseopt port:,prefix: "$@" || return
+    # shellcheck disable=SC2154
+    : "${option_port=}"
+    # shellcheck disable=SC2086
+    set -- ${args+"${args[@]}"}
+
+    local port=${1-${option_port}}
     if [[ -z $port ]]; then
         err "Must specify a port"
         return 1

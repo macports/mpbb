@@ -17,35 +17,33 @@ The defined build steps are:
 
 1.  Update base without updating the portindex.
 
-        mpbb selfupdate --prefix /opt/local
+        mpbb --prefix /opt/local selfupdate
 
 2.  Checkout ports tree and update the portindex.
 
-        mpbb checkout \
-            --prefix /opt/local \
-            --work-dir /tmp/scratch \
+        mpbb --prefix /opt/local --work-dir /tmp/scratch \
+            checkout \
             --svn-url https://svn.macports.org/repository/macports/trunk \
             --svn-revision 123456
 
 3.  Print one or more ports' subports to standard output.
 
-        mpbb list-subports --prefix /opt/local php cmake llvm-3.8 [...]
+        mpbb --prefix /opt/local list-subports php cmake llvm-3.8 [...]
 
 4.  For each subport listed in step 3:
 
     a.  Install dependencies.
 
-            mpbb install-dependencies --prefix /opt/local php71
+            mpbb --prefix /opt/local install-dependencies php71
 
     b.  Install the subport itself.
 
-            mpbb install-port --prefix /opt/local php71
+            mpbb --prefix /opt/local install-port php71
 
     c.  Gather archives.
 
-            mpbb gather-archives \
-                --prefix /opt/local \
-                --work-dir /tmp/scratch \
+            mpbb --prefix /opt/local --work-dir /tmp/scratch \
+                gather-archives \
                 --archive-site https://packages.macports.org \
                 --staging-dir /tmp/scratch/staging
 
@@ -56,7 +54,7 @@ The defined build steps are:
     f.  Clean up. This must always be run, even if a previous step
         failed.
 
-            mpbb cleanup --prefix /opt/local
+            mpbb --prefix /opt/local cleanup
 
 
 ## Subcommand API ##
@@ -79,19 +77,8 @@ Subcommand scripts may use but not modify these global shell parameters:
 
 -   `$command`:
       The name of the subcommand.
--   `$option_archive_site`:
-      The URL of the mirror to check for preexisting archives.
 -   `$option_prefix`:
       The prefix of the MacPorts installation.
--   `$option_staging_dir`:
-      The directory for staging distributable archives for upload.
--   `$option_svn`:
-      The path to the Subversion executable.
--   `$option_svn_revision`:
-      The revision to checkout from the `$option_svn_url` repository.
--   `$option_svn_url`:
-      The URL of a Subversion repository containing the MacPorts `base`
-      and `dports` directory trees.
 -   `$option_work_dir`:
       A directory for storing temporary data. It is guaranteed to
       persist for the duration of an `mpbb` run, so it may be used to
