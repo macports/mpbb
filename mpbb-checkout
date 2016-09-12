@@ -40,6 +40,41 @@ Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 
+is-empty() {
+    if [[ $# -ne 1 || -z $1 ]]; then
+        err 'is-empty requires a single non-null argument'
+        return 2
+    fi
+    (shopt -s dotglob nullglob; f=("$1"/*); (( ! ${#f[@]} )))
+}
+
+svn-checkout() {
+    if (( $# < 2 )); then
+        err 'svn-checkout requires at least two arguments'
+        return 2
+    fi
+
+    local -r dst=$1 src=$2 rev=${3-HEAD}
+    local -r svn=("$svn" --non-interactive)
+    local -r root=$("${svn[@]}" info --show-item wc-root "$dst" 2>/dev/null)
+
+    if [[ -z $root ]] && is-empty "$dst"; then
+        printf "\n---> Checking out Subversion repository from \`%s'\n" "$src"
+        # "svn checkout" creates the intermediate directories.
+        "${svn[@]}" checkout --revision "$rev" "$src" "$dst"
+    elif [[ $root -ef $dst ]]; then
+        # TODO Allow switching the Subversion server.
+        printf "\n---> Updating Subversion repository from \`%s'\n" \
+            "$("${svn[@]}" info --show-item url "$dst")"
+        "${svn[@]}" cleanup "$dst" \
+            && "${svn[@]}" update --revision "$rev" "$dst"
+    else
+        err "\`$dst' is not an empty directory or" \
+            'the root of a Subversion working copy'
+        return 1
+    fi
+}
+
 checkout() {
     local args
     parseopt jobs-url:,ports-commit:,ports-url:,prefix:,svn::,svn-url: "$@" \
@@ -56,9 +91,10 @@ checkout() {
     # shellcheck disable=SC2154
     local -r ports_dir=${option_work_dir}/dports
 
-    local jobs_dir svn
-    # shellcheck disable=SC2154
+    local checkout jobs_dir svn
+    # shellcheck disable=SC2100 disable=SC2154
     if svn=${option_svn:-$(command -v svn)}; then
+        checkout=svn-checkout
         jobs_dir=${option_work_dir}/tools
         if [[ -n ${option_svn_url+_} ]]; then
             : "${option_jobs_url=${option_svn_url}/base/portmgr/jobs}"
@@ -67,42 +103,16 @@ checkout() {
             : "${option_jobs_url=https://svn.macports.org/repository/macports/trunk/base/portmgr/jobs}"
             : "${option_ports_url=https://svn.macports.org/repository/macports/trunk/dports}"
         fi
-    if [[ -d "${jobs_dir}/.svn" ]] ; then
-        echo "Update macports tools from svn..."
-        if [[ -e "${jobs_dir}/.svn/lock" ]]; then
-            "$svn" --non-interactive cleanup "${jobs_dir}" || return
-        fi
-        "$svn" update --non-interactive \
-            -r HEAD \
-            "${jobs_dir}" || return
-    else
-        echo "Checking out macports tools from svn..."
-        mkdir -p "$(dirname "${jobs_dir}")"
-        "$svn" checkout --non-interactive \
-            -r HEAD "${option_jobs_url}" \
-            "${jobs_dir}" || return
-    fi
-
-    if [[ -d "${ports_dir}/.svn" ]] ; then
-        echo "Update macports from svn..."
-        # TODO: add switching of SVN server
-        if [[ -e "${ports_dir}/.svn/lock" ]]; then
-            "$svn" --non-interactive cleanup "${ports_dir}" || return
-        fi
-        "$svn" update --non-interactive \
-            -r "${option_ports_commit-HEAD}" \
-            "${ports_dir}" || return
-    else
-        echo "Checking out macports from svn..."
-        mkdir -p "$(dirname "${ports_dir}")"
-        "$svn" checkout --non-interactive \
-            -r "${option_ports_commit-HEAD}" "${option_ports_url}" \
-            "${ports_dir}" || return
-    fi
     else
         err 'cannot find a Subversion client'
         return 1
     fi
+    readonly checkout jobs_dir svn
+
+    $checkout "${jobs_dir}" "${option_jobs_url}" || return
+    # shellcheck disable=SC2086 disable=SC2154
+    $checkout "${ports_dir}" "${option_ports_url}" \
+            ${option_ports_commit+"${option_ports_commit}"} || return
 
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
