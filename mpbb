@@ -4,27 +4,9 @@
 # Abort on undefined variables.
 set -u
 
-## Options and their defaults
-option_default_archive_site=https://packages.macports.org
-option_default_help=0
-option_default_port=
-option_default_prefix=/opt/local
-option_default_staging_dir=${PWD:-/tmp/mp-buildbot}/archive-staging
-option_default_svn=$(which svn)
-option_default_svn_revision=HEAD
-option_default_svn_url=https://svn.macports.org/repository/macports/trunk
-option_default_work_dir=${PWD:-/tmp/mp-buildbot}
-
-option_archive_site=$option_default_archive_site
-option_help=$option_default_help
-option_port=$option_default_port
-option_prefix=$option_default_prefix
-option_staging_dir=$option_default_staging_dir
-option_svn=$option_default_svn
-option_svn_revision=$option_default_svn_revision
-option_svn_url=$option_default_svn_url
-option_work_dir=$option_default_work_dir
-option_log_dir="${option_work_dir}/logs"
+# shellcheck disable=SC2154
+# Don't inherit any option variables from the calling environment.
+unset "${!option_@}"
 
 # Print $0 and arguments to standard error.
 # Unset IFS to ensure "$*" uses spaces as separators.
@@ -45,27 +27,27 @@ OPTIONS
 
  --archive-site URL
    Base URL of the packages archive to check whether an archive was not
-   published yet. Default is $option_default_archive_site.
+   published yet. Default is "https://packages.macports.org".
 
  --help
    Print this usage message.
 
  --prefix PREFIX
    The prefix of the MacPorts installation that will build the ports. Defaults
-   to $option_default_prefix.
+   to "/opt/local".
 
  --svn BINARY
    Absolute path to the svn binary that you want to use for SVN operations. The
-   default is to find svn in your path, which is currently $option_default_svn.
+   default is to find svn in your path.
 
  --svn-url SVNURL
    URL to a Subversion repository in a format accepted by Subversion. The
    referenced folder must contain a dports and a base folder. The default is
-   $option_default_svn_url.
+   "https://svn.macports.org/repository/macports/trunk".
 
  --svn-revision REVISION
    Revision number in the specified Subversion repository to checkout. Defaults
-   to $option_default_svn_revision.
+   to "HEAD".
 
  --staging-dir DIR
    Directory where new distributable archives should be copied for deployment
@@ -160,7 +142,6 @@ while [[ $# -gt 0 ]]; do
                     ;;
                 --work-dir)
                     option_work_dir=$2
-                    option_log_dir="${option_work_dir}/logs"
                     shift
                     ;;
                 --)
@@ -169,8 +150,8 @@ while [[ $# -gt 0 ]]; do
                     ;;
                 *)
                     err "Unknown option: ${key}"
-                    echo
-                    usage
+                    option_help=1
+                    break
                     ;;
             esac
 
@@ -181,6 +162,21 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Use sensible defaults for options that weren't set on the command line.
+: "${option_port=}"
+: "${option_prefix=/opt/local}"
+: "${option_work_dir=${PWD:-/tmp/mp-buildbot}}"
+: "${option_archive_site=https://packages.macports.org}"
+: "${option_staging_dir=${option_work_dir}/archive-staging}"
+: "${option_svn=$(which svn)}"
+: "${option_svn_revision=HEAD}"
+: "${option_svn_url=https://svn.macports.org/repository/macports/trunk}"
+: "${option_help=0}"
+
+# shellcheck disable=SC2034 disable=SC2154
+# Not really options, but pretend they are because they're global.
+option_log_dir=${option_work_dir}/logs
 
 ## If subcommand help is requested, print that
 if [[ $option_help -eq 1 ]]; then
