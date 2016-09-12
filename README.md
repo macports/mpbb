@@ -94,3 +94,24 @@ Subcommand scripts may use but not modify these global shell parameters:
 -   `$option_failcache_dir`:
       A directory for storing information about previously failed builds which
       saves time because builds that are known to fail will not be attempted.
+
+
+## Runtime Requirements ##
+
+-   `mpbb` is written in [bash](https://www.gnu.org/software/bash) and
+    is known to be compatible with 3.2.17 through 3.2.57.
+-   Library functions
+    -   `compute_failcache_hash` requires an
+        [OpenSSL](https://www.openssl.org) that can generate SHA256 digests.
+    -   `parseopt` requires [Frodo Looijaard's enhanced
+        `getopt(1)`](http://frodo.looijaard.name/project/getopt),
+        which is available from the `getopt` port.
+-   Subcommands
+    -   Any subcommand involving ports requires MacPorts, obviously.
+    -   `mpbb checkout` requires one or both of the
+        [Git](https://git-scm.com) and
+        [Subversion](http://subversion.apache.org) clients.
+    -   `mpbb help` requires
+        [`fmt(1)`](https://en.wikipedia.org/wiki/Fmt).
+    -   `mpbb gather-archives` requires [curl](https://curl.haxx.se).
+    -   `mpbb selfupdate` requires Make.
