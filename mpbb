@@ -1,8 +1,8 @@
 #!/bin/bash
 # -*- coding: utf-8; mode: sh; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=sh:et:sw=4:ts=4:sts=4
 
-# Abort on error and undefined variables. Enable debug output
-set -eu
+# Abort on undefined variables.
+set -u
 
 ## Options and their defaults
 option_default_archive_site=https://packages.macports.org
