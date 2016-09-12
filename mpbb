@@ -176,9 +176,14 @@ if (( $# < 1 )); then
     usage
 fi
 
-command=$1
+subcmd=$1
 shift
-if [[ ! -f "$thisdir/mpbb-$command" ]]; then
+
+# This loop exits with 0 if cmds contains subcmd or is empty.
+for cmd in "${cmds[@]}"; do
+    [[ $cmd == "$subcmd" ]] && break
+done
+if (( $? != 0 || ${#cmds[@]} == 0 )); then
     err "Unknown command \`$command'"
     usage
 fi
@@ -189,13 +194,13 @@ if [[ $option_help -eq 1 ]]; then
 fi
 
 ## Otherwise, run the command and deal with errors
-PORTSRC=${option_work_dir}/macports.conf "$command" "$@"
+PORTSRC=${option_work_dir}/macports.conf "$subcmd" "$@"
 readonly rc=$?
 case $rc in
     0)
         ;;
     *)
-        err "\`$command' failed to run successfully"
+        err "\`$subcmd' failed to run successfully"
         ;;
 esac
 exit $rc
