@@ -113,14 +113,19 @@ fi
 parseopt prefix:,work-dir: "$@" || exit
 
 # Use sensible defaults for options that weren't set on the command line.
-: "${option_port=}"
-: "${option_prefix=/opt/local}"
-: "${option_work_dir=${PWD:-/tmp/mp-buildbot}}"
+# shellcheck disable=SC2154
+{
+    : "${option_port=}"
+    : "${option_prefix=/opt/local}"
+    : "${option_work_dir=${PWD:-/tmp/mp-buildbot}}"
+}
 
-# shellcheck disable=SC2034 disable=SC2154
+# shellcheck disable=SC2034
 # Not really options, but pretend they are because they're global.
-option_jobs_dir=${option_work_dir}/infrastructure/jobs
-option_log_dir=${option_work_dir}/logs
+{
+    option_jobs_dir=${option_work_dir}/infrastructure/jobs
+    option_log_dir=${option_work_dir}/logs
+}
 
 # Inform the user if old repositories are still present.
 if [[ -d ${option_work_dir}/tools/.svn ]]; then
@@ -169,6 +174,7 @@ shift
 for cmd in "${cmds[@]}"; do
     [[ $cmd == "$subcmd" ]] && break
 done
+# shellcheck disable=SC2181
 if (( $? != 0 || ${#cmds[@]} == 0 )); then
     err "Unknown command \`$cmd'"
     echo >&2 "Try \`$0 help' for more information."
