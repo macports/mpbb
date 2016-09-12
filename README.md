@@ -63,15 +63,17 @@ Subcommand scripts are sourced by the `mpbb` driver. A script named
 `mpbb-SUBCOMMAND` must define these two shell functions:
 
 -   `SUBCOMMAND()`:
-      Perform the subcommand's work when invoked by the driver.
--   `SUBCOMMAND-help()`:
-      Print a brief summary of the subcommand's purpose to standard
-      output, but do not `exit`. The driver converts newlines to spaces
-      in the final output.
+      Perform the subcommand's work and return zero on success and
+      nonzero on failure.
+-   `SUBCOMMAND-usage()`:
+      Print to standard out a usage summary, a description of the
+      subcommand's purpose, and the subcommand's options, but do not
+      `exit`. The output is passed through `fmt(1)`, so single newlines
+      are not preserved.
 
 Scripts may define additional functions as desired. For example, the
 `mpbb-list-subports` script defines the required `list-subports` and
-`list-subports-help` functions, as well as a `print-subports` helper.
+`list-subports-usage` functions, as well as a `print-subports` helper.
 
 Subcommand scripts may use but not modify these global shell parameters:
 
