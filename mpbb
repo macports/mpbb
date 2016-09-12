@@ -14,60 +14,32 @@ msg() (unset IFS; printf >&2 '%s: %s\n' "$0" "$*")
 err() { msg error: "$@"; }
 warn() { msg warning: "$@"; }
 
-usage() {
-    cols=$(tput cols) || cols=80
+mpbb-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global options>] <command> [<args>]
 
-    fmt -w $(( cols - 8 )) >&2 <<-EOF
-Usage: $0 COMMAND [OPTION...]
+Build MacPorts ports in a continuous integration environment.
 
-mpbb, a script to help build MacPorts ports in a continous integration
-environment.
+Global options:
 
-OPTIONS
+  --prefix=<path>
+    The prefix of the MacPorts installation that will be used for
+    building ports. Defaults to \`/opt/local'.
 
- --archive-site=URL
-   Base URL of the packages archive to check whether an archive was not
-   published yet. Default is "https://packages.macports.org".
+  --work-dir=<path>
+    A working directory to be used for storing temporary files,
+    accessible by the MacPorts installation specified with \`--prefix'.
+    The directory should persist between runs of \`mpbb'. Defaults to
+    the value of \$PWD or \`/tmp/mp-buildbot'.
 
- --help
-   Print this usage message.
+Available commands:
 
- --prefix=PREFIX
-   The prefix of the MacPorts installation that will build the ports. Defaults
-   to "/opt/local".
+  ${cmds[0]}$(printf ', %s' "${cmds[@]:1}")
 
- --svn=BINARY
-   Absolute path to the svn binary that you want to use for SVN operations. The
-   default is to find svn in your path.
-
- --svn-url=SVNURL
-   URL to a Subversion repository in a format accepted by Subversion. The
-   referenced folder must contain a dports and a base folder. The default is
-   "https://svn.macports.org/repository/macports/trunk".
-
- --svn-revision=REVISION
-   Revision number in the specified Subversion repository to checkout. Defaults
-   to "HEAD".
-
- --staging-dir=DIR
-   Directory where new distributable archives should be copied for deployment
-   on the archive server. Defaults to the 'archive-staging' subfolder in the
-   current directory.
-
- --work-dir=WORKDIR
-   A scratch area that mpbb will use to put temporary files, ideally kept
-   between builds. Your MacPorts installation in --prefix needs to be able to
-   access this location. Defaults to your current directory, or
-   /tmp/mp-buildbot if \$PWD isn't set.
+Run \`$prog help <command>' for per-command help.
 EOF
-
-    printf >&2 "\nCOMMANDS\n"
-    for command in "${commands[@]}"; do
-        printf >&2 " %s\n" "$command"
-        printf "   %s\n\n" "$("${command}-help" | tr '\n' ' ')" | fmt -w $(( cols - 8 )) >&2
-    done
-
-    exit 2
 }
 
 # TODO Documentation, obviously :)
@@ -86,7 +58,7 @@ parseopt() {
             ;;
         1)
             # getopt(1) will print the bad argument to standard error.
-            echo >&2 "Try \`$0 --help' for more information."
+            echo >&2 "Try \`$0 help' for more information."
             return 2
             ;;
         *)
@@ -138,13 +110,12 @@ if getopt -T >/dev/null; then
 fi
 
 # Process options.
-parseopt help,prefix:,work-dir: "$@" || exit
+parseopt prefix:,work-dir: "$@" || exit
 
 # Use sensible defaults for options that weren't set on the command line.
 : "${option_port=}"
 : "${option_prefix=/opt/local}"
 : "${option_work_dir=${PWD:-/tmp/mp-buildbot}}"
-: "${option_help=0}"
 
 # shellcheck disable=SC2034 disable=SC2154
 # Not really options, but pretend they are because they're global.
@@ -156,15 +127,18 @@ option_log_dir=${option_work_dir}/logs
 set -- ${args+"${args[@]}"}
 
 # Load the subcommand implementations. Each sourced script "mpbb-FOO"
-# must define functions "FOO" and "FOO-help".
+# must define functions "FOO" and "FOO-usage".
 cmds=()
+usages=(mpbb-usage)
 thisdir=$(cd "$(dirname "$0")" && pwd)
 for cmdfile in "$thisdir/mpbb-"*; do
     # Unfortunately ShellCheck does not currently support following multiple
     # files, so we'll just disable the warning.
     # shellcheck disable=SC1090
     if . "$cmdfile"; then
-        cmds+=("${cmdfile##*/mpbb-}")
+        cmd=${cmdfile##*/mpbb-}
+        cmds+=("$cmd")
+        usages+=("${cmd}-usage")
     else
         err "failed to load subcommand script \`$cmdfile'"
         exit 3
@@ -173,7 +147,8 @@ done
 
 if (( $# < 1 )); then
     err "No command specified"
-    usage
+    echo >&2 "Try \`$0 help' for more information."
+    exit 2
 fi
 
 subcmd=$1
@@ -185,12 +160,8 @@ for cmd in "${cmds[@]}"; do
 done
 if (( $? != 0 || ${#cmds[@]} == 0 )); then
     err "Unknown command \`$command'"
-    usage
-fi
-
-## If subcommand help is requested, print that
-if [[ $option_help -eq 1 ]]; then
-    usage
+    echo >&2 "Try \`$0 help' for more information."
+    exit 2
 fi
 
 ## Otherwise, run the command and deal with errors

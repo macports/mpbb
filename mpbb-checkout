@@ -5,12 +5,32 @@
 # This script is sourced by the mpbb wrapper script.
 # Do not execute this directly!
 
-
-checkout-help() {
+checkout-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
     cat <<EOF
-Update or checkout a working copy of the ports tree from --svn-url to specific
-SVN revision (--svn-revision), update or create the PortIndex and configure
-the MacPorts installation to use this ports tree.
+usage: $prog [<global opts>] checkout [<opts>]
+
+Obtain a working copy of the jobs tools and ports tree and configure
+MacPorts to use the latter as a port source.
+
+Options:
+
+  --svn=<path>
+    A command-line Subversion client. Defaults to the first \`svn'
+    executable found in \$PATH.
+
+  --svn-url=<URL>
+    URL to a Subversion repository that contains \`dports' and
+    \`base/portmgr/jobs' subdirectories. Only used when checking out
+    a new working copy. Defaults to
+    \`https://svn.macports.org/repository/macports/trunk'.
+
+  --svn-revision=<rev>
+    Revision number at which the ports tree will be checked out.
+    Defaults to \`HEAD'.
+
+Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 

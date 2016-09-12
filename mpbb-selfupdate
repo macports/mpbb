@@ -5,8 +5,17 @@
 # This script is sourced by the mpbb wrapper script.
 # Do not execute this directly!
 
-selfupdate-help() {
-    echo "Run selfupdate --nosync in the MacPorts installation specified by the --prefix flag"
+selfupdate-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global options>] selfupdate
+
+Install or update the auxiliary MacPorts base installation. (To reindex
+port sources, use \`$prog checkout'.)
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
 }
 
 selfupdate() {

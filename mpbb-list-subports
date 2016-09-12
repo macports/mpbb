@@ -5,10 +5,16 @@
 # This script is sourced by the mpbb wrapper script.
 # Do not execute this directly!
 
+list-subports-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global opts>] list-subports <port> [<port2> [...]]
 
-list-subports-help() {
-    echo "Print the name of port --port and its subports."
-    echo "Alternatively, print the name and subports of multiple ports given as positional arguments."
+Print the name and subports of each given port to standard output.
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
 }
 
 print-subports() {

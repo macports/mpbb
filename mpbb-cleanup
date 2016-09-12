@@ -5,8 +5,16 @@
 # This script is sourced by the mpbb wrapper script.
 # Do not execute this directly!
 
-cleanup-help() {
-    echo "Clean up remnants from previous builds."
+cleanup-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global opts>] cleanup
+
+Clean up after a build.
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
 }
 
 cleanup() {

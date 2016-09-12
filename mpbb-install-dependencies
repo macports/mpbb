@@ -5,9 +5,16 @@
 # This script is sourced by the mpbb wrapper script.
 # Do not execute this directly!
 
+install-dependencies-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global opts>] install-dependencies <port>
 
-install-dependencies-help() {
-    echo "Build and install all dependencies of port --port."
+Build and install the dependencies of the given port.
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
 }
 
 get-maintainers() {

@@ -5,9 +5,28 @@
 # This script is sourced by the mpbb wrapper script.
 # Do not execute this directly!
 
+gather-archives-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global opts>] gather-archives [<opts>]
 
-gather-archives-help() {
-    echo "Gather unpublished distributable archives of the built port and its dependencies."
+Copy unpublished, distributable archives of active ports into a staging
+directory for uploading.
+
+Options:
+
+  --archive-site=<URL>
+    URL of a mirror to check for preexisting archives. Defaults to
+    \`https://packages.macports.org'.
+
+  --staging-dir=<path>
+    A directory for storing distributable archives before deployment.
+    Defaults to the \`archive-staging' subdirectory of the \`--work-dir'
+    working directory.
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
 }
 
 gather-archives() {
