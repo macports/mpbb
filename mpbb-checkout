@@ -16,25 +16,37 @@ MacPorts to use the latter as a port source.
 
 Options:
 
+  --git[=<path>]
+    Use Git to obtain the jobs tools and ports tree; this is the default
+    behavior. The path to a Git client may be provided explicitly,
+    otherwise \`git' is used. Cannot be specified together with --svn.
+
   --jobs-url=<URL>
     URL to a repository containing the jobs tools. Only used when
     checking out a new working copy. Defaults to
-    \`https://svn.macports.org/repository/macports/trunk/base/portmgr/jobs'.
+    \`https://github.com/macports/infrastructure.git' for Git and
+    \`https://github.com/macports/infrastructure.git/trunk/jobs' for
+    Subversion.
+
+  --ports-branch=<branch>
+    The branch of the remote repository from which the ports tree will
+    be checked out. Only used with Git; defaults to \`master'.
 
   --ports-commit=<commit>
     A commit or revision at which the ports tree will be checked out.
     Any specifier understood by the version-control client may be used.
-    Defaults to \`HEAD'.
+    Defaults to \`FETCH_HEAD' for Git and \`HEAD' for Subversion.
 
   --ports-url=<URL>
     URL to a repository containing the ports tree. Only used when
     checking out a new working copy. Defaults to
-    \`https://svn.macports.org/repository/macports/trunk/dports'.
+    \`https://github.com/macports/ports.git' for Git and.
+    \`https://github.com/macports/ports.git/trunk' for Subversion.
 
   --svn[=<path>]
-    Use Subversion to obtain the jobs tools and ports tree; this is the
-    default behavior. The path to a Subversion client may be provided
-    explicitly, otherwise \`svn' is used.
+    Use Subversion to obtain the jobs tools and ports tree. The path to
+    a Subversion client may be provided explicitly, otherwise \`svn' is
+    used. Cannot be specified together with --git.
 
 Run \`$prog help' for global options and a list of other subcommands.
 EOF
@@ -46,6 +58,47 @@ is-empty() {
         return 2
     fi
     (shopt -s dotglob nullglob; f=("$1"/*); (( ! ${#f[@]} )))
+}
+
+git-checkout() {
+    if (( $# < 2 )); then
+        err 'git-checkout requires at least two arguments'
+        return 2
+    fi
+
+    local -r dst=$1 src=$2 commitish=${3-FETCH_HEAD} branch=${4-master}
+
+    # top is null unless dst exists somewhere in a Git working tree.
+    local -r top=$({ cd "$dst" && "$git" rev-parse --show-toplevel; } 2>/dev/null)
+    if ! { [[ -z $top ]] && is-empty "$dst" || [[ $top -ef $dst ]]; }; then
+        err "\`$dst' is not an empty directory or" \
+            'the top level of a Git working tree'
+        return 1
+    fi
+
+    printf "\n---> Updating Git repository from \`%s' branch of \`%s'\n" \
+        "$branch" "$src"
+    (
+        # "git init" creates the intermediate directories and is safe to
+        # run in an existing repository.
+        "$git" init "$dst" || exit
+
+        # Change directories explicitly because Lion's Git (1.7.12.4) is
+        # too old to understand "git -C" (requires 1.8.5).
+        cd "$dst" || exit
+
+        # Fetch directly from the URL to avoid fussing with remotes and
+        # to allow switching sources easily.
+        "$git" fetch --tags "$src" "$branch" || exit
+
+        # Maintain master to prevent Git from garbage-collecting the
+        # fetched objects.
+        "$git" update-ref -m "mpbb checkout $(date -u +%Y-%m-%dT%TZ)" \
+                    refs/heads/master FETCH_HEAD || exit
+
+        # Only update the working tree here, at the very end.
+        "$git" checkout --detach "$commitish"
+    )
 }
 
 svn-checkout() {
@@ -77,7 +130,7 @@ svn-checkout() {
 
 checkout() {
     local args
-    parseopt jobs-url:,ports-commit:,ports-url:,prefix:,svn::,svn-url: "$@" \
+    parseopt git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,prefix:,svn::,svn-url: "$@" \
         || return
     # shellcheck disable=SC2086
     set -- ${args+"${args[@]}"}
@@ -91,28 +144,40 @@ checkout() {
     # shellcheck disable=SC2154
     local -r ports_dir=${option_work_dir}/ports
 
-    local checkout jobs_dir svn
+    local checkout git jobs_dir svn
     # shellcheck disable=SC2100 disable=SC2154
-    if svn=${option_svn:-$(command -v svn)}; then
+    if [[ -z ${option_svn+_} ]] && git=${option_git:-$(command -v git)}; then
+        checkout=git-checkout
+        # Checking out "jobs_url" should create a "jobs" subdirectory.
+        jobs_dir=$(dirname "${option_jobs_dir}")
+        : "${option_jobs_url=https://github.com/macports/infrastructure.git}"
+        : "${option_ports_url=https://github.com/macports/ports.git}"
+    elif [[ -z ${option_git+_} ]] && svn=${option_svn:-$(command -v svn)}; then
         checkout=svn-checkout
         jobs_dir=${option_jobs_dir}
         if [[ -n ${option_svn_url+_} ]]; then
             : "${option_jobs_url=${option_svn_url}/base/portmgr/jobs}"
             : "${option_ports_url=${option_svn_url}/dports}"
         else
-            : "${option_jobs_url=https://svn.macports.org/repository/macports/trunk/base/portmgr/jobs}"
-            : "${option_ports_url=https://svn.macports.org/repository/macports/trunk/dports}"
+            : "${option_jobs_url=https://github.com/macports/infrastructure.git/trunk/jobs}"
+            : "${option_ports_url=https://github.com/macports/ports.git/trunk}"
         fi
     else
-        err 'cannot find a Subversion client'
+        case ${option_git+_},${option_svn+_} in
+            _,_) err 'cannot use both Git and Subversion'; return 2 ;;
+            _,)  err 'cannot find a Git client' ;;
+            ,_)  err 'cannot find a Subversion client' ;;
+            ,)   err 'cannot find any Git or Subversion clients' ;;
+        esac
         return 1
     fi
-    readonly checkout jobs_dir svn
+    readonly checkout git jobs_dir svn
 
     $checkout "${jobs_dir}" "${option_jobs_url}" || return
     # shellcheck disable=SC2086 disable=SC2154
     $checkout "${ports_dir}" "${option_ports_url}" \
-            ${option_ports_commit+"${option_ports_commit}"} || return
+            ${option_ports_commit+"${option_ports_commit}"} \
+            ${option_ports_branch+"${option_ports_branch}"} || return
 
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
