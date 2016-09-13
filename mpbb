@@ -47,7 +47,6 @@ parseopt prefix:,work-dir: "$@" || exit
 # Use sensible defaults for options that weren't set on the command line.
 # shellcheck disable=SC2154
 {
-    : "${option_port=}"
     : "${option_prefix=/opt/local}"
     : "${option_work_dir=${PWD:-/tmp/mp-buildbot}}"
 }

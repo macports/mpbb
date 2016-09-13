@@ -130,7 +130,7 @@ svn-checkout() {
 
 checkout() {
     local args
-    parseopt git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,prefix:,svn::,svn-url: "$@" \
+    parseopt git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,svn::,svn-url: "$@" \
         || return
     # shellcheck disable=SC2086
     set -- ${args+"${args[@]}"}

@@ -31,7 +31,7 @@ EOF
 
 gather-archives() {
     local args
-    parseopt archive-site:,prefix:,staging-dir: "$@" || return
+    parseopt archive-site:,staging-dir: "$@" || return
     : "${option_archive_site=https://packages.macports.org}"
     # shellcheck disable=SC2154
     : "${option_staging_dir=${option_work_dir}/archive-staging}"

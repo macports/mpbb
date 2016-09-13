@@ -19,11 +19,6 @@ EOF
 }
 
 selfupdate() {
-    local args
-    parseopt prefix: "$@" || return
-    # shellcheck disable=SC2086
-    set -- ${args+"${args[@]}"}
-
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     if [ ! -f "${option_prefix}/bin/port" ]; then
