@@ -11,7 +11,7 @@ unset "${!option_@}"
 # Load function library
 thisdir=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=functions
-. "$thisdir/functions"
+. "$thisdir/functions" || exit
 
 mpbb-usage() {
     # "prog" is defined in mpbb-help.
@@ -40,73 +40,6 @@ Available commands:
 Run \`$prog help <command>' for per-command help.
 EOF
 }
-
-# TODO Documentation, obviously :)
-parseopt() {
-    # Be stricter about this than getopt(1) is.
-    if ! [[ ${1-} =~ ^[[:alnum:]-]+:{0,2}(,[[:alnum:]-]+:{0,2})*$ ]]; then
-        err 'Invalid argument given to parseopt'
-        return 3
-    fi
-
-    # Use "--options +" to prevent arguments from being rearranged.
-    local opts
-    opts=$(getopt --name "$0" --opt + --longopt "$1" -- "${@:2}")
-    case $? in
-        0)
-            ;;
-        1)
-            # getopt(1) will print the bad argument to standard error.
-            echo >&2 "Try \`$0 help' for more information."
-            return 2
-            ;;
-        *)
-            err 'getopt encountered an internal error'
-            return 3
-            ;;
-    esac
-    readonly opts
-
-    local -a validopts
-    IFS=, read -ra validopts <<<"$1"
-    readonly validopts=("${validopts[@]/#/--}")
-
-    eval set -- "$opts"
-
-    local opt validopt
-    # getopt(1) ensures that the options are always terminated with "--".
-    while [[ $1 != -- ]]; do
-        opt=$1
-        shift
-        # XXX Do NOT touch anything below unless you know exactly what
-        # you're doing (http://mywiki.wooledge.org/BashFAQ/006#eval).
-        for validopt in "${validopts[@]}"; do
-            if [[ $validopt == "$opt:" || $validopt == "$opt::" ]]; then
-                opt=${opt#--}
-                # $1 is null for omitted optional arguments.
-                eval option_"${opt//-/_}"'=$1'
-                shift
-                continue 2
-            fi
-            if [[ $validopt == "$opt" ]]; then
-                opt=${opt#--}
-                eval option_"${opt//-/_}"'=1'
-                continue 2
-            fi
-        done
-        # Unreachable unless there is a bug in this function or in getopt(1).
-        err 'parseopt encountered an internal error'
-        return 3
-    done
-    args=("${@:2}")
-}
-
-unset GETOPT_COMPATIBLE
-if getopt -T >/dev/null; then
-    # http://frodo.looijaard.name/project/getopt
-    err "Cannot find an enhanced getopt(1)"
-    exit 3
-fi
 
 # Process options.
 parseopt prefix:,work-dir: "$@" || exit
