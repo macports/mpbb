@@ -1,4 +1,5 @@
 #!/usr/bin/env port-tclsh
+#
 # Generates a list of supported architectures for the given port.
 #
 # Copyright (c) 2016 The MacPorts Project.
