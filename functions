@@ -139,9 +139,9 @@ failcache_key() {
     fi
 
     local canonical_variants
-    canonical_variants=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/canonical_variants.tcl" "$@")
+    canonical_variants=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/canonical-variants.tcl" "$@")
     if [ $? -ne 0 ]; then
-        err "tools/canonical_variants.tcl" "$@" "failed"
+        err "tools/canonical-variants.tcl" "$@" "failed"
         return 4
     fi
 
