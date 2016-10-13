@@ -24,9 +24,10 @@ Options:
   --jobs-url=<URL>
     URL to a repository containing the jobs tools. Only used when
     checking out a new working copy. Defaults to
-    \`https://github.com/macports/infrastructure.git' for Git and
-    \`https://github.com/macports/infrastructure.git/trunk/jobs' for
-    Subversion.
+    \`https://github.com/macports/macports-infrastructure.git' for Git
+    and
+    \`https://github.com/macports/macports-infrastructure.git/trunk/jobs'
+    for Subversion.
 
   --ports-branch=<branch>
     The branch of the remote repository from which the ports tree will
@@ -40,8 +41,9 @@ Options:
   --ports-url=<URL>
     URL to a repository containing the ports tree. Only used when
     checking out a new working copy. Defaults to
-    \`https://github.com/macports/ports.git' for Git and.
-    \`https://github.com/macports/ports.git/trunk' for Subversion.
+    \`https://github.com/macports/macports-ports.git' for Git and
+    \`https://github.com/macports/macports-ports.git/trunk' for
+    Subversion.
 
   --svn[=<path>]
     Use Subversion to obtain the jobs tools and ports tree. The path to
@@ -150,8 +152,8 @@ checkout() {
         checkout=git-checkout
         # Checking out "jobs_url" should create a "jobs" subdirectory.
         jobs_dir=$(dirname "${option_jobs_dir}")
-        : "${option_jobs_url=https://github.com/macports/infrastructure.git}"
-        : "${option_ports_url=https://github.com/macports/ports.git}"
+        : "${option_jobs_url=https://github.com/macports/macports-infrastructure.git}"
+        : "${option_ports_url=https://github.com/macports/macports-ports.git}"
     elif [[ -z ${option_git+_} ]] && svn=${option_svn:-$(command -v svn)}; then
         checkout=svn-checkout
         jobs_dir=${option_jobs_dir}
@@ -159,8 +161,8 @@ checkout() {
             : "${option_jobs_url=${option_svn_url}/base/portmgr/jobs}"
             : "${option_ports_url=${option_svn_url}/dports}"
         else
-            : "${option_jobs_url=https://github.com/macports/infrastructure.git/trunk/jobs}"
-            : "${option_ports_url=https://github.com/macports/ports.git/trunk}"
+            : "${option_jobs_url=https://github.com/macports/macports-infrastructure.git/trunk/jobs}"
+            : "${option_ports_url=https://github.com/macports/macports-ports.git/trunk}"
         fi
     else
         case ${option_git+_},${option_svn+_} in
