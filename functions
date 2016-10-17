@@ -181,6 +181,9 @@ failcache_success() {
         return 1
     fi
 
+    # Only remove the entry for the successful configuration, leaving
+    # other entries in case they are explicitly requested later. These
+    # can be removed manually if desired.
     rm -f "${option_failcache_dir}/${key}"
 }
 
