@@ -43,6 +43,15 @@ install-port() {
     #> "$log_port_contents"
     > "$log_port_stats"
 
+    # $option_prefix and $thisdir are set in mpbb
+    # shellcheck disable=SC2154
+    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "$@") ]]; then
+        echo "$@ already installed, nothing to do"
+        # log: summary for the portwatcher
+        echo "Building '$port' ... [OK]" >> "$log_subports_progress"
+        return 0
+    fi
+
     local time_start
     local time_stop
     time_start=$(date +%s)
@@ -75,8 +84,6 @@ install-port() {
     # log: contents
     "${option_prefix}/bin/port" -q contents "$port" > "$log_port_contents"
 
-    # TODO: printing statistics (and installing the port + dependencies)
-    #       only makes sense when the port hasn't been installed previously
     # log: statistics
     echo "time:    $((time_stop - time_start))s" >> "$log_port_stats"
 

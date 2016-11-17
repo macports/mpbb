@@ -101,34 +101,65 @@ install-dependencies() {
         text="Installing dependency ($dependencies_counter of $dependencies_count) '${depname}' with variants '${depvariants}'"
         echo "----> ${text}"
         echo -n "${text} ... " >> "$log_status_dependencies"
-        # $depvariants isn't quoted on purpose
-        # shellcheck disable=SC2086
-        if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
-            echo "Build of dependency '${depname}' with variants '${depvariants}' failed, aborting." >&2
-            echo "[FAIL]" >> "$log_status_dependencies"
-            echo "Building '$port' ... [ERROR] (failed to install dependency '${depname}') maintainers: $(get-maintainers "$port" "${depname}")." >> "$log_subports_progress"
-
-            # Update failcache
-            # $depvariants isn't quoted on purpose
-            # shellcheck disable=SC2086
-            failcache_failure "$depname" $depvariants
-            if [ $? -ne 0 ]; then
-                err "failcache_failure $depname $depvariants failed."
-                return 1
-            fi
-            return 1
-        else
+        # $option_prefix and $thisdir are set in mpbb
+        # shellcheck disable=SC2154
+        if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "${depname}" "${depvariants}") ]]; then
+            echo "Already installed, nothing to do"
             echo "[OK]" >> "$log_status_dependencies"
-            # Remove failcache if it exists
-            # $depvariants isn't quoted on purpose
-            # shellcheck disable=SC2086
-            failcache_success "$depname" $depvariants
-            if [ $? -ne 0 ]; then
-                err "failcache_success $depname $depvariants failed."
-                return 1
-            fi
             dependencies_counter=$((dependencies_counter + 1))
+        else
+            # $depvariants isn't quoted on purpose
+            # shellcheck disable=SC2154,SC2086
+            if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
+                echo "Build of dependency '${depname}' with variants '${depvariants}' failed, aborting." >&2
+                echo "[FAIL]" >> "$log_status_dependencies"
+                echo "Building '$port' ... [ERROR] (failed to install dependency '${depname}') maintainers: $(get-maintainers "$port" "${depname}")." >> "$log_subports_progress"
+
+                # Update failcache
+                # $depvariants isn't quoted on purpose
+                # shellcheck disable=SC2086
+                failcache_failure "$depname" $depvariants
+                if [ $? -ne 0 ]; then
+                    err "failcache_failure $depname $depvariants failed."
+                    return 1
+                fi
+                return 1
+            else
+                echo "[OK]" >> "$log_status_dependencies"
+
+                # Remove failcache if it exists
+                # $depvariants isn't quoted on purpose
+                # shellcheck disable=SC2086
+                failcache_success "$depname" $depvariants
+                if [ $? -ne 0 ]; then
+                    err "failcache_success $depname $depvariants failed."
+                    return 1
+                fi
+                dependencies_counter=$((dependencies_counter + 1))
+                # deactivate everything between builds
+                # $option_prefix is set by mpbb
+                # shellcheck disable=SC2154
+                "${option_prefix}/bin/port" -fp deactivate active
+            fi
         fi
     done <<<"$dependencies"
+
+    # activate everything now that we know it's all built and installed
+    # ... but only we're actually going to build the requested port
+
+    # $option_prefix and $thisdir are set in mpbb
+    # shellcheck disable=SC2154
+    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "$@") ]]; then
+        echo "$@ Already installed, not activating dependencies"
+    else
+        echo "Activating all dependencies..."
+        # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
+        # shellcheck disable=SC2154,SC2086
+        if ! "${option_prefix}/bin/port" -d activate ${dependencies}; then
+            echo "Activating all dependencies failed, aborting." >&2
+            return 1
+        fi
+        echo "Done."
+    fi
 }
 
