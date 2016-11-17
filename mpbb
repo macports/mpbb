@@ -31,7 +31,7 @@ Global options:
     A working directory to be used for storing temporary files,
     accessible by the MacPorts installation specified with \`--prefix'.
     The directory should persist between runs of \`mpbb'. Defaults to
-    the value of \$PWD or \`/tmp/mp-buildbot'.
+    the value of \$PWD or \`/tmp/mpbb'.
 
 Available commands:
 
@@ -48,7 +48,7 @@ parseopt prefix:,work-dir: "$@" || exit
 # shellcheck disable=SC2154
 {
     : "${option_prefix=/opt/local}"
-    : "${option_work_dir=${PWD:-/tmp/mp-buildbot}}"
+    : "${option_work_dir=${PWD:-/tmp/mpbb}}"
 }
 
 # shellcheck disable=SC2034
