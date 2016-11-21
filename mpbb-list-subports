@@ -37,18 +37,28 @@ print-subports() {
         exclude=0
         exclude_reasons=()
 
-        if [[ "$port" =~ graveyard ]]; then
+        # FIXME: this doesn't take selected variants into account
+        # $option_prefix and $thisdir are set in mpbb
+        # shellcheck disable=SC2154
+        if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "${port}") ]]; then
             exclude=1
-            exclude_reasons+=("its name contains 'graveyard'")
-        else
-            # $thisdir is set in mpbb
-            # shellcheck disable=SC2154
-            for portgroup in $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/portgroups.tcl" "$port"); do
-                if [ "$portgroup" = "obsolete-1.0" ]; then
-                    exclude=1
-                    exclude_reasons+=("it includes the obsolete 1.0 PortGroup")
-                fi
-            done
+            exclude_reasons+=("it has already been built")
+        fi
+
+        if [[ $exclude -eq 0 ]]; then
+            if [[ "$port" =~ graveyard ]]; then
+                exclude=1
+                exclude_reasons+=("its name contains 'graveyard'")
+            else
+                # $thisdir is set in mpbb
+                # shellcheck disable=SC2154
+                for portgroup in $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/portgroups.tcl" "$port"); do
+                    if [ "$portgroup" = "obsolete-1.0" ]; then
+                        exclude=1
+                        exclude_reasons+=("it includes the obsolete 1.0 PortGroup")
+                    fi
+                done
+            fi
         fi
 
         if [[ $exclude -eq 0 && "${os_version}" = "10.6" && "${is_64bit_capable}" = "0" ]]; then
