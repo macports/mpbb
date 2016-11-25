@@ -20,7 +20,11 @@ EOF
 get-maintainers() {
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    "${option_prefix}/bin/port" info --index --maintainers --line "$@" | tr ',' '\n' | sort | uniq | tr '\n' ',' | \
+    #
+    # sed -n 's/^Email: \([^,]*\).*$/\1/p' is as temporary workaround
+    # for changes introduced in 2.3.5
+    #     'Email: username@macports.org, GitHub: username' => 'username@macports.org'
+    "${option_prefix}/bin/port" info --index --maintainers --line "$@" | sed -n 's/^Email: \([^,]*\).*$/\1/p' | tr ',' '\n' | sort | uniq | tr '\n' ',' | \
         awk '{gsub(/(open|no)maintainer(@macports.org)?,/, ""); print}' | \
         tr '$' '\n' | sed 's/,$//' | tr '@' ';'
 }
