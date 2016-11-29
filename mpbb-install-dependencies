@@ -159,7 +159,7 @@ install-dependencies() {
         echo "Activating all dependencies..."
         # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
         # shellcheck disable=SC2154,SC2086
-        if ! "${option_prefix}/bin/port" -d activate ${dependencies}; then
+        if ! "${option_prefix}/bin/port" -d install --unrequested ${dependencies}; then
             echo "Activating all dependencies failed, aborting." >&2
             return 1
         fi
