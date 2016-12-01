@@ -57,6 +57,7 @@ if {[info exists portinfo(porturl)]} {
     if {[catch {set mport [mportopen $portinfo(porturl) [list subport $portname] {}]}]} {
         ui_warn "failed to open port: $portname"
     } else {
-        puts [_mportkey $mport supported_archs]
+        set archs [_mportkey $mport supported_archs]
+        puts [expr {$archs ne "" ? $archs : "x86_64 i386 ppc64 ppc"}]
     }
 }
