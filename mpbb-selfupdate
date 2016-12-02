@@ -32,7 +32,7 @@ selfupdate() {
             tar -xjf ${macports_distfile} || return
         fi
         cd ${macports_distname} || return
-        ./configure --prefix="${option_prefix}" --enable-readline || return
+        PATH=/usr/bin:/bin:/usr/sbin:/sbin ./configure --prefix="${option_prefix}" --enable-readline || return
         make -j"$(sysctl -n hw.activecpu)" || return
         make install || return
         cd .. || return
