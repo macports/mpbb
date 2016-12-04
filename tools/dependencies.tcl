@@ -128,22 +128,3 @@ proc printdependency {ditem} {
     puts [string trim "$depinfo(name) $variantstring"]
 }
 dlist_eval $dlist {} [list printdependency]
-
-# close all open ports
-foreach ditem $macports::open_mports {
-    #try -pass_signal {...}
-    try {
-        mportclose $ditem
-    } catch {{*} eCode eMessage} {
-        ui_warn "mportclose [ditem_key $ditem provides] failed: $eMessage"
-    }
-}
-
-# shut down MacPorts
-#try -pass_signal {...}
-try {
-    mportshutdown
-} catch {{*} eCode eMessage} {
-    ui_error "mportshutdown failed: $eMessage"
-    exit 1
-}

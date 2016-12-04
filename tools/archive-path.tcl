@@ -69,5 +69,4 @@ if {[info exists portinfo(porturl)]} {
         set workername [ditem_key $mport workername]
         puts [$workername eval get_portimage_path]
     }
-    catch {mportclose $mport}
 }

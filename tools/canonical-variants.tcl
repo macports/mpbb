@@ -80,19 +80,3 @@ try {
 
 array set info [mportinfo $mport]
 puts $info(canonical_active_variants)
-
-#try -pass_signal {...}
-try {
-    mportclose $mport
-} catch {{*} eCode eMessage} {
-    ui_warn "mportclose $portname failed: $eMessage"
-}
-
-# shut down MacPorts
-#try -pass_signal {...}
-try {
-    mportshutdown
-} catch {{*} eCode eMessage} {
-    ui_error "mportshutdown failed: $eMessage"
-    exit 1
-}

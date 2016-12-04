@@ -77,5 +77,4 @@ if {[info exists portinfo(porturl)]} {
     } else {
         puts [_mportkey $mport supported_archs]
     }
-    catch {mportclose $mport}
 }

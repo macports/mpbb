@@ -79,21 +79,3 @@ if {[info exists portinfo(portgroups)]} {
         puts "$group-$version"
     }
 }
-
-# close the Port
-#try -pass_signal {...}
-try {
-    mportclose $mport
-} catch {{*} eCode eMessage} {
-    ui_error "mportclose $portname failed: $eMessage"
-    exit 1
-}
-
-# shut down MacPorts
-#try -pass_signal {...}
-try {
-    mportshutdown
-} catch {{*} eCode eMessage} {
-    ui_error "mportshutdown failed: $eMessage"
-    exit 1
-}
