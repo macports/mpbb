@@ -40,7 +40,8 @@ if {[llength $::argv] == 0} {
 }
 
 # initialize macports
-if {[catch {mportinit "" "" ""} result]} {
+set my_options(ports_source_only) yes
+if {[catch {mportinit "" my_options ""} result]} {
    ui_error "$errorInfo"
    ui_error "Failed to initialize ports sytem: $result"
    exit 1
