@@ -95,45 +95,27 @@ proc printdependency {ditem} {
 
     array set depinfo [mportinfo $ditem]
 
-    # There's a conceptual problem here: We need to calculate the string to
-    # pass to port(1) to build this exact port with its variants, but the
-    # active_variants array does not contain an entry for explicitly
-    # deactivated default_variants.
-    #
     # To calculate the correct string with the explicitly disabled default
-    # variants, if any, we need the default variants first. Unfortunately the
-    # only way to get the set of default variants is opening the port without
-    # any.
+    # variants, if any, we need the default variants first.
     #
     # Given the active_variants of the current dependency calculation and the
-    # ones from a pristine port without variants, calculate the required
-    # string.
-
-    # open the port without variants to determine the default variants
-    if {[llength [array get variants]] > 0} {
-        #try -pass_signal {...}
-        try {
-            set result [mportlookup $depinfo(name)]
-            if {[llength $result] < 2} {
-                ui_error "No such port: $depinfo(name)"
-                exit 1
+    # default variants, calculate the required string.
+    set default_variants {}
+    if {[array size variants] > 0 && [info exists depinfo(vinfo)]} {
+        foreach {vname vattrs} $depinfo(vinfo) {
+            foreach {key val} $vattrs {
+                if {$key eq "is_default" && $val eq "+"} {
+                    lappend default_variants $vname
+                    break
+                }
             }
-
-            # open the port so we can calculate the default variants
-            array set defaultvariant_portinfo [lindex $result 1]
-            set defaultvariant_mport [mportopen $defaultvariant_portinfo(porturl) [list subport $depinfo(name)] {}]
-            array set defaultvariant_info [mportinfo $defaultvariant_mport]
-            array set default_variants $defaultvariant_info(active_variants)
-            mportclose $defaultvariant_mport
         }
-    } else {
-        array set default_variants {}
     }
 
     set variantstring ""
     array set active_variants $depinfo(active_variants)
 
-    set relevant_variants [lsort -unique [concat [array names active_variants] [array names default_variants]]]
+    set relevant_variants [lsort -unique [concat [array names active_variants] $default_variants]]
     foreach variant $relevant_variants {
         if {[info exists active_variants($variant)]} {
             append variantstring "$active_variants($variant)$variant"
