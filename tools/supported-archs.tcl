@@ -30,27 +30,9 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-if {[info exists env(PREFIX)]} {
-    set prefix $env(PREFIX)
-} else {
-    set prefix /opt/local
-}
-
 if {[llength $::argv] == 0} {
     puts stderr "Usage: $argv0 <portname>"
     exit 1
-} elseif {[llength $::argv] >= 3 && [lindex $argv 0] eq "-i"} {
-    set prefixFromInterp [file dirname [file dirname [lindex $argv 1]]]
-    if {$prefixFromInterp ne $prefix} {
-        if {[file executable ${prefix}/bin/port-tclsh]} {
-            exec ${prefix}/bin/port-tclsh $argv0 {*}[lrange $::argv 2 end] <@stdin >@stdout 2>@stderr
-            exit 0
-        } else {
-            puts stderr "No port-tclsh found in ${prefix}/bin"
-            exit 1
-        }
-    }
-    set ::argv [lrange $::argv 2 end]
 }
 
 package require macports
