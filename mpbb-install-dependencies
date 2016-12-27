@@ -114,7 +114,7 @@ install-dependencies() {
         else
             # $depvariants isn't quoted on purpose
             # shellcheck disable=SC2154,SC2086
-            if ! "${option_prefix}/bin/port" -d install --unrequested "$depname" $depvariants; then
+            if ! "${option_prefix}/bin/port" -dn install --unrequested "$depname" $depvariants; then
                 echo "Build of dependency '${depname}' with variants '${depvariants}' failed, aborting." >&2
                 echo "[FAIL]" >> "$log_status_dependencies"
                 echo "Building '$port' ... [ERROR] (failed to install dependency '${depname}') maintainers: $(get-maintainers "$port" "${depname}")." >> "$log_subports_progress"
@@ -159,7 +159,7 @@ install-dependencies() {
         echo "Activating all dependencies..."
         # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
         # shellcheck disable=SC2154,SC2086
-        if ! "${option_prefix}/bin/port" -d install --unrequested ${dependencies}; then
+        if ! "${option_prefix}/bin/port" -dn install --unrequested ${dependencies}; then
             echo "Activating all dependencies failed, aborting." >&2
             return 1
         fi

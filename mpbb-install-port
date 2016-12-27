@@ -61,7 +61,7 @@ install-port() {
     time_start=$(date +%s)
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    if "${option_prefix}/bin/port" -dk install "$@"; then
+    if "${option_prefix}/bin/port" -dkn install "$@"; then
         # Remove failcache if it exists
         failcache_success "$@"
         if [ $? -ne 0 ]; then
