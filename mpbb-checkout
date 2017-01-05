@@ -197,6 +197,16 @@ host_blacklist ${mirrors[*]/%/.distfiles.macports.org} \
 EOF
 ) || return
 
+    if uname -r | grep -q '^9\.'; then
+        # Work around very slow 'xcodebuild -version' on 10.5. Make sure these
+        # settings match the reality on the Leopard buildslave, obviously.
+        cat >> "${option_work_dir}/macports.conf" <<EOF
+xcodeversion 3.1.4
+xcodebuildcmd /usr/bin/xcodebuild
+developer_dir /Developer
+EOF
+    fi
+
     cat > "${option_work_dir}/sources.conf" <<EOF || return
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
