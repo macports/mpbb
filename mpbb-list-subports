@@ -67,7 +67,7 @@ print-subports() {
                 if [[ "${os_version}" = "10.6" && "${is_64bit_capable}" = "0" && ! ("${supported_archs}" == *"x86_64"* && "${supported_archs}" == *"i386"*) ]]; then
                     exclude=1
                     exclude_reasons+=("the ${os_version}_x86_64 builder will build it")
-                elif [[ "${os_version}" = "10.5" && "${supported_archs}" != *"ppc"* ]]; then
+                elif [[ "${os_version}" = "10.5" && "${supported_archs}" != *"ppc"* && "${supported_archs}" != *"noarch"* ]]; then
                     exclude=1
                     exclude_reasons+=("it does not support the ppc arch")
                 fi
