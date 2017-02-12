@@ -29,6 +29,9 @@ print-subports() {
     # shellcheck disable=SC2154
 
     os_version="$(sw_vers -productVersion | cut -d . -f 1-2)"
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    tclsh=${option_prefix}/bin/port-tclsh
     # $optoin_prefix is set in mpbb
     # shellcheck disable=SC2154
     ports=$("${option_prefix}/bin/port" -q info --index --line --name "${portname}" "subportof:${portname}" 2>/dev/null) || return
@@ -37,12 +40,19 @@ print-subports() {
         exclude_reasons=()
 
         # FIXME: this doesn't take selected variants into account
-        # $option_prefix and $thisdir are set in mpbb
+        # $thisdir is set in mpbb
         # shellcheck disable=SC2154
-        #if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "${port}") ]]; then
-        #    exclude=1
-        #    exclude_reasons+=("it has already been built")
-        #fi
+        archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}")
+        if [[ -f "${archive_path}" ]]; then
+            archive_basename=$(basename "${archive_path}")
+            if curl -fIsL "${option_archive_site}/${port}/${archive_basename}" > /dev/null; then
+                exclude=1
+                exclude_reasons+=("it has already been built and uploaded")
+            elif ! "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
+                exclude=1
+                exclude_reasons+=("it has already been built and is not distributable")
+            fi
+        fi
 
         if [[ $exclude -eq 0 ]]; then
             if [[ "$port" =~ graveyard ]]; then
@@ -51,7 +61,7 @@ print-subports() {
             else
                 # $thisdir is set in mpbb
                 # shellcheck disable=SC2154
-                for portgroup in $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/portgroups.tcl" "$port"); do
+                for portgroup in $("${tclsh}" "${thisdir}/tools/portgroups.tcl" "$port"); do
                     if [ "$portgroup" = "obsolete-1.0" ]; then
                         exclude=1
                         exclude_reasons+=("it includes the obsolete 1.0 PortGroup")
@@ -61,7 +71,7 @@ print-subports() {
         fi
 
         if [[ $exclude -eq 0 && ("${os_version}" = "10.6" || "${os_version}" = "10.5") ]]; then
-            supported_archs=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/supported-archs.tcl" "${port}")
+            supported_archs=$("${tclsh}" "${thisdir}/tools/supported-archs.tcl" "${port}")
             if [[ -n "${supported_archs}" ]]; then
                 is_64bit_capable="$(sysctl -n hw.cpu64bit_capable)"
                 if [[ "${os_version}" = "10.6" && "${is_64bit_capable}" = "0" && ! ("${supported_archs}" == *"x86_64"* && "${supported_archs}" == *"i386"*) ]]; then
