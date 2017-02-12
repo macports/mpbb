@@ -49,6 +49,7 @@ install-port() {
         echo "$@ already installed, nothing to do"
         # log: summary for the portwatcher
         echo "Building '$port' ... [OK]" >> "$log_subports_progress"
+        echo "$@" >> "${option_work_dir}/all_ports"
         return 0
     fi
 
@@ -122,4 +123,6 @@ install-port() {
     if [ $? -eq 0 ] && [ -f "$port_mainlog" ]; then
         cp -f "$port_mainlog" "$log_port_main"
     fi
+
+    echo "$@" >> "${option_work_dir}/all_ports"
 }

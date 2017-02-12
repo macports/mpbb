@@ -92,6 +92,8 @@ install-dependencies() {
         return 1
     fi
 
+    rm -f "${option_work_dir}/all_ports"
+
     while read -r dependency; do
         # Split portname +variant1+variant2 into portname and variants, where
         # the variants are optional.
@@ -142,6 +144,8 @@ install-dependencies() {
                 "${option_prefix}/bin/port" -fp deactivate active
             fi
         fi
+        # add to the list for gather_archives
+        echo "$dependency" >> "${option_work_dir}/all_ports"
     done <<<"$dependencies"
 
     # activate everything now that we know it's all built and installed
