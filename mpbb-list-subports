@@ -25,8 +25,9 @@ print-subports() {
     local exclude
     local exclude_reasons
     local reason
-    # $option_log_dir is set in mpbb
-    # shellcheck disable=SC2154
+
+    parseopt archive-site: "$@" || return
+    : "${option_archive_site=https://packages.macports.org}"
 
     os_version="$(sw_vers -productVersion | cut -d . -f 1-2)"
     # $option_prefix is set in mpbb
