@@ -39,10 +39,10 @@ print-subports() {
         # FIXME: this doesn't take selected variants into account
         # $option_prefix and $thisdir are set in mpbb
         # shellcheck disable=SC2154
-        if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "${port}") ]]; then
-            exclude=1
-            exclude_reasons+=("it has already been built")
-        fi
+        #if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "${port}") ]]; then
+        #    exclude=1
+        #    exclude_reasons+=("it has already been built")
+        #fi
 
         if [[ $exclude -eq 0 ]]; then
             if [[ "$port" =~ graveyard ]]; then
