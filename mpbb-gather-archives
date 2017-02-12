@@ -51,7 +51,7 @@ gather-archives() {
     mkdir -p "${option_staging_dir}" || return
 
     status=0
-    for archive_path in $("${option_prefix}/bin/port" -q location $(cat "${option_work_dir}/all_ports"); do
+    for archive_path in $("${option_prefix}/bin/port" -q location $(cat "${option_work_dir}/all_ports")); do
         archive_port=$(basename "$(dirname "${archive_path}")")
         archive_basename=$(basename "${archive_path}")
 
