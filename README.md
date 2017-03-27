@@ -83,7 +83,7 @@ Subcommand scripts may use but not modify these global shell parameters:
       The prefix of the MacPorts installation.
 -   `$option_jobs_dir`:
       The path to a local copy of the
-      [jobs tools](https://trac.macports.org/browser/trunk/base/portmgr/jobs).
+      [jobs tools](https://github.com/macports/macports-infrastructure/tree/master/jobs).
 -   `$option_log_dir`:
       A directory for storing build logs.
 -   `$option_work_dir`:
@@ -112,6 +112,6 @@ Subcommand scripts may use but not modify these global shell parameters:
         [Git](https://git-scm.com) and
         [Subversion](http://subversion.apache.org) clients.
     -   `mpbb help` requires
-        [`fmt(1)`](https://en.wikipedia.org/wiki/Fmt).
+        [`fmt(1)`](https://en.wikipedia.org/wiki/Fmt_(Unix)).
     -   `mpbb gather-archives` requires [curl](https://curl.haxx.se).
     -   `mpbb selfupdate` requires Make.
