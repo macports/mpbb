@@ -13,6 +13,12 @@ usage: $prog [<global opts>] list-subports <port> [<port2> [...]]
 
 Print the name and subports of each given port to standard output.
 
+Options:
+
+  --archive-site=<URL>
+    URL of a mirror to check for preexisting archives. Defaults to
+    \`https://packages.macports.org'.
+
 Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
