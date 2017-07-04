@@ -92,8 +92,6 @@ dlist_delete dlist $mport
 
 ## print dependencies with variants
 proc printdependency {ditem} {
-    global variants
-
     array set depinfo [mportinfo $ditem]
 
     # To calculate the correct string with the explicitly disabled default
@@ -102,8 +100,10 @@ proc printdependency {ditem} {
     # Given the active_variants of the current dependency calculation and the
     # default variants, calculate the required string.
     set default_variants {}
-    if {[array size variants] > 0 && [info exists depinfo(vinfo)]} {
+    set all_variants {}
+    if {[info exists depinfo(vinfo)]} {
         foreach {vname vattrs} $depinfo(vinfo) {
+            lappend all_variants $vname
             foreach {key val} $vattrs {
                 if {$key eq "is_default" && $val eq "+"} {
                     lappend default_variants $vname
@@ -113,16 +113,23 @@ proc printdependency {ditem} {
         }
     }
 
+    set disabled_variants {}
+    foreach variant [array names ::variants] {
+        if {$::variants($variant) eq "-" && $variant in $all_variants} {
+            lappend disabled_variants $variant
+        }
+    }
+
     set variantstring ""
     array set active_variants $depinfo(active_variants)
 
-    set relevant_variants [lsort -unique [concat [array names active_variants] $default_variants]]
-    foreach variant $relevant_variants {
-        if {[info exists active_variants($variant)]} {
-            append variantstring "$active_variants($variant)$variant"
-        } else {
-            # the only case where this situation can occur is a default variant that was explicitly disabled
+    foreach variant [lsort [concat [array names active_variants] $disabled_variants]] {
+        if {$variant in $disabled_variants} {
+            # print explicitly disabled variants (just in case they were default variants)
             append variantstring "-$variant"
+        } elseif {$variant ni $default_variants} {
+            # print all non-default requested variants
+            append variantstring "$active_variants($variant)$variant"
         }
     }
 
