@@ -24,16 +24,14 @@ EOF
 }
 
 print-subports() {
-    local portname=$1
+    local archive_site=$1
+    local portname=$2
     local port
     local portgroup
     local ports
     local exclude
     local exclude_reasons
     local reason
-
-    parseopt archive-site: "$@" || return
-    : "${option_archive_site=https://packages.macports.org}"
 
     os_version="$(sw_vers -productVersion | cut -d . -f 1-2)"
     # $option_prefix is set in mpbb
@@ -52,7 +50,7 @@ print-subports() {
         archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}")
         if [[ -f "${archive_path}" ]]; then
             archive_basename=$(basename "${archive_path}")
-            if curl -fIsL "${option_archive_site}/${port}/${archive_basename}" > /dev/null; then
+            if curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
                 exclude=1
                 exclude_reasons+=("it has already been built and uploaded")
             elif ! "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
@@ -111,6 +109,11 @@ list-subports() {
     # shellcheck disable=SC2154
     local log_subports_progress="${option_log_dir}/ports-progress.txt"
 
+    local args
+    parseopt archive-site: "$@" || return
+    : "${option_archive_site=https://packages.macports.org}"
+    set -- ${args+"${args[@]}"}
+
     if [ $# -le 0 ]; then
         err "Must specify at least one port"
         return 1
@@ -123,7 +126,7 @@ list-subports() {
     > "$log_subports_progress"
 
     for p in "$@"; do
-        print-subports "$p" && success=1
+        print-subports "$option_archive_site" "$p" && success=1
     done
 
     if [ $success -eq 0 ]; then
