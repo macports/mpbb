@@ -102,7 +102,7 @@ proc printdependency {ditem} {
     # Given the active_variants of the current dependency calculation and the
     # default variants, calculate the required string.
     set default_variants {}
-    if {[array size variants] > 0 && [info exists depinfo(vinfo)]} {
+    if {[info exists depinfo(vinfo)]} {
         foreach {vname vattrs} $depinfo(vinfo) {
             foreach {key val} $vattrs {
                 if {$key eq "is_default" && $val eq "+"} {
@@ -113,19 +113,29 @@ proc printdependency {ditem} {
         }
     }
 
-    set variantstring ""
+    set activevariantstring ""
+    set requestedvariantstring ""
     array set active_variants $depinfo(active_variants)
 
     set relevant_variants [lsort -unique [concat [array names active_variants] $default_variants]]
     foreach variant $relevant_variants {
         if {[info exists active_variants($variant)]} {
-            append variantstring "$active_variants($variant)$variant"
+            append activevariantstring "$active_variants($variant)$variant"
+            if {$variant ni $default_variants} {
+                append requestedvariantstring "$active_variants($variant)$variant"
+            }
         } else {
             # the only case where this situation can occur is a default variant that was explicitly disabled
-            append variantstring "-$variant"
+            append requestedvariantstring "-$variant"
         }
     }
 
-    puts [string trim "$depinfo(name) $variantstring"]
+    if {$activevariantstring eq ""} {
+        set activevariantstring {""}
+    }
+    if {$requestedvariantstring eq ""} {
+        set requestedvariantstring {""}
+    }
+    puts [string trim "$depinfo(name) $activevariantstring $requestedvariantstring"]
 }
 dlist_eval $dlist {} [list printdependency]
