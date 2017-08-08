@@ -68,6 +68,9 @@ install-dependencies() {
     echo "$dependencies" | sed -E 's/^/ - /' | tee -a "$log_status_dependencies"
     echo >> "$log_status_dependencies"
 
+    # save $@ since 'set' is used below
+    orig_args="$@"
+
     # Check whether any of the dependencies have previously failed
     failcachecounter=0
     while read -r dependency; do
@@ -161,8 +164,8 @@ install-dependencies() {
 
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
-    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "$@") ]]; then
-        echo "$@ Already installed, not activating dependencies"
+    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" ${orig_args}) ]]; then
+        echo "${orig_args} Already installed, not activating dependencies"
     else
         echo "Activating all dependencies..."
         # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
