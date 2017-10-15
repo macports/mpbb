@@ -186,7 +186,8 @@ checkout() {
     (cd "${ports_dir}" && "${option_prefix}/bin/portindex") || return
 
     local -ar mirrors=(aarnet.au cjj.kr fco.it her.gr jnb.za jog.id kmq.jp
-                       lil.fr mse.uk nou.nc nue.de osl.no pek.cn sea.us ykf.ca)
+                       lil.fr mse.uk nou.nc nue.de osl.no pek.cn sea.us
+                       ykf.ca ywg.ca)
     # Unset IFS to ensure "${mirrors[*]}" uses spaces as separators.
     (unset IFS && cat > "${option_work_dir}/macports.conf" <<EOF
 # Automatically overwritten by mpbb-checkout
