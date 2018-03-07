@@ -9,7 +9,7 @@ install-port-usage() {
     # "prog" is defined in mpbb-help.
     # shellcheck disable=SC2154
     cat <<EOF
-usage: $prog [<global opts>] install-port [<opts>] <port>
+usage: $prog [<global opts>] install-port <port>
 
 Build and install the given port.
 

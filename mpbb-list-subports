@@ -9,7 +9,7 @@ list-subports-usage() {
     # "prog" is defined in mpbb-help.
     # shellcheck disable=SC2154
     cat <<EOF
-usage: $prog [<global opts>] list-subports <port> [<port2> [...]]
+usage: $prog [<global opts>] list-subports [<opts>] <port> [<port2> [...]]
 
 Print the name and subports of each given port to standard output.
 
