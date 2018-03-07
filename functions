@@ -203,3 +203,11 @@ failcache_failure() {
     mkdir -p "${option_failcache_dir}"
     echo "${BUILDBOT_BUILDURL:-unknown}" > "${option_failcache_dir}/${key}"
 }
+
+get-maintainers() {
+    # 'username@macports.org github_username' => 'username@macports.org'
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    "${option_prefix}/bin/port" info --index --maintainers --line "$@" \
+        | tr ', ' '\n' | fgrep '@' | tr '\n' ',' | sed 's/,$//'
+}

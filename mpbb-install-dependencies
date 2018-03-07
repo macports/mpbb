@@ -17,14 +17,6 @@ Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 
-get-maintainers() {
-    # 'username@macports.org github_username' => 'username@macports.org'
-    # $option_prefix is set in mpbb
-    # shellcheck disable=SC2154
-    "${option_prefix}/bin/port" info --index --maintainers --line "$@" \
-        | tr ', ' '\n' | fgrep '@' | tr '\n' ',' | sed 's/,$//'
-}
-
 install-dependencies() {
     local port=${1-}
     if [[ -z $port ]]; then
