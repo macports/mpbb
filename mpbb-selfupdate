@@ -36,9 +36,14 @@ selfupdate() {
             applications_dir_flag="--with-applications-dir=${option_prefix}/Applications/MacPorts"
         fi
         : "${applications_dir_flag=}"
+        if [ "$(id -u)" -ne 0 ]; then
+            install_user_and_group_flags="--with-install-user=$(id -un) --with-install-group=$(id -gn)"
+        fi
+        : "${install_user_and_group_flags=}"
         PATH=/usr/bin:/bin:/usr/sbin:/sbin ./configure \
             --prefix="${option_prefix}" \
             ${applications_dir_flag} \
+            ${install_user_and_group_flags} \
             --enable-readline || return
         make -j"$(sysctl -n hw.activecpu)" || return
         make install || return
