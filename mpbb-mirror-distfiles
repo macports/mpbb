@@ -73,7 +73,7 @@ mirror-distfiles() {
     args=()
     for arg in "$@"; do
         args+=("$arg")
-        args+=("subportof:$arg")
+        args+=("rdepof:$arg")
     done
     set -- ${args+"${args[@]}"}
 
