@@ -1,0 +1,82 @@
+#!/bin/bash
+# -*- coding: utf-8; mode: sh; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=sh:et:sw=4:ts=4:sts=4
+
+# Note:
+# This script is sourced by the mpbb wrapper script.
+# Do not execute this directly!
+
+mirror-distfiles-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global opts>] mirror-distfiles <port> [<port2> [...]]
+
+Mirror the distfiles of each given port and their subports.
+
+Options:
+
+  --distfiles-dir=<URL>
+    A directory for storing the distfiles. Defaults to the
+    \`var/macports/distfiles' subdirectory of the \`--prefix' directory. If
+    changed, deletes the \`var/macports/distfiles' directory and replaces it
+    with a symlink to the specified directory.
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
+}
+
+mirror-distfiles() {
+    local args args2
+    parseopt distfiles-dir: "$@" || return
+    default_distfiles_dir="${option_prefix}"/var/macports/distfiles
+    : "${option_distfiles_dir=${default_distfiles_dir}}"
+    args2=()
+    for arg in "${args[@]}"; do
+        args2+=("$arg")
+        args2+=("subportof:$arg")
+    done
+    set -- ${args2+"${args2[@]}"}
+
+    if [ ! -d "${option_distfiles_dir}" ]; then
+        err "Distfiles directory \`${option_distfiles_dir}' does not exist"
+        return 1
+    fi
+
+    if [ $# -le 0 ]; then
+        err "Must specify at least one port"
+        return 1
+    fi
+
+    if [ "${option_distfiles_dir}" = "${default_distfiles_dir}" ]; then
+        if [ -L "${default_distfiles_dir}" ]; then
+            msg "Removing symlink \`${default_distfiles_dir}' and creating directory"
+            rm -f "${default_distfiles_dir}"
+            mkdir "${default_distfiles_dir}" || return
+        fi
+    else
+        make_symlink=0
+        if [ -L "${default_distfiles_dir}" ]; then
+            distfiles_link_target="$(readlink -n "${default_distfiles_dir}")"
+            if [ "${distfiles_link_target}" != "${option_distfiles_dir}" ]; then
+                msg "Changing \`${default_distfiles_dir}' symlink from \`${distfiles_link_target}' to \`${option_distfiles_dir}'"
+                rm -f "${default_distfiles_dir}"
+                make_symlink=1
+            fi
+        elif [ -d "${default_distfiles_dir}" ]; then
+            msg "Removing directory \`${default_distfiles_dir}' and replacing it with a symlink to \`${option_distfiles_dir}'"
+            rm -rvf "${default_distfiles_dir}" | sed 's/^/Deleting /'
+            make_symlink=1
+        else
+            msg "Making \`${default_distfiles_dir}' a symlink to \`${option_distfiles_dir}'"
+            make_symlink=1
+        fi
+        if [ ${make_symlink} -eq 1 ]; then
+            ln -s "${option_distfiles_dir}" "${default_distfiles_dir}" || return
+        fi
+    fi
+
+    # Mirror the distfiles.
+    # $option_prefix is set by mpbb
+    # shellcheck disable=SC2154
+    "${option_prefix}/bin/port" -p mirror "$@"
+}
