@@ -30,12 +30,7 @@ mirror-distfiles() {
     parseopt distfiles-dir: "$@" || return
     default_distfiles_dir="${option_prefix}"/var/macports/distfiles
     : "${option_distfiles_dir=${default_distfiles_dir}}"
-    args2=()
-    for arg in "${args[@]}"; do
-        args2+=("$arg")
-        args2+=("subportof:$arg")
-    done
-    set -- ${args2+"${args2[@]}"}
+    set -- ${args+"${args[@]}"}
 
     if [ ! -d "${option_distfiles_dir}" ]; then
         err "Distfiles directory \`${option_distfiles_dir}' does not exist"
@@ -74,6 +69,13 @@ mirror-distfiles() {
             ln -s "${option_distfiles_dir}" "${default_distfiles_dir}" || return
         fi
     fi
+
+    args=()
+    for arg in "$@"; do
+        args+=("$arg")
+        args+=("subportof:$arg")
+    done
+    set -- ${args+"${args[@]}"}
 
     # Mirror the distfiles.
     # $option_prefix is set by mpbb
