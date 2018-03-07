@@ -32,7 +32,14 @@ selfupdate() {
             tar -xjf ${macports_distfile} || return
         fi
         cd ${macports_distname} || return
-        PATH=/usr/bin:/bin:/usr/sbin:/sbin ./configure --prefix="${option_prefix}" --enable-readline || return
+        if [ "${option_prefix}" != "/opt/local" ]; then
+            applications_dir_flag="--with-applications-dir=${option_prefix}/Applications/MacPorts"
+        fi
+        : "${applications_dir_flag=}"
+        PATH=/usr/bin:/bin:/usr/sbin:/sbin ./configure \
+            --prefix="${option_prefix}" \
+            ${applications_dir_flag} \
+            --enable-readline || return
         make -j"$(sysctl -n hw.activecpu)" || return
         make install || return
         cd .. || return
