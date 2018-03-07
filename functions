@@ -151,7 +151,7 @@ failcache_key() {
 ## Test whether a given port with variants has previously failed.
 #
 # Valid arguments are a port name, optionally followed by a variant
-# specification. Succeeds if the port did not previsouly fail to build,
+# specification. Succeeds if the port did not previously fail to build,
 # fails if the port is known to fail.
 failcache_test() {
     local key
