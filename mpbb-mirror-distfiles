@@ -11,7 +11,7 @@ mirror-distfiles-usage() {
     cat <<EOF
 usage: $prog [<global opts>] mirror-distfiles <port> [<port2> [...]]
 
-Mirror the distfiles of each given port and their subports.
+Mirror the distfiles of each given port and their recursive dependencies.
 
 Options:
 
@@ -26,7 +26,7 @@ EOF
 }
 
 mirror-distfiles() {
-    local args args2
+    local args
     parseopt distfiles-dir: "$@" || return
     default_distfiles_dir="${option_prefix}"/var/macports/distfiles
     : "${option_distfiles_dir=${default_distfiles_dir}}"
@@ -70,15 +70,8 @@ mirror-distfiles() {
         fi
     fi
 
-    args=()
-    for arg in "$@"; do
-        args+=("$arg")
-        args+=("rdepof:$arg")
-    done
-    set -- ${args+"${args[@]}"}
-
     # Mirror the distfiles.
     # $option_prefix is set by mpbb
     # shellcheck disable=SC2154
-    "${option_prefix}/bin/port" -p mirror "$@"
+    "${option_prefix}/bin/port" -p mirror "$@" $("${option_prefix}/bin/port" -q rdeps --index "$@" | sed '/^--$/d')
 }
