@@ -73,5 +73,5 @@ mirror-distfiles() {
     # Mirror the distfiles.
     # $option_prefix is set by mpbb
     # shellcheck disable=SC2154
-    "${option_prefix}/bin/port" -p mirror "$@" $("${option_prefix}/bin/port" -pq rdeps --index "$@" | sed '/^--$/d')
+    "${option_prefix}/bin/port" -p mirror "$@" $("${option_prefix}/bin/port" -pq rdeps --index "$@" | sed -E -e '/^--$/d' -e 's/^[[:space:]]+//' | sort -u)
 }
