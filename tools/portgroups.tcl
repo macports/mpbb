@@ -31,6 +31,15 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+proc split_variants {variants} {
+    set result {}
+    set l [regexp -all -inline -- {([-+])([[:alpha:]_]+[\w\.]*)} $variants]
+    foreach { match sign variant } $l {
+        lappend result $variant $sign
+    }
+    return $result
+}
+
 package require macports
 
 if {[llength $::argv] == 0} {
@@ -47,6 +56,11 @@ if {[catch {mportinit "" "" ""} result]} {
 
 # look up the path of the Portfile for the given port
 set portname [lindex $::argv 0]
+if {[llength $::argv] > 1} {
+    set variations [split_variants [lindex $::argv 1]]
+} else {
+    set variations ""
+}
 #try -pass_signal {...}
 try {
     set result [mportlookup $portname]
@@ -63,7 +77,7 @@ try {
 array set portinfo [lindex $result 1]
 #try -pass_signal {...}
 try {
-    set mport [mportopen $portinfo(porturl) [list subport $portname] {}]
+    set mport [mportopen $portinfo(porturl) [list subport $portname] $variations]
 } catch {{*} eCode eMessage} {
     ui_error "mportopen ${portinfo(porturl)} failed: $eMessage"
     exit 1

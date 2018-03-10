@@ -30,6 +30,15 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+proc split_variants {variants} {
+    set result {}
+    set l [regexp -all -inline -- {([-+])([[:alpha:]_]+[\w\.]*)} $variants]
+    foreach { match sign variant } $l {
+        lappend result $variant $sign
+    }
+    return $result
+}
+
 if {[llength $::argv] == 0} {
     puts stderr "Usage: $argv0 <portname>"
     exit 1
@@ -44,6 +53,11 @@ if {[catch {mportinit "" "" ""} result]} {
 }
 
 set portname [lindex $::argv 0]
+if {[llength $::argv] > 1} {
+    set variations [split_variants [lindex $::argv 1]]
+} else {
+    set variations ""
+}
 
 if {[catch {set one_result [mportlookup $portname]}] || [llength $one_result] < 2} {
     ui_error "No port named ${portname} could be found in the port index"
@@ -54,7 +68,7 @@ array set portinfo [lindex $one_result 1]
 set portname $portinfo(name)
 
 if {[info exists portinfo(porturl)]} {
-    if {[catch {set mport [mportopen $portinfo(porturl) [list subport $portname] {}]}]} {
+    if {[catch {set mport [mportopen $portinfo(porturl) [list subport $portname] $variations]}]} {
         ui_warn "failed to open port: $portname"
     } else {
         set archs [_mportkey $mport supported_archs]
