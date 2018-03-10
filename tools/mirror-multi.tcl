@@ -36,11 +36,11 @@ package require macports
 
 if {[catch {mportinit "" "" ""} result]} {
    ui_error "$errorInfo"
-   ui_error "Failed to initialize ports sytem: $result"
+   ui_error "Failed to initialize ports system: $result"
    exit 1
 }
 
-set platforms [list 8 ppc 8 i386 9 ppc 9 i386]
+set platforms [list 8 powerpc 8 i386 9 powerpc 9 i386]
 foreach vers {10 11 12 13 14 15 16 17} {
     if {${macports::os_major} != $vers} {
         lappend platforms $vers i386
