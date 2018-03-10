@@ -154,9 +154,12 @@ proc mirror_port {portinfo_list} {
     set any_failed 0
     # have to checksum too since the mirror target claims to succeed
     # even if the checksums were wrong and the files deleted
-    if {$do_mirror && ([mportexec $mport mirror] != 0 || [mportexec $mport checksum] != 0)} {
-        set any_failed 1
-        set tried_and_failed($portname) 1
+    if {$do_mirror} {
+        mportexec $mport clean
+        if {[mportexec $mport mirror] != 0 || [mportexec $mport checksum] != 0} {
+            set any_failed 1
+            set tried_and_failed($portname) 1
+        }
     }
     mportclose $mport
 
@@ -174,8 +177,11 @@ proc mirror_port {portinfo_list} {
         array unset portinfo
         array set portinfo [mportinfo $mport]
         lappend deps {*}[get_dep_list portinfo]
-        if {$do_mirror && ([mportexec $mport mirror] != 0  || [mportexec $mport checksum] != 0)} {
-            set any_failed 1
+        if {$do_mirror} {
+            mportexec $mport clean
+            if {[mportexec $mport mirror] != 0  || [mportexec $mport checksum] != 0} {
+                set any_failed 1
+            }
         }
         mportclose $mport
     }
@@ -191,8 +197,11 @@ proc mirror_port {portinfo_list} {
         array unset portinfo
         array set portinfo [mportinfo $mport]
         lappend deps {*}[get_dep_list portinfo]
-        if {$do_mirror && ([mportexec $mport mirror] != 0 || [mportexec $mport checksum] != 0)} {
-            set any_failed 1
+        if {$do_mirror} {
+            mportexec $mport clean
+            if {[mportexec $mport mirror] != 0 || [mportexec $mport checksum] != 0} {
+                set any_failed 1
+            }
         }
         mportclose $mport
     }
