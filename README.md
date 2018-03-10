@@ -23,8 +23,8 @@ The defined build steps are:
 
         mpbb --prefix /opt/local --work-dir /tmp/scratch \
             checkout \
-            --svn-url https://svn.macports.org/repository/macports/trunk \
-            --svn-revision 123456
+            [--ports-url https://github.com/macports/macports-ports.git] \
+            [--ports-commit 40c3ce0a26abc0d778754ecde9660bead94a2ffd]
 
 3.  Print one or more ports' subports to standard output.
 
