@@ -147,6 +147,7 @@ proc mirror_port {portinfo_list} {
     }
     if {[catch {mportopen $porturl [list subport $portname] {}} mport]} {
         ui_error "mportopen $porturl failed: $mport"
+        set tried_and_failed($portname) 1
         return 1
     }
     array unset portinfo
@@ -158,7 +159,6 @@ proc mirror_port {portinfo_list} {
         mportexec $mport clean
         if {[mportexec $mport mirror] != 0 || [mportexec $mport checksum] != 0} {
             set any_failed 1
-            set tried_and_failed($portname) 1
         }
     }
     mportclose $mport
@@ -171,7 +171,6 @@ proc mirror_port {portinfo_list} {
         if {[catch {mportopen $porturl [list subport $portname] [list $variant +]} mport]} {
             ui_error "mportopen $porturl failed: $mport"
             set any_failed 1
-            set tried_and_failed($portname) 1
             continue
         }
         array unset portinfo
@@ -191,7 +190,6 @@ proc mirror_port {portinfo_list} {
         if {[catch {mportopen $porturl [list subport $portname os_major $os_major os_arch $os_arch] {}} mport]} {
             ui_error "mportopen $porturl failed: $mport"
             set any_failed 1
-            set tried_and_failed($portname) 1
             continue
         }
         array unset portinfo
@@ -222,6 +220,8 @@ proc mirror_port {portinfo_list} {
 
     if {$any_failed == 0} {
         set_mirror_done $portname
+    } else {
+        set tried_and_failed($portname) 1
     }
     return $any_failed
 }
