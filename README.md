@@ -115,3 +115,14 @@ Subcommand scripts may use but not modify these global shell parameters:
         [`fmt(1)`](https://en.wikipedia.org/wiki/Fmt_(Unix)).
     -   `mpbb gather-archives` requires [curl](https://curl.haxx.se).
     -   `mpbb selfupdate` requires Make.
+
+## Development Setup ##
+
+For development of `mpbb`, we recommend the following setup:
+
+- Install a separate copy of MacPorts, e.g. in `/opt/mports`. See
+  [Install Multiple MacPorts Copies](https://guide.macports.org/#installing.macports.source.multiple).
+  It is not recommended to use your normal copy of MacPorts, since `mpbb` will
+  do cleanup after installation and deactivate all active ports.
+- Call `mpbb` with `--prefix=/opt/mports` to use your custom prefix. You may
+  also want to set `--work-dir`.
