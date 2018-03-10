@@ -107,7 +107,7 @@ for cmd in "${cmds[@]}"; do
 done
 # shellcheck disable=SC2181
 if (( $? != 0 || ${#cmds[@]} == 0 )); then
-    err "Unknown command \`$cmd'"
+    err "Unknown command \`$subcmd'"
     echo >&2 "Try \`$0 help' for more information."
     exit 2
 fi
