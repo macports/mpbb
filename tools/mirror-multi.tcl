@@ -48,7 +48,7 @@ foreach vers {10 11 12 13 14 15 16 17} {
 }
 set deptypes {depends_fetch depends_extract depends_build depends_lib depends_run depends_test}
 
-array set tried_and_failed {}
+array set processed {}
 array set mirror_done {}
 
 proc check_mirror_done {portname} {
@@ -135,11 +135,12 @@ proc get_variants {portinfovar} {
 }
 
 proc mirror_port {portinfo_list} {
-    global platforms deptypes tried_and_failed
+    global platforms deptypes processed
 
     array set portinfo $portinfo_list
     set portname $portinfo(name)
     set porturl $portinfo(porturl)
+    set processed($portname) 1
     set do_mirror 1
     if {[lsearch -exact -nocase $portinfo(license) "nomirror"] >= 0} {
         ui_msg "Not mirroring $portname due to license"
@@ -147,7 +148,6 @@ proc mirror_port {portinfo_list} {
     }
     if {[catch {mportopen $porturl [list subport $portname] {}} mport]} {
         ui_error "mportopen $porturl failed: $mport"
-        set tried_and_failed($portname) 1
         return 1
     }
     array unset portinfo
@@ -205,7 +205,7 @@ proc mirror_port {portinfo_list} {
     }
 
     foreach dep [lsort -unique $deps] {
-        if {![info exists tried_and_failed($dep)] && ![check_mirror_done $dep]} {
+        if {![info exists processed($dep)] && ![check_mirror_done $dep]} {
             set result [mportlookup $dep]
             if {[llength $result] < 2} {
                 ui_error "No such port: $dep"
@@ -220,8 +220,6 @@ proc mirror_port {portinfo_list} {
 
     if {$any_failed == 0} {
         set_mirror_done $portname
-    } else {
-        set tried_and_failed($portname) 1
     }
     return $any_failed
 }
@@ -234,12 +232,12 @@ if {[lindex $::argv 0] eq "-c"} {
 
 set exitval 0
 foreach portname $::argv {
-    if {[info exists tried_and_failed($portname)]} {
-        ui_msg "skipping ${portname}, already tried and failed"
+    if {[info exists processed($portname)]} {
+        ui_msg "skipping ${portname}, already processed"
         continue
     }
     if {[check_mirror_done $portname]} {
-        ui_msg "skipping ${portname}, already mirrored"
+        ui_msg "skipping ${portname}, previously mirrored"
         continue
     }
 
