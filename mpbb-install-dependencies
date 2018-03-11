@@ -66,13 +66,10 @@ install-dependencies() {
     # Check whether any of the dependencies have previously failed
     failcachecounter=0
     while read -r dependency; do
-        # Split portname +variant1+variant2 into portname and active
-        # variants, where the variants are optional.
-        set $dependency
-        depname="$1"
-        # remove surrounding quotes
-        depvariants="${2%\"}"
-        depvariants="${depvariants#\"}"
+        # Split portname +variant1+variant2 into portname and variants, where
+        # the variants are optional.
+        depname=${dependency%% *}
+        depvariants=${dependency:${#depname}+1}
 
         # $depvariants isn't quoted on purpose
         # shellcheck disable=SC2086
@@ -93,30 +90,25 @@ install-dependencies() {
     rm -f "${option_work_dir}/all_ports"
 
     while read -r dependency; do
-        # Split portname +variant1+variant2 into portname and active and
-        # requested variants, where the variants are optional.
-        set $dependency
-        depname=$1
-        # remove surrounding quotes
-        depvariants="${2%\"}"
-        depvariants="${depvariants#\"}"
-        deprequestedvariants="${3%\"}"
-        deprequestedvariants="${deprequestedvariants#\"}"
+        # Split portname +variant1+variant2 into portname and variants, where
+        # the variants are optional.
+        depname=${dependency%% *}
+        depvariants=${dependency:${#depname}+1}
 
-        text="Installing dependency ($dependencies_counter of $dependencies_count) '${depname}' with variants '${depvariants}' (requesting '${deprequestedvariants}')"
+        text="Installing dependency ($dependencies_counter of $dependencies_count) '${depname}' with variants '${depvariants}'"
         echo "----> ${text}"
         echo -n "${text} ... " >> "$log_status_dependencies"
         # $option_prefix and $thisdir are set in mpbb
         # shellcheck disable=SC2154
-        if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "${depname}" "${deprequestedvariants}") ]]; then
+        if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "${depname}" "${depvariants}") ]]; then
             echo "Already installed, nothing to do"
             echo "[OK]" >> "$log_status_dependencies"
             dependencies_counter=$((dependencies_counter + 1))
         else
-            # $deprequestedvariants isn't quoted on purpose
+            # $depvariants isn't quoted on purpose
             # shellcheck disable=SC2154,SC2086
-            if ! "${option_prefix}/bin/port" -dn install --unrequested "$depname" $deprequestedvariants; then
-                echo "Build of dependency '${depname}' with variants '${deprequestedvariants}' failed, aborting." >&2
+            if ! "${option_prefix}/bin/port" -dn install --unrequested "$depname" $depvariants; then
+                echo "Build of dependency '${depname}' with variants '${depvariants}' failed, aborting." >&2
                 echo "[FAIL]" >> "$log_status_dependencies"
                 echo "Building '$port' ... [ERROR] (failed to install dependency '${depname}') maintainers: $(get-maintainers "$port" "${depname}")." >> "$log_subports_progress"
 
@@ -148,7 +140,7 @@ install-dependencies() {
             fi
         fi
         # add to the list for gather_archives
-        echo "$depname $deprequestedvariants" >> "${option_work_dir}/all_ports"
+        echo "$dependency" >> "${option_work_dir}/all_ports"
     done <<<"$dependencies"
 
     # activate everything now that we know it's all built and installed
@@ -162,7 +154,7 @@ install-dependencies() {
         echo "Activating all dependencies..."
         # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
         # shellcheck disable=SC2154,SC2086
-        if ! "${option_prefix}/bin/port" -dn install --unrequested $(cat "${option_work_dir}/all_ports"); then
+        if ! "${option_prefix}/bin/port" -dn install --unrequested ${dependencies}; then
             echo "Activating all dependencies failed, aborting." >&2
             return 1
         fi
