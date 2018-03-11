@@ -73,6 +73,6 @@ mirror-distfiles() {
     # Mirror the distfiles.
     # $option_prefix is set by mpbb
     # shellcheck disable=SC2154
-    # "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/mirror-multi.tcl" -c "${option_work_dir}/mirrorcache" "$@"
-    "${option_prefix}/bin/port" -p mirror "$@" $("${option_prefix}/bin/port" -pq rdeps --index "$@" | sed -E -e '/^--$/d' -e 's/^[[:space:]]+//' | sort -u)
+    "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/mirror-multi.tcl" -c "${option_work_dir}/mirrorcache" "$@"
+    #"${option_prefix}/bin/port" -p mirror "$@" $("${option_prefix}/bin/port" -pq rdeps --index "$@" | sed -E -e '/^--$/d' -e 's/^[[:space:]]+//' | sort -u)
 }
