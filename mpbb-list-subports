@@ -9,7 +9,7 @@ list-subports-usage() {
     # "prog" is defined in mpbb-help.
     # shellcheck disable=SC2154
     cat <<EOF
-usage: $prog [<global opts>] list-subports [<opts>] <port> [<port2> [...]]
+usage: $prog [<global opts>] list-subports [<opts>] <port>[@(+|-)variant [...]] [<port2>[@(+|-)variant [...]] [...]]
 
 Print the name and subports of each given port to standard output.
 
@@ -25,7 +25,8 @@ EOF
 
 print-subports() {
     local archive_site=$1
-    local portname=$2
+    local portname=${2%%@*}
+    local portvariants=${2:${#portname}+1}
     local port
     local portgroup
     local ports
@@ -44,16 +45,15 @@ print-subports() {
         exclude=0
         exclude_reasons=()
 
-        # FIXME: this doesn't take selected variants into account
         # $thisdir is set in mpbb
         # shellcheck disable=SC2154
-        archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}")
+        archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}" "${portvariants}")
         if [[ -f "${archive_path}" ]]; then
             archive_basename=$(basename "${archive_path}")
             if curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
                 exclude=1
                 exclude_reasons+=("it has already been built and uploaded")
-            elif ! "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
+            elif ! "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}" "${portvariants}"; then
                 exclude=1
                 exclude_reasons+=("it has already been built and is not distributable")
             fi
@@ -66,7 +66,7 @@ print-subports() {
             else
                 # $thisdir is set in mpbb
                 # shellcheck disable=SC2154
-                for portgroup in $("${tclsh}" "${thisdir}/tools/portgroups.tcl" "$port"); do
+                for portgroup in $("${tclsh}" "${thisdir}/tools/portgroups.tcl" "${port}" "${portvariants}"); do
                     if [ "$portgroup" = "obsolete-1.0" ]; then
                         exclude=1
                         exclude_reasons+=("it includes the obsolete 1.0 PortGroup")
@@ -76,7 +76,7 @@ print-subports() {
         fi
 
         if [[ $exclude -eq 0 && ("${os_version}" = "10.6" || "${os_version}" = "10.5") ]]; then
-            supported_archs=$("${tclsh}" "${thisdir}/tools/supported-archs.tcl" "${port}")
+            supported_archs=$("${tclsh}" "${thisdir}/tools/supported-archs.tcl" "${port}" "${portvariants}")
             if [[ -n "${supported_archs}" ]]; then
                 is_64bit_capable="$(sysctl -n hw.cpu64bit_capable)"
                 if [[ "${os_version}" = "10.6" && "${is_64bit_capable}" = "0" && ! ("${supported_archs}" == *"x86_64"* && "${supported_archs}" == *"i386"*) ]]; then
@@ -90,7 +90,11 @@ print-subports() {
         fi
 
         if [ $exclude -eq 0 ]; then
-            echo "$port"
+            if [ -n "${portvariants}" ]; then
+                echo "${port}@${portvariants}"
+            else
+                echo "$port"
+            fi
         else
             if [ ${#exclude_reasons[@]} -eq 1 ]; then
                 echo >&2 "Excluding '${port}' because ${exclude_reasons[0]}."
