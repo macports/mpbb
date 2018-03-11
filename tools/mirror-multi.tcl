@@ -143,6 +143,22 @@ proc get_variants {portinfovar} {
     return $variants
 }
 
+# work around the bug where the mirror target claims to succeed when
+# the distfile checksums did not match
+proc check_distfiles {mport} {
+    set distpath [_mportkey $mport distpath]
+    if {[catch {_mportkey $mport all_dist_files} all_dist_files]} {
+        # no distfiles, no problem
+        return 0
+    }
+    foreach distfile $all_dist_files {
+        if {![file exists [file join $distpath $distfile]]} {
+            return 1
+        }
+    }
+    return 0
+}
+
 proc mirror_port {portinfo_list} {
     global platforms deptypes processed
 
@@ -163,12 +179,11 @@ proc mirror_port {portinfo_list} {
     }
     array unset portinfo
     array set portinfo [mportinfo $mport]
-    # have to checksum too since the mirror target claims to succeed
-    # even if the checksums were wrong and the files deleted
+
     if {$do_mirror} {
         incr attempted
         mportexec $mport clean
-        if {[mportexec $mport mirror] == 0 && [mportexec $mport checksum] == 0} {
+        if {[mportexec $mport mirror] == 0 && [check_distfiles $mport] == 0} {
             incr succeeded
         }
     }
@@ -189,7 +204,7 @@ proc mirror_port {portinfo_list} {
         lappend deps {*}[get_dep_list portinfo]
         if {$do_mirror} {
             mportexec $mport clean
-            if {[mportexec $mport mirror] == 0  && [mportexec $mport checksum] == 0} {
+            if {[mportexec $mport mirror] == 0  && [check_distfiles $mport] == 0} {
                 incr succeeded
             }
         } else {
@@ -210,7 +225,7 @@ proc mirror_port {portinfo_list} {
         lappend deps {*}[get_dep_list portinfo]
         if {$do_mirror} {
             mportexec $mport clean
-            if {[mportexec $mport mirror] == 0 && [mportexec $mport checksum] == 0} {
+            if {[mportexec $mport mirror] == 0 && [check_distfiles $mport] == 0} {
                 incr succeeded
             }
         } else {
