@@ -9,7 +9,7 @@ install-port-usage() {
     # "prog" is defined in mpbb-help.
     # shellcheck disable=SC2154
     cat <<EOF
-usage: $prog [<global opts>] install-port <port>
+usage: $prog [<global opts>] install-port <port>[@(+|-)variant [...]]
 
 Build and install the given port.
 
@@ -18,11 +18,12 @@ EOF
 }
 
 install-port() {
-    local port=${1-}
-    if [[ -z $port ]]; then
+    if [[ -z $1 ]]; then
         err "Must specify a port"
         return 1
     fi
+    local port=${1%%@*}
+    local portvariants=${1:${#port}+1}
     # $option_log_dir is set in mpbb
     # shellcheck disable=SC2154
     local log_port_contents="${option_log_dir}/port-contents.txt"
@@ -37,7 +38,7 @@ install-port() {
 
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
-    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "$@") ]]; then
+    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "$port" "$portvariants") ]]; then
         echo "$* already installed, nothing to do"
         # log: summary for the portwatcher
         echo "Building '$port' ... [OK]" >> "$log_subports_progress"
@@ -50,11 +51,10 @@ install-port() {
     time_start=$(date +%s)
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    if "${option_prefix}/bin/port" -dkn install "$@"; then
+    if "${option_prefix}/bin/port" -dkn install "$port" $portvariants; then
         # Remove failcache if it exists
-        failcache_success "$@"
-        if [ $? -ne 0 ]; then
-            err "failcache_success" "$@" "failed."
+        if ! failcache_success "$port" "$portvariants"; then
+            err "failcache_success $port $portvariants failed."
             return 1
         fi
     else
@@ -62,9 +62,8 @@ install-port() {
         # log: summary for the portwatcher
         echo "Building '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
         # update failcache
-        failcache_failure "$@"
-        if [ $? -ne 0 ]; then
-            err "failcache_failure" "$@" "failed."
+        if ! failcache_failure "$port" "$portvariants"; then
+            err "failcache_failure $port $portvariants failed."
             return 1
         fi
         return 1
@@ -86,7 +85,7 @@ install-port() {
     local print_arg_workdir="ERROR"
     local print_arg_destdir="ERROR"
     # First, compute port_workdir_size and port_destdir_size
-    port_workdir=$("${option_prefix}/bin/port" work "$port")
+    port_workdir=$("${option_prefix}/bin/port" work "$port" $portvariants)
     if [ -n "$port_workdir" ]; then
         port_workdir_size=$(du -ks "$port_workdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
         if [ $? -eq 0 ] && [ -n "$port_workdir_size" ]; then
@@ -111,7 +110,7 @@ install-port() {
 
     # log: main.log
     local port_mainlog
-    port_mainlog=$("${option_prefix}/bin/port" logfile "$port")
+    port_mainlog=$("${option_prefix}/bin/port" logfile "$port" $portvariants)
     if [ $? -eq 0 ] && [ -f "$port_mainlog" ]; then
         cp -f "$port_mainlog" "$log_port_main"
     fi
