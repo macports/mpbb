@@ -9,7 +9,7 @@ install-dependencies-usage() {
     # "prog" is defined in mpbb-help.
     # shellcheck disable=SC2154
     cat <<EOF
-usage: $prog [<global opts>] install-dependencies <port>
+usage: $prog [<global opts>] install-dependencies <port>[@(+|-)variant [...]]
 
 Build and install the dependencies of the given port.
 
@@ -18,11 +18,12 @@ EOF
 }
 
 install-dependencies() {
-    local port=${1-}
-    if [[ -z $port ]]; then
+    if [[ -z $1 ]]; then
         err "Must specify a port"
         return 1
     fi
+    local port=${1%%@*}
+    local portvariants=${1:${#port}+1}
     local dependencies
     local dependencies_count
     local dependencies_counter
@@ -41,7 +42,7 @@ install-dependencies() {
     # calculate list of dependencies in-order
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
-    dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "$@")
+    dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "$port" "$portvariants")
     if [ $? -ne 0 ]; then
         echo "Calculating dependencies for '$port' failed, aborting." >&2
         echo "Building '$port' ... [ERROR] (failed to calculate dependencies) maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
