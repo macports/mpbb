@@ -37,12 +37,13 @@ install-dependencies() {
 
     # prepare the log file and make sure to start with an empty one
     mkdir -p "${option_log_dir}"
-    > "$log_status_dependencies"
+    :> "$log_status_dependencies"
 
     # calculate list of dependencies in-order
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
     dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "$port" "$portvariants")
+    # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
         echo "Calculating dependencies for '$port' failed, aborting." >&2
         echo "Building '$port' ... [ERROR] (failed to calculate dependencies) maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
@@ -62,7 +63,7 @@ install-dependencies() {
     echo >> "$log_status_dependencies"
 
     # save $@ since 'set' is used below
-    orig_args="$@"
+    orig_args="$*"
 
     # Check whether any of the dependencies have previously failed
     failcachecounter=0
@@ -88,6 +89,8 @@ install-dependencies() {
         return 1
     fi
 
+    # option_work_dir is set in mpbb
+    # shellcheck disable=SC2154
     rm -f "${option_work_dir}/all_ports"
 
     while read -r dependency; do
@@ -116,8 +119,7 @@ install-dependencies() {
                 # Update failcache
                 # $depvariants isn't quoted on purpose
                 # shellcheck disable=SC2086
-                failcache_failure "$depname" $depvariants
-                if [ $? -ne 0 ]; then
+                if ! failcache_failure "$depname" $depvariants; then
                     err "failcache_failure $depname $depvariants failed."
                     return 1
                 fi
@@ -128,8 +130,7 @@ install-dependencies() {
                 # Remove failcache if it exists
                 # $depvariants isn't quoted on purpose
                 # shellcheck disable=SC2086
-                failcache_success "$depname" $depvariants
-                if [ $? -ne 0 ]; then
+                if ! failcache_success "$depname" $depvariants; then
                     err "failcache_success $depname $depvariants failed."
                     return 1
                 fi
@@ -147,8 +148,8 @@ install-dependencies() {
     # activate everything now that we know it's all built and installed
     # ... but only we're actually going to build the requested port
 
-    # $option_prefix and $thisdir are set in mpbb
-    # shellcheck disable=SC2154
+    # $option_prefix and $thisdir are set in mpbb, orig_args is not quoted on purpose
+    # shellcheck disable=SC2154,SC2086
     if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" ${orig_args}) ]]; then
         echo "${orig_args} Already installed, not activating dependencies"
     else
