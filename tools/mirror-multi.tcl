@@ -69,10 +69,16 @@ proc check_mirror_done {portname} {
             set portfile_hash [sha256 file $portfile]
             set fd [open $cache_entry]
             set entry_hash [gets $fd]
+            set partial [gets $fd]
             close $fd
             if {$portfile_hash eq $entry_hash} {
-                set mirror_done($portname) 1
-                return 1
+                if {$partial eq ""} {
+                    set mirror_done($portname) 1
+                    return 1
+                } else {
+                    set mirror_done($portname) $partial
+                    return $partial
+                }
             } else {
                 file delete -force $cache_entry
                 set mirror_done($portname) 0
@@ -84,9 +90,9 @@ proc check_mirror_done {portname} {
     return 0
 }
 
-proc set_mirror_done {portname} {
+proc set_mirror_done {portname value} {
     global mirror_done mirrorcache_dir
-    if {![info exists mirror_done($portname)] || $mirror_done($portname) == 0} {
+    if {![info exists mirror_done($portname)] || $mirror_done($portname) != 1} {
         set result [mportlookup $portname]
         array unset portinfo
         array set portinfo [lindex $result 1]
@@ -98,6 +104,9 @@ proc set_mirror_done {portname} {
         set cache_entry [file join $cache_dir $portname]
         set fd [open $cache_entry w]
         puts $fd $portfile_hash
+        if {$value != 1} {
+            puts $fd $value
+        }
         close $fd
         set mirror_done($portname) 1
     }
@@ -142,6 +151,8 @@ proc mirror_port {portinfo_list} {
     set porturl $portinfo(porturl)
     set processed($portname) 1
     set do_mirror 1
+    set attempted 0
+    set succeeded 0
     if {[lsearch -exact -nocase $portinfo(license) "nomirror"] >= 0} {
         ui_msg "Not mirroring $portname due to license"
         set do_mirror 0
@@ -152,13 +163,13 @@ proc mirror_port {portinfo_list} {
     }
     array unset portinfo
     array set portinfo [mportinfo $mport]
-    set any_failed 0
     # have to checksum too since the mirror target claims to succeed
     # even if the checksums were wrong and the files deleted
     if {$do_mirror} {
+        incr attempted
         mportexec $mport clean
-        if {[mportexec $mport mirror] != 0 || [mportexec $mport checksum] != 0} {
-            set any_failed 1
+        if {[mportexec $mport mirror] == 0 && [mportexec $mport checksum] == 0} {
+            incr succeeded
         }
     }
     mportclose $mport
@@ -168,9 +179,9 @@ proc mirror_port {portinfo_list} {
 
     foreach variant $variants {
         ui_msg "$portname +${variant}"
+        incr attempted
         if {[catch {mportopen $porturl [list subport $portname] [list $variant +]} mport]} {
             ui_error "mportopen $porturl failed: $mport"
-            set any_failed 1
             continue
         }
         array unset portinfo
@@ -178,18 +189,20 @@ proc mirror_port {portinfo_list} {
         lappend deps {*}[get_dep_list portinfo]
         if {$do_mirror} {
             mportexec $mport clean
-            if {[mportexec $mport mirror] != 0  || [mportexec $mport checksum] != 0} {
-                set any_failed 1
+            if {[mportexec $mport mirror] == 0  && [mportexec $mport checksum] == 0} {
+                incr succeeded
             }
+        } else {
+            incr succeeded
         }
         mportclose $mport
     }
 
     foreach {os_major os_arch} $platforms {
         ui_msg "$portname with platform 'darwin $os_major $os_arch'"
+        incr attempted
         if {[catch {mportopen $porturl [list subport $portname os_major $os_major os_arch $os_arch] {}} mport]} {
             ui_error "mportopen $porturl failed: $mport"
-            set any_failed 1
             continue
         }
         array unset portinfo
@@ -197,31 +210,39 @@ proc mirror_port {portinfo_list} {
         lappend deps {*}[get_dep_list portinfo]
         if {$do_mirror} {
             mportexec $mport clean
-            if {[mportexec $mport mirror] != 0 || [mportexec $mport checksum] != 0} {
-                set any_failed 1
+            if {[mportexec $mport mirror] == 0 && [mportexec $mport checksum] == 0} {
+                incr succeeded
             }
+        } else {
+            incr succeeded
         }
         mportclose $mport
     }
 
+    set dep_failed 0
     foreach dep [lsort -unique $deps] {
-        if {![info exists processed($dep)] && ![check_mirror_done $dep]} {
+        if {![info exists processed($dep)] && [check_mirror_done $dep] == 0} {
             set result [mportlookup $dep]
             if {[llength $result] < 2} {
                 ui_error "No such port: $dep"
-                set any_failed 1
+                set dep_failed 1
                 continue
             }
             if {[mirror_port [lindex $result 1]] != 0} {
-                set any_failed 1
+                set dep_failed 1
             }
         }
     }
 
-    if {$any_failed == 0} {
-        set_mirror_done $portname
+    if {$dep_failed == 0 && $succeeded > 0} {
+        if {$succeeded == $attempted} {
+            set_mirror_done $portname 1
+        } else {
+            set_mirror_done $portname 0.5
+        }
+        return 0
     }
-    return $any_failed
+    return 1
 }
 
 set mirrorcache_dir /tmp/mirrorcache
@@ -236,7 +257,7 @@ foreach portname $::argv {
         ui_msg "skipping ${portname}, already processed"
         continue
     }
-    if {[check_mirror_done $portname]} {
+    if {[check_mirror_done $portname] == 1} {
         ui_msg "skipping ${portname}, previously mirrored"
         continue
     }
