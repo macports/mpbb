@@ -34,7 +34,7 @@ install-port() {
     # prepare the log files and make sure to start with empty ones
     mkdir -p "${option_log_dir}"
     #> "$log_port_contents"
-    > "$log_port_stats"
+    :> "$log_port_stats"
 
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
@@ -50,7 +50,7 @@ install-port() {
     local time_stop
     time_start=$(date +%s)
     # $option_prefix is set in mpbb
-    # shellcheck disable=SC2154
+    # shellcheck disable=SC2154,SC2086
     if "${option_prefix}/bin/port" -dkn install "$port" $portvariants; then
         # Remove failcache if it exists
         if ! failcache_success "$port" "$portvariants"; then
@@ -85,9 +85,11 @@ install-port() {
     local print_arg_workdir="ERROR"
     local print_arg_destdir="ERROR"
     # First, compute port_workdir_size and port_destdir_size
+    # shellcheck disable=SC2086
     port_workdir=$("${option_prefix}/bin/port" work "$port" $portvariants)
     if [ -n "$port_workdir" ]; then
         port_workdir_size=$(du -ks "$port_workdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
+        # shellcheck disable=SC2181
         if [ $? -eq 0 ] && [ -n "$port_workdir_size" ]; then
             print_arg_workdir="${port_workdir_size}k"
         fi
@@ -98,6 +100,7 @@ install-port() {
         print_arg_destdir="-"
         if [ -d "$port_destdir" ]; then
             port_destdir_size=$(du -ks "$port_destdir" | sed 's/^ *//' | tr '\t' '\n' | head -n 1)
+            # shellcheck disable=SC2181
             if [ $? -eq 0 ] && [ -n "$port_destdir_size" ]; then
                 print_arg_destdir="${port_destdir_size}k"
             fi
@@ -110,7 +113,10 @@ install-port() {
 
     # log: main.log
     local port_mainlog
+    # portvariants is not quoted on purpose
+    # shellcheck disable=SC2086
     port_mainlog=$("${option_prefix}/bin/port" logfile "$port" $portvariants)
+    # shellcheck disable=SC2181
     if [ $? -eq 0 ] && [ -f "$port_mainlog" ]; then
         cp -f "$port_mainlog" "$log_port_main"
     fi
