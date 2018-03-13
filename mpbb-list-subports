@@ -25,7 +25,7 @@ EOF
 
 print-subports() {
     local archive_site=$1
-    local portname=$2
+    local portnames=$2
     local port
     local portgroup
     local ports
@@ -39,7 +39,7 @@ print-subports() {
     tclsh=${option_prefix}/bin/port-tclsh
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    ports=$("${option_prefix}/bin/port" -q info --index --line --name "${portname}" "subportof:${portname}" 2>/dev/null) || return
+    ports=$("${tclsh}" "${thisdir}/tools/sort-with-subports.tcl" ${portnames} 2>/dev/null) || return
     for port in $ports; do
         exclude=0
         exclude_reasons=()
@@ -125,9 +125,7 @@ list-subports() {
     mkdir -p "$option_log_dir"
     > "$log_subports_progress"
 
-    for p in "$@"; do
-        print-subports "$option_archive_site" "$p" && success=1
-    done
+    print-subports "$option_archive_site" "$*" && success=1
 
     if [ $success -eq 0 ]; then
         err "None of the specified ports were found in the port index."
