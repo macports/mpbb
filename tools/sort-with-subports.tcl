@@ -49,12 +49,10 @@ proc ui_channels {priority} {
 proc process_port_deps {portname portdeps_in portlist_in} {
    upvar $portdeps_in portdeps
    upvar $portlist_in portlist
-   if {[lsearch -exact $portlist $portname] == -1} {
-      if {[info exists portdeps($portname)]} {
-         foreach portdep $portdeps($portname) {
-            if {[lsearch -exact $portlist $portdep] == -1} {
-               process_port_deps $portdep portdeps portlist
-            }
+   if {[info exists portdeps($portname)]} {
+      foreach portdep $portdeps($portname) {
+         if {$portdep ni $portlist} {
+            process_port_deps $portdep portdeps portlist
          }
       }
       lappend portlist $portname
@@ -71,10 +69,12 @@ array set portdepinfo {}
 set todo [list]
 if {[lindex $argv 0] eq "-"} {
     while {[gets stdin line] >= 0} {
-        lappend todo [string trim $line]
+        lappend todo [string tolower [string trim $line]]
     }
 } else {
-    set todo $argv
+    foreach p $argv {
+        lappend todo [string tolower $p]
+    }
 }
 # save the ones that the user actually wants to know about
 foreach p $todo {
@@ -96,32 +96,34 @@ while {$todo ne {}} {
     }
 
     array set portinfo [lindex $result 1]
-    set portname $portinfo(name)
-    if {[info exists inputports($portname)] && [info exists portinfo(subports)]} {
-        foreach subport $portinfo(subports) {
-            lappend todo $subport
-            set outputports($subport) 1
+    if {![info exists portdepinfo($p)]} {
+        if {[info exists inputports($p)] && [info exists portinfo(subports)]} {
+            foreach subport $portinfo(subports) {
+                set splower [string tolower $subport]
+                lappend todo $splower
+                set outputports($splower) 1
+            }
         }
-    }
-    if {![info exists portdepinfo($portname)]} {
         set deplist [list]
         foreach depstype $depstypes {
-            if {[info exists portinfo($depstype)] && $portinfo($depstype) != ""} {
+            if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
                 foreach onedep $portinfo($depstype) {
-                    set depname [lindex [split [lindex $onedep 0] :] end]
+                    set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
                     lappend deplist $depname
                     lappend todo $depname
                 }
             }
         }
-        set portdepinfo($portname) $deplist
+        set portdepinfo($p) $deplist
     }
     array unset portinfo
 }
 
 set portlist [list]
 foreach portname [lsort -dictionary [array names portdepinfo]] {
-   process_port_deps $portname portdepinfo portlist
+   if {$portname ni $portlist} {
+      process_port_deps $portname portdepinfo portlist
+   }
 }
 
 foreach portname $portlist {
