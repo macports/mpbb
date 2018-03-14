@@ -100,7 +100,9 @@ while {$todo ne {}} {
         if {[info exists inputports($p)] && [info exists portinfo(subports)]} {
             foreach subport $portinfo(subports) {
                 set splower [string tolower $subport]
-                lappend todo $splower
+                if {![info exists portdepinfo($splower)]} {
+                    lappend todo $splower
+                }
                 set outputports($splower) 1
             }
         }
