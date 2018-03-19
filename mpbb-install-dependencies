@@ -151,8 +151,8 @@ install-dependencies() {
         echo "$depname $deprequestedvariants" >> "${option_work_dir}/all_ports"
     done <<<"$dependencies"
 
-    # activate everything now that we know it's all built and installed
-    # ... but only we're actually going to build the requested port
+    # Activate everything now that we know it's all built and installed,
+    # but only if we're actually going to build the requested port.
 
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
