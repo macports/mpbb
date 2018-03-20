@@ -47,16 +47,15 @@ proc ui_channels {priority} {
 
 
 proc process_port_deps {portname portdeps_in portlist_in} {
-   upvar $portdeps_in portdeps
-   upvar $portlist_in portlist
-   if {[info exists portdeps($portname)]} {
-      foreach portdep $portdeps($portname) {
-         if {$portdep ni $portlist} {
+    upvar $portdeps_in portdeps
+    upvar $portlist_in portlist
+    foreach portdep $portdeps($portname) {
+        if {[info exists portdeps($portdep)]} {
             process_port_deps $portdep portdeps portlist
-         }
-      }
-      lappend portlist $portname
-   }
+        }
+    }
+    lappend portlist $portname
+    unset portdeps($portname)
 }
 
 
@@ -123,7 +122,7 @@ while {$todo ne {}} {
 
 set portlist [list]
 foreach portname [lsort -dictionary [array names portdepinfo]] {
-   if {$portname ni $portlist} {
+   if {[info exists portdepinfo($portname)]} {
       process_port_deps $portname portdepinfo portlist
    }
 }
