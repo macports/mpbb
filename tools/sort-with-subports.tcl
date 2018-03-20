@@ -65,6 +65,7 @@ if {[catch {mportinit "" "" ""} result]} {
 }
 
 array set portdepinfo {}
+array set canonicalnames {}
 set todo [list]
 if {[lindex $argv 0] eq "-"} {
     while {[gets stdin line] >= 0} {
@@ -116,6 +117,9 @@ while {$todo ne {}} {
             }
         }
         set portdepinfo($p) $deplist
+        if {[info exists outputports($p)]} {
+            set canonicalnames($p) $portinfo(name)
+        }
     }
     array unset portinfo
 }
@@ -129,6 +133,6 @@ foreach portname [lsort -dictionary [array names portdepinfo]] {
 
 foreach portname $portlist {
     if {[info exists outputports($portname)]} {
-        puts $portname
+        puts $canonicalnames($portname)
     }
 }
