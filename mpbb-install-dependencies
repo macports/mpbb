@@ -113,6 +113,21 @@ install-dependencies() {
             echo "[OK]" >> "$log_status_dependencies"
             dependencies_counter=$((dependencies_counter + 1))
         else
+            # First try to get a binary archive in case the local archives were deleted.
+            # $deprequestedvariants isn't quoted on purpose
+            # shellcheck disable=SC2154,SC2086
+            if ! "${option_prefix}/bin/port" -d archivefetch "$depname" $deprequestedvariants; then
+                # This port command should never fail. If no archive was
+                # available, it will still return with 0.
+                echo "Fetching archive for dependency '${depname}' with variants '${deprequestedvariants}' failed, aborting." >&2
+                echo "[FAIL] (archivefetch)" >> "$log_status_dependencies"
+                echo "Building '$port' ... [ERROR] (failed to archivefetch dependency '${depname}')." >> "$log_subports_progress"
+                # Do not add to failcache.
+                return 1
+            fi
+            # Fetch distfiles to check for fetch failures. If the archivefetch
+            # above downloaded an archive, the fetch phase is already marked as
+            # completed in the statefile and this will do nothing.
             # $deprequestedvariants isn't quoted on purpose
             # shellcheck disable=SC2154,SC2086
             if ! "${option_prefix}/bin/port" -d fetch "$depname" $deprequestedvariants; then
