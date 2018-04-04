@@ -115,6 +115,16 @@ install-dependencies() {
         else
             # $deprequestedvariants isn't quoted on purpose
             # shellcheck disable=SC2154,SC2086
+            if ! "${option_prefix}/bin/port" -d fetch "$depname" $deprequestedvariants; then
+                echo "Fetch of dependency '${depname}' with variants '${deprequestedvariants}' failed, aborting." >&2
+                echo "[FAIL] (fetch)" >> "$log_status_dependencies"
+                echo "Building '$port' ... [ERROR] (failed to fetch dependency '${depname}') maintainers: $(get-maintainers "$port" "${depname}")." >> "$log_subports_progress"
+                # Do not add to failcache. This could be a temporary problem that will
+                # be resolved once the file appears on mirrors.
+                return 1
+            fi
+            # $deprequestedvariants isn't quoted on purpose
+            # shellcheck disable=SC2154,SC2086
             if ! "${option_prefix}/bin/port" -dn install --unrequested "$depname" $deprequestedvariants; then
                 echo "Build of dependency '${depname}' with variants '${deprequestedvariants}' failed, aborting." >&2
                 echo "[FAIL]" >> "$log_status_dependencies"
