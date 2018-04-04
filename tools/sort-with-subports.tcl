@@ -49,13 +49,14 @@ proc ui_channels {priority} {
 proc process_port_deps {portname portdeps_in portlist_in} {
     upvar $portdeps_in portdeps
     upvar $portlist_in portlist
-    foreach portdep $portdeps($portname) {
+    set deplist $portdeps($portname)
+    unset portdeps($portname)
+    foreach portdep $deplist {
         if {[info exists portdeps($portdep)]} {
             process_port_deps $portdep portdeps portlist
         }
     }
     lappend portlist $portname
-    unset portdeps($portname)
 }
 
 
