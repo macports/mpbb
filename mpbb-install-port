@@ -45,6 +45,7 @@ install-port() {
         return 0
     fi
 
+    local status=0
     local time_start
     local time_stop
     time_start=$(date +%s)
@@ -56,36 +57,39 @@ install-port() {
         echo "Fetching '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
         # Do not add to failcache. This could be a temporary problem that will
         # be resolved once the file appears on mirrors.
-        return 1
-    fi
-    # $option_prefix is set in mpbb
-    # shellcheck disable=SC2154
-    if "${option_prefix}/bin/port" -dkn install "$@"; then
-        # Remove failcache if it exists
-        failcache_success "$@"
-        if [ $? -ne 0 ]; then
-            err "failcache_success" "$@" "failed."
-            return 1
-        fi
+        status=1
     else
-        echo "Build of '$port' failed."
-        # log: summary for the portwatcher
-        echo "Building '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
-        # update failcache
-        failcache_failure "$@"
-        if [ $? -ne 0 ]; then
-            err "failcache_failure" "$@" "failed."
-            return 1
+        # $option_prefix is set in mpbb
+        # shellcheck disable=SC2154
+        if "${option_prefix}/bin/port" -dkn install "$@"; then
+            # Remove failcache if it exists
+            failcache_success "$@"
+            if [ $? -ne 0 ]; then
+                err "failcache_success" "$@" "failed."
+                status=1
+            fi
+        else
+            echo "Build of '$port' failed."
+            # log: summary for the portwatcher
+            echo "Building '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
+            # update failcache
+            failcache_failure "$@"
+            if [ $? -ne 0 ]; then
+                err "failcache_failure" "$@" "failed."
+                status=1
+            fi
+            status=1
         fi
-        return 1
     fi
     time_stop=$(date +%s)
 
-    # log: summary for the portwatcher
-    echo "Building '$port' ... [OK]" >> "$log_subports_progress"
+    if [ $status -eq 0 ]; then
+        # log: summary for the portwatcher
+        echo "Building '$port' ... [OK]" >> "$log_subports_progress"
 
-    # log: contents
-    "${option_prefix}/bin/port" -q contents "$port" > "$log_port_contents"
+        # log: contents
+        "${option_prefix}/bin/port" -q contents "$port" > "$log_port_contents"
+    fi
 
     # log: statistics
     echo "time:    $((time_stop - time_start))s" >> "$log_port_stats"
@@ -126,5 +130,9 @@ install-port() {
         cp -f "$port_mainlog" "$log_port_main"
     fi
 
-    echo "$@" >> "${option_work_dir}/all_ports"
+    if [ $status -eq 0 ]; then
+        echo "$@" >> "${option_work_dir}/all_ports"
+    fi
+
+    return $status
 }
