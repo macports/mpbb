@@ -44,18 +44,20 @@ print-subports() {
         exclude=0
         exclude_reasons=()
 
-        # FIXME: this doesn't take selected variants into account
-        # $thisdir is set in mpbb
-        # shellcheck disable=SC2154
-        archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}")
-        if [[ -f "${archive_path}" ]]; then
-            archive_basename=$(basename "${archive_path}")
-            if curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
-                exclude=1
-                exclude_reasons+=("it has already been built and uploaded")
-            elif ! "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
-                exclude=1
-                exclude_reasons+=("it has already been built and is not distributable")
+        if [[ -n "${archive_site}" ]]; then
+            # FIXME: this doesn't take selected variants into account
+            # $thisdir is set in mpbb
+            # shellcheck disable=SC2154
+            archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}")
+            if [[ -f "${archive_path}" ]]; then
+                archive_basename=$(basename "${archive_path}")
+                if curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
+                    exclude=1
+                    exclude_reasons+=("it has already been built and uploaded")
+                elif ! "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
+                    exclude=1
+                    exclude_reasons+=("it has already been built and is not distributable")
+                fi
             fi
         fi
 
