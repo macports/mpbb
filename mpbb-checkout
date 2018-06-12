@@ -185,18 +185,12 @@ checkout() {
     # shellcheck disable=SC2154
     (cd "${ports_dir}" && "${option_prefix}/bin/portindex") || return
 
-    local -ar mirrors=(aarnet.au cjj.kr fco.it her.gr jnb.za jog.id kmq.jp
-                       lil.fr mse.uk nou.nc nue.de osl.no pek.cn sea.us
-                       ykf.ca ywg.ca)
-    # Unset IFS to ensure "${mirrors[*]}" uses spaces as separators.
-    (unset IFS && cat > "${option_work_dir}/macports.conf" <<EOF
+    cat > "${option_work_dir}/macports.conf" <<EOF || return
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
 sources_conf ${option_work_dir}/sources.conf
-host_blacklist ${mirrors[*]/%/.distfiles.macports.org} \
-               ${mirrors[*]/%/.packages.macports.org}
+host_blacklist *.distfiles.macports.org *.packages.macports.org
 EOF
-) || return
 
     if uname -r | grep -q '^9\.'; then
         # Work around very slow 'xcodebuild -version' on 10.5. Make sure these
