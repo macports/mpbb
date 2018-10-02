@@ -41,7 +41,7 @@ cleanup() {
     if [ ! -L "${option_prefix}/var/macports/distfiles" ]; then
         echo
         echo "----> Deleting distfiles"
-        find "${option_prefix}/var/macports/distfiles" -type f -mtime +1 -print -delete | sed -E 's/^/Deleting distfile /'
+        find "${option_prefix}/var/macports/distfiles" -type f \! -newerat "4 hours ago" -print -delete | sed -E 's/^/Deleting distfile /'
         find "${option_prefix}/var/macports/distfiles" -type d -mindepth 1 -empty -print -delete | sed -E 's/^/Deleting directory /'
     fi
     echo
