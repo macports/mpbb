@@ -16,16 +16,21 @@ Print the name and subports of each given port to standard output.
 Options:
 
   --archive-site=<URL>
-    URL of a mirror to check for preexisting archives. Defaults to
+    URL to check for preexisting public archives. Defaults to
     \`https://packages.macports.org'.
+
+  --archive-site-private=<URL>
+    URL to check for preexisting private archives. Defaults to
+    \`https://packages-private.macports.org'.
 
 Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 
 print-subports() {
-    local archive_site=$1
-    local portnames=$2
+    local archive_site_public=$1
+    local archive_site_private=$2
+    local portnames=$3
     local port
     local portgroup
     local ports
@@ -44,19 +49,29 @@ print-subports() {
         exclude=0
         exclude_reasons=()
 
-        if [[ -n "${archive_site}" ]]; then
+        if [[ -n "${archive_site_public}" || -n "${archive_site_private}" ]]; then
             # FIXME: this doesn't take selected variants into account
             # $thisdir is set in mpbb
             # shellcheck disable=SC2154
             archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}")
             if [[ -f "${archive_path}" ]]; then
                 archive_basename=$(basename "${archive_path}")
-                if curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
+
+                # $option_jobs_dir is set in mpbb
+                # shellcheck disable=SC2154
+                if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
+                    archive_type=public
+                    archive_distributable="distributable"
+                    archive_site="${archive_site_public}"
+                else
+                    archive_type=private
+                    archive_distributable="not distributable"
+                    archive_site="${archive_site_private}"
+                fi
+
+                if [[ -n "${archive_site}" ]] && curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
                     exclude=1
-                    exclude_reasons+=("it has already been built and uploaded")
-                elif ! "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
-                    exclude=1
-                    exclude_reasons+=("it has already been built and is not distributable")
+                    exclude_reasons+=("it is ${archive_distributable} and has already been built and uploaded to the ${archive_type} server")
                 fi
             fi
         fi
@@ -112,8 +127,13 @@ list-subports() {
     local log_subports_progress="${option_log_dir}/ports-progress.txt"
 
     local args
-    parseopt archive-site: "$@" || return
+    parseopt archive-site:,archive-site-private: "$@" || return
+    # $option_archive_site is set by parseopt
+    # shellcheck disable=SC2154
     : "${option_archive_site=https://packages.macports.org}"
+    # $option_archive_site_private is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_archive_site_private=https://packages-private.macports.org}"
     set -- ${args+"${args[@]}"}
 
     if [ $# -le 0 ]; then
@@ -127,7 +147,7 @@ list-subports() {
     mkdir -p "$option_log_dir"
     > "$log_subports_progress"
 
-    print-subports "$option_archive_site" "$*" && success=1
+    print-subports "${option_archive_site}" "${option_archive_site_private}" "$*" && success=1
 
     if [ $success -eq 0 ]; then
         err "None of the specified ports were found in the port index."
