@@ -17,13 +17,16 @@ directory for uploading.
 Options:
 
   --archive-site=<URL>
-    URL of a mirror to check for preexisting archives. Defaults to
+    URL to check for preexisting public archives. Defaults to
     \`https://packages.macports.org'.
 
+  --archive-site-private=<URL>
+    URL to check for preexisting private archives. Defaults to
+    \`https://packages-private.macports.org'.
+
   --staging-dir=<path>
-    A directory for storing distributable archives before deployment.
-    Defaults to the \`archive-staging' subdirectory of the \`--work-dir'
-    working directory.
+    A directory for storing archives before deployment. Defaults to the
+    \`archive-staging' subdirectory of the \`--work-dir' working directory.
 
 Run \`$prog help' for global options and a list of other subcommands.
 EOF
@@ -31,8 +34,14 @@ EOF
 
 gather-archives() {
     local args
-    parseopt archive-site:,staging-dir: "$@" || return
+    parseopt archive-site:,archive-site-private:,staging-dir: "$@" || return
+    # $option_archive_site is set by parseopt
+    # shellcheck disable=SC2154
     : "${option_archive_site=https://packages.macports.org}"
+    # $option_archive_site_private is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_archive_site_private=https://packages-private.macports.org}"
+    # $option_staging_dir is set by parseopt
     # shellcheck disable=SC2154
     : "${option_staging_dir=${option_work_dir}/archive-staging}"
     # shellcheck disable=SC2086
@@ -48,23 +57,30 @@ gather-archives() {
         echo
     fi
 
-    mkdir -p "${option_staging_dir}" || return
+    mkdir -p "${option_staging_dir}"/public "${option_staging_dir}"/private || return
 
     status=0
     for archive_path in $("${option_prefix}/bin/port" -q location installed and \( $(cat "${option_work_dir}/all_ports") \)); do
         archive_port=$(basename "$(dirname "${archive_path}")")
         archive_basename=$(basename "${archive_path}")
 
-        if ! curl -fIsL "${option_archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
-            # $option_jobs_dir is set in mpbb
-            # shellcheck disable=SC2154
-            if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" -v "${archive_port}"; then
-                echo "Staging archive for upload: ${archive_basename}"
-                mkdir -p "${option_staging_dir}/${archive_port}" || { status=$?; break; }
-                ln "${archive_path}" "${option_staging_dir}/${archive_port}/${archive_basename}" || { status=$?; break; }
-            fi
+        # $option_jobs_dir is set in mpbb
+        # shellcheck disable=SC2154
+        if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" -v "${archive_port}"; then
+            archive_type=public
+            archive_site="${option_archive_site}"
         else
-            echo "Archive was already uploaded: ${archive_basename}"
+            archive_type=private
+            archive_site="${option_archive_site_private}"
+        fi
+        archive_dir="${option_staging_dir}/${archive_type}/${archive_port}"
+
+        if ! curl -fIsL "${archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
+            echo "Staging ${archive_type} archive for upload: ${archive_basename}"
+            mkdir -p "${archive_dir}" || { status=$?; break; }
+            ln "${archive_path}" "${archive_dir}/${archive_basename}" || { status=$?; break; }
+        else
+            echo "Already uploaded ${archive_type} archive: ${archive_basename}"
         fi
     done
 
