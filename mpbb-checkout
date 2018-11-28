@@ -16,6 +16,10 @@ MacPorts to use the latter as a port source.
 
 Options:
 
+  --archive-sites=<URL>
+    Space-separated list of additional URLs to check for preexisting
+    archives. Defaults to \`https://packages-private.macports.org'.
+
   --git[=<path>]
     Use Git to obtain the jobs tools and ports tree; this is the default
     behavior. The path to a Git client may be provided explicitly,
@@ -132,7 +136,7 @@ svn-checkout() {
 
 checkout() {
     local args
-    parseopt git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,svn::,svn-url: "$@" \
+    parseopt archive-sites:,git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,svn::,svn-url: "$@" \
         || return
     # shellcheck disable=SC2086
     set -- ${args+"${args[@]}"}
@@ -145,6 +149,14 @@ checkout() {
 
     # shellcheck disable=SC2154
     local -r ports_dir=${option_work_dir}/ports
+
+    # $option_archive_sites is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_archive_sites=https://packages-private.macports.org}"
+
+    # $option_archive_sites isn't quoted on purpose
+    # shellcheck disable=SC2086
+    archive_site_local=$(printf '%s/:tbz2 ' ${option_archive_sites})
 
     local checkout git jobs_dir svn
     # shellcheck disable=SC2100 disable=SC2154
@@ -190,6 +202,7 @@ checkout() {
 # Do not edit !!!
 sources_conf ${option_work_dir}/sources.conf
 host_blacklist *.distfiles.macports.org *.packages.macports.org
+archive_site_local ${archive_site_local}
 EOF
 
     if uname -r | grep -q '^9\.'; then
