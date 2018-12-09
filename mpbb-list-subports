@@ -54,25 +54,23 @@ print-subports() {
             # $thisdir is set in mpbb
             # shellcheck disable=SC2154
             archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}")
-            if [[ -f "${archive_path}" ]]; then
-                archive_basename=$(basename "${archive_path}")
+            archive_basename=$(basename "${archive_path}")
 
-                # $option_jobs_dir is set in mpbb
-                # shellcheck disable=SC2154
-                if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
-                    archive_type=public
-                    archive_distributable="distributable"
-                    archive_site="${archive_site_public}"
-                else
-                    archive_type=private
-                    archive_distributable="not distributable"
-                    archive_site="${archive_site_private}"
-                fi
+            # $option_jobs_dir is set in mpbb
+            # shellcheck disable=SC2154
+            if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
+                archive_type=public
+                archive_distributable="distributable"
+                archive_site="${archive_site_public}"
+            else
+                archive_type=private
+                archive_distributable="not distributable"
+                archive_site="${archive_site_private}"
+            fi
 
-                if [[ -n "${archive_site}" ]] && curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
-                    exclude=1
-                    exclude_reasons+=("it is ${archive_distributable} and has already been built and uploaded to the ${archive_type} server")
-                fi
+            if [[ -n "${archive_site}" ]] && curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
+                exclude=1
+                exclude_reasons+=("it is ${archive_distributable} and has already been built and uploaded to the ${archive_type} server")
             fi
         fi
 
