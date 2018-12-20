@@ -60,7 +60,7 @@ install-port() {
     fi
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    if "${option_prefix}/bin/port" -dkn install "$@"; then
+    if "${option_prefix}/bin/port" -dkn install --unrequested "$@"; then
         # Remove failcache if it exists
         failcache_success "$@"
         if [ $? -ne 0 ]; then
