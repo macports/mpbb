@@ -20,6 +20,11 @@ Options:
     Space-separated list of additional URLs to check for preexisting
     archives. Defaults to \`https://packages-private.macports.org'.
 
+  --binpath=<paths>
+    Colon-separated list of paths where MacPorts will look for
+    programs. Defaults to
+    \`<prefix>/bin:<prefix>/sbin:/bin:/sbin:/usr/bin:/usr/sbin'.
+
   --git[=<path>]
     Use Git to obtain the jobs tools and ports tree; this is the default
     behavior. The path to a Git client may be provided explicitly,
@@ -136,7 +141,7 @@ svn-checkout() {
 
 checkout() {
     local args
-    parseopt archive-sites:,git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,svn::,svn-url: "$@" \
+    parseopt archive-sites:,binpath:,git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,svn::,svn-url: "$@" \
         || return
     # shellcheck disable=SC2086
     set -- ${args+"${args[@]}"}
@@ -157,6 +162,11 @@ checkout() {
     # $option_archive_sites isn't quoted on purpose
     # shellcheck disable=SC2086
     archive_site_local=$(printf '%s/:tbz2 ' ${option_archive_sites})
+
+    # $option_binpath is set by parseopt
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    : "${option_binpath=${option_prefix}/bin:${option_prefix}/sbin:/bin:/sbin:/usr/bin:/usr/sbin}"
 
     local checkout git jobs_dir svn
     # shellcheck disable=SC2100 disable=SC2154
@@ -203,6 +213,7 @@ checkout() {
 sources_conf ${option_work_dir}/sources.conf
 host_blacklist *.distfiles.macports.org *.packages.macports.org
 archive_site_local ${archive_site_local}
+binpath ${option_binpath}
 EOF
 
     if uname -r | grep -q '^9\.'; then
