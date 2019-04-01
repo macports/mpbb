@@ -211,7 +211,7 @@ checkout() {
 # Automatically overwritten by mpbb-checkout
 # Do not edit !!!
 sources_conf ${option_work_dir}/sources.conf
-host_blacklist *.distfiles.macports.org *.packages.macports.org
+host_blacklist *.distfiles.macports.org *.packages.macports.org mirrors.shu.edu.cn
 archive_site_local ${archive_site_local}
 binpath ${option_binpath}
 EOF
