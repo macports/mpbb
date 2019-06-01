@@ -40,8 +40,8 @@ if {$showVersion} {
 }
 
 foreach port [registry::entry imaged] {
-    # Set to yes if a port is not current
-    set old no
+    # Set to yes if a port should be uninstalled
+    set uninstall no
 
     set installed_name [$port name]
     set installed_version [$port version]
@@ -50,21 +50,20 @@ foreach port [registry::entry imaged] {
 
     set portindex_match [mportlookup $installed_name]
     if {[llength $portindex_match] < 2} {
-        # Not found in index, classify as old
+        # Not found in index
         ui_msg "Removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because it is no longer in the PortIndex"
-        set old yes
+        set uninstall yes
     } else {
         array unset portinfo
         array set portinfo [lindex $portindex_match 1]
 
         if {$portinfo(version) ne $installed_version || $portinfo(revision) != $installed_revision} {
-            # Port is not current because the version in the index is
-            # different than the installed one
+            # The version in the index is different than the installed one
             ui_msg "Removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because there is a newer version in the PortIndex"
-            set old yes
+            set uninstall yes
         }
     }
-    if {$old} {
+    if {$uninstall} {
         registry_uninstall::uninstall $installed_name $installed_version $installed_revision $installed_variants [list ports_force 1]
     }
 }
