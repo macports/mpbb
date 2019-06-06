@@ -17,6 +17,24 @@ Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 
+format_size() {
+    size="$1"
+    units=KiB
+    if [ "$size" -ge 1024 ]; then
+        size=$(((size + 512) / 1024))
+        units=MiB
+        if [ "$size" -ge 1024 ]; then
+            size=$(((size + 512) / 1024))
+            units=GiB
+        fi
+    fi
+    echo "$size$units"
+}
+
+disk_free() {
+    df -k "$1" | awk 'NR==2 {print $4}'
+}
+
 cleanup() {
     # if this is the very first build, selfupdate did not install port yet
     # $option_prefix is set in mpbb
@@ -26,6 +44,12 @@ cleanup() {
         echo "port not installed at ${option_prefix}/bin/port"
         return
     fi
+
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    disk_free_before=$(disk_free "$option_prefix")
+    echo "----> Free disk space before cleanup: $(format_size "$disk_free_before")"
+    echo
 
     echo "----> Deactivating ports"
     # $option_prefix is set by mpbb
@@ -55,4 +79,10 @@ cleanup() {
         rm -rf "${option_prefix}/var/macports/${dir}"/*
         echo
     done
+
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    disk_free_after=$(disk_free "$option_prefix")
+    echo "----> Free disk space after cleanup: $(format_size "$disk_free_after")"
+    echo "----> Disk space saved by cleanup: $(format_size $((disk_free_after - disk_free_before)))"
   }
