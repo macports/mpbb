@@ -49,7 +49,6 @@ foreach source $macports::sources {
         try -pass_signal {
             while {[gets $fd line] >= 0} {
                 array unset portinfo
-                set name [lindex $line 0]
                 set len  [lindex $line 1]
                 set line [read $fd $len]
                 array set portinfo $line
