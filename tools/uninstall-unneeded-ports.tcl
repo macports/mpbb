@@ -56,7 +56,7 @@ foreach source $macports::sources {
 
                 # depends_test is not included because mpbb doesn't run `port test'
                 foreach field {depends_build depends_extract depends_fetch depends_lib depends_patch depends_run} {
-                    if [info exists portinfo($field)] {
+                    if {[info exists portinfo($field)]} {
                         foreach dependency $portinfo($field) {
                             set dependency_name [lindex [split $dependency {:}] end]
                             incr dependents([string tolower $dependency_name])
