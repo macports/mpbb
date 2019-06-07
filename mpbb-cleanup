@@ -18,7 +18,12 @@ EOF
 }
 
 format_size() {
-    size="$1"
+    size="${1#-}"
+    if [ "$1" == "$size" ]; then
+        sign=
+    else
+        sign=-
+    fi
     units=KiB
     if [ "$size" -ge 1024 ]; then
         size=$(((size + 512) / 1024))
@@ -28,7 +33,7 @@ format_size() {
             units=GiB
         fi
     fi
-    echo "$size$units"
+    echo "$sign$size$units"
 }
 
 disk_free() {
