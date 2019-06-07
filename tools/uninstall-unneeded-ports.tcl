@@ -34,7 +34,7 @@ package require macports
 mportinit
 
 if {$showVersion} {
-    puts "uninstall-old-ports.tcl version $MY_VERSION"
+    puts "uninstall-unneeded-ports.tcl version $MY_VERSION"
     puts "MacPorts version [macports::version]"
     exit 0
 }
