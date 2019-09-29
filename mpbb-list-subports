@@ -74,22 +74,6 @@ print-subports() {
             fi
         fi
 
-        if [[ $exclude -eq 0 ]]; then
-            if [[ "$port" =~ graveyard ]]; then
-                exclude=1
-                exclude_reasons+=("its name contains 'graveyard'")
-            else
-                # $thisdir is set in mpbb
-                # shellcheck disable=SC2154
-                for portgroup in $("${tclsh}" "${thisdir}/tools/portgroups.tcl" "$port"); do
-                    if [ "$portgroup" = "obsolete-1.0" ]; then
-                        exclude=1
-                        exclude_reasons+=("it includes the obsolete 1.0 PortGroup")
-                    fi
-                done
-            fi
-        fi
-
         if [[ $exclude -eq 0 && ("${os_version}" = "10.6" || "${os_version}" = "10.5") ]]; then
             supported_archs=$("${tclsh}" "${thisdir}/tools/supported-archs.tcl" "${port}")
             if [[ -n "${supported_archs}" ]]; then
