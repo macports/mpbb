@@ -83,7 +83,7 @@ foreach p $todo {
     set outputports($p) 1
 }
 # process all recursive deps
-set depstypes {depends_fetch depends_extract depends_build depends_lib depends_run}
+set depstypes {depends_fetch depends_extract depends_patch depends_build depends_lib depends_run}
 while {$todo ne {}} {
     set p [lindex $todo 0]
     set todo [lrange $todo 1 end]
