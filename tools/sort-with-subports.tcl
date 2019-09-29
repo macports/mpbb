@@ -106,7 +106,9 @@ while {$todo ne {}} {
                 if {![info exists portdepinfo($splower)]} {
                     lappend todo $splower
                 }
-                set outputports($splower) 1
+                if {![info exists outputports($splower)]} {
+                    set outputports($splower) 1
+                }
             }
         }
         set deplist [list]
@@ -120,8 +122,16 @@ while {$todo ne {}} {
             }
         }
         set portdepinfo($p) $deplist
-        if {[info exists outputports($p)]} {
-            set canonicalnames($p) $portinfo(name)
+        if {[info exists outputports($p)] && $outputports($p) == 1} {
+            if {[info exists portinfo(replaced_by)]} {
+                puts stderr "Excluding $portinfo(name) because it is replaced by $portinfo(replaced_by)"
+                set outputports($p) 0
+            } elseif {[info exists portinfo(known_fail)] && [string is true -strict $portinfo(known_fail)]} {
+                puts stderr "Excluding $portinfo(name) because it is known to fail"
+                set outputports($p) 0
+            } else {
+                set canonicalnames($p) $portinfo(name)
+            }
         }
         array unset portinfo
     }
@@ -135,7 +145,7 @@ foreach portname [lsort -dictionary [array names portdepinfo]] {
 }
 
 foreach portname $portlist {
-    if {[info exists outputports($portname)]} {
+    if {[info exists outputports($portname)] && $outputports($portname) == 1} {
         puts $canonicalnames($portname)
     }
 }
