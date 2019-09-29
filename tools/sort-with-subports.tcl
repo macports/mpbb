@@ -87,17 +87,19 @@ set depstypes {depends_fetch depends_extract depends_patch depends_build depends
 while {$todo ne {}} {
     set p [lindex $todo 0]
     set todo [lrange $todo 1 end]
-    if {[catch {mportlookup $p} result]} {
-        puts stderr "$errorInfo"
-        error "Failed to find port '$p': $result"
-    }
-    if {[llength $result] < 2} {
-        puts stderr "port $p not found in the index"
-        continue
-    }
 
-    array set portinfo [lindex $result 1]
     if {![info exists portdepinfo($p)]} {
+        if {[catch {mportlookup $p} result]} {
+            puts stderr "$errorInfo"
+            error "Failed to find port '$p': $result"
+        }
+        if {[llength $result] < 2} {
+            puts stderr "port $p not found in the index"
+            continue
+        }
+
+        array set portinfo [lindex $result 1]
+
         if {[info exists inputports($p)] && [info exists portinfo(subports)]} {
             foreach subport $portinfo(subports) {
                 set splower [string tolower $subport]
@@ -121,8 +123,8 @@ while {$todo ne {}} {
         if {[info exists outputports($p)]} {
             set canonicalnames($p) $portinfo(name)
         }
+        array unset portinfo
     }
-    array unset portinfo
 }
 
 set portlist [list]
