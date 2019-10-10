@@ -41,7 +41,7 @@ if {[catch {mportinit "" "" ""} result]} {
 }
 
 set platforms [list 8 powerpc 8 i386 9 powerpc 9 i386]
-foreach vers {10 11 12 13 14 15 16 17 18} {
+foreach vers {10 11 12 13 14 15 16 17 18 19} {
     if {${macports::os_major} != $vers} {
         lappend platforms $vers i386
     }
