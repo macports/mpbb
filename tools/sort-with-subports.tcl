@@ -65,6 +65,8 @@ if {[catch {mportinit "" "" ""} result]} {
    error "Failed to initialize ports system: $result"
 }
 
+set is_64bit_capable [sysctl hw.cpu64bit_capable]
+
 array set portdepinfo {}
 array set canonicalnames {}
 set todo [list]
@@ -129,7 +131,22 @@ while {$todo ne {}} {
             } elseif {[info exists portinfo(known_fail)] && [string is true -strict $portinfo(known_fail)]} {
                 puts stderr "Excluding $portinfo(name) because it is known to fail"
                 set outputports($p) 0
-            } else {
+            } elseif {$::macports::os_major <= 10} {
+                if {![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
+                    set supported_archs [_mportkey $result supported_archs]
+                    if {$::macports::os_arch eq "i386" && !${is_64bit_capable} && $supported_archs ne "" && ("x86_64" ni $supported_archs || "i386" ni $supported_archs)} {
+                        puts stderr "Excluding $portinfo(name) because the ${::macports::macosx_version}_x86_64 builder will build it"
+                        set outputports($p) 0
+                    } elseif {$::macports::os_arch eq "powerpc" && $supported_archs ne "" && $supported_archs ne "noarch" && "ppc" ni $supported_archs} {
+                        puts stderr "Excluding $portinfo(name) because it does not support the ppc arch"
+                        set outputports($p) 0
+                    }
+                } else {
+                    puts stderr "Excluding $portinfo(name) because it failed to open: $result"
+                    set outputports($p) 0
+                }
+            }
+            if {$outputports($p) == 1} {
                 set canonicalnames($p) $portinfo(name)
             }
         }
