@@ -44,7 +44,7 @@ print-subports() {
     tclsh=${option_prefix}/bin/port-tclsh
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    ports=$("${tclsh}" "${thisdir}/tools/sort-with-subports.tcl" ${portnames} 2>/dev/null) || return
+    ports=$("${tclsh}" "${thisdir}/tools/sort-with-subports.tcl" ${portnames}) || return
     for port in $ports; do
         exclude=0
         exclude_reasons=()
