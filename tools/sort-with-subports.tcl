@@ -113,17 +113,7 @@ while {$todo ne {}} {
                 }
             }
         }
-        set deplist [list]
-        foreach depstype $depstypes {
-            if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
-                foreach onedep $portinfo($depstype) {
-                    set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
-                    lappend deplist $depname
-                    lappend todo $depname
-                }
-            }
-        }
-        set portdepinfo($p) $deplist
+
         if {[info exists outputports($p)] && $outputports($p) == 1} {
             if {[info exists portinfo(replaced_by)]} {
                 puts stderr "Excluding $portinfo(name) because it is replaced by $portinfo(replaced_by)"
@@ -150,6 +140,21 @@ while {$todo ne {}} {
                 set canonicalnames($p) $portinfo(name)
             }
         }
+
+        if {![info exists outputports($p)] || $outputports($p) == 1} {
+            set deplist [list]
+            foreach depstype $depstypes {
+                if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
+                    foreach onedep $portinfo($depstype) {
+                        set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
+                        lappend deplist $depname
+                        lappend todo $depname
+                    }
+                }
+            }
+            set portdepinfo($p) $deplist
+        }
+
         array unset portinfo
     }
 }
