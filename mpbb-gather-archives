@@ -66,7 +66,7 @@ gather-archives() {
 
         # $option_jobs_dir is set in mpbb
         # shellcheck disable=SC2154
-        if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" -v "${archive_port}"; then
+        if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" -d "${option_license_db_dir}" -v "${archive_port}"; then
             archive_type=public
             archive_site="${option_archive_site}"
         else
