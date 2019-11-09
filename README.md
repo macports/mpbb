@@ -94,6 +94,9 @@ Subcommand scripts may use but not modify these global shell parameters:
 -   `$option_failcache_dir`:
       A directory for storing information about previously failed builds which
       saves time because builds that are known to fail will not be attempted.
+-   `$option_license_db_dir`:
+      A directory for storing information about port licenses used by the
+      port_binary_distributable.tcl script.
 
 
 ## Runtime Requirements ##

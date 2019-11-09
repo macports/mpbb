@@ -5,7 +5,7 @@
 # sub-ports of the specified ports.
 #
 # Copyright (c) 2006,2008 Bryan L Blackburn.  All rights reserved.
-# Copyright (c) 2018 The MacPorts Project
+# Copyright (c) 2018-2019 The MacPorts Project
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -65,6 +65,42 @@ if {[catch {mportinit "" "" ""} result]} {
    error "Failed to initialize ports system: $result"
 }
 
+set archive_site_private ""
+set archive_site_public ""
+set jobs_dir ""
+set license_db_dir ""
+while {[string range [lindex $::argv 0] 0 1] eq "--"} {
+    switch -- [lindex $::argv 0] {
+        --archive_site_private {
+            set archive_site_private [lindex $::argv 1]
+            set ::argv [lrange $::argv 1 end]
+        }
+        --archive_site_public {
+            set archive_site_public [lindex $::argv 1]
+            set ::argv [lrange $::argv 1 end]
+        }
+        --jobs_dir {
+            set jobs_dir [lindex $::argv 1]
+            set ::argv [lrange $::argv 1 end]
+        }
+        --license_db_dir {
+            set license_db_dir [lindex $::argv 1]
+            set ::argv [lrange $::argv 1 end]
+        }
+        default {
+            error "unknown option: [lindex $::argv 0]"
+        }
+    }
+    set ::argv [lrange $::argv 1 end]
+}
+
+if {$jobs_dir ne ""} {
+    source ${jobs_dir}/distributable_lib.tcl
+    if {$license_db_dir ne ""} {
+        init_license_db $license_db_dir
+    }
+}
+
 set is_64bit_capable [sysctl hw.cpu64bit_capable]
 
 array set portdepinfo {}
@@ -114,6 +150,7 @@ while {$todo ne {}} {
             }
         }
 
+        set opened 0
         if {[info exists outputports($p)] && $outputports($p) == 1} {
             if {[info exists portinfo(replaced_by)]} {
                 puts stderr "Excluding $portinfo(name) because it is replaced by $portinfo(replaced_by)"
@@ -121,8 +158,31 @@ while {$todo ne {}} {
             } elseif {[info exists portinfo(known_fail)] && [string is true -strict $portinfo(known_fail)]} {
                 puts stderr "Excluding $portinfo(name) because it is known to fail"
                 set outputports($p) 0
-            } elseif {$::macports::os_major <= 10} {
+            } elseif {$archive_site_public ne ""} {
+                # FIXME: support non-default variants
                 if {![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
+                    set opened 1
+                    set workername [ditem_key $result workername]
+                    set archive_name [$workername eval get_portimage_name]
+                    if {![catch {curl getsize ${archive_site_public}/$portinfo(name)/${archive_name}} size] && $size > 0} {
+                        puts stderr "Excluding $portinfo(name) because it has already been built and uploaded to the public server"
+                        set outputports($p) 0
+                    }
+                } else {
+                    puts stderr "Excluding $portinfo(name) because it failed to open: $result"
+                    set outputports($p) 0
+                }
+                if {$outputports($p) == 1 && $archive_site_private ne "" && $jobs_dir ne ""} {
+                    # FIXME: support non-default variants
+                    set results [check_licenses $portinfo(name) [list]]
+                    if {[lindex $results 0] == 1 && ![catch {curl getsize ${archive_site_private}/$portinfo(name)/${archive_name}} size] && $size > 0} {
+                        puts stderr "Excluding $portinfo(name) because it is not distributable and it has already been built and uploaded to the private server"
+                        set outputports($p) 0
+                    }
+                }
+            }
+            if {$outputports($p) == 1 && $::macports::os_major <= 10} {
+                if {$opened == 1 || ![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
                     set supported_archs [_mportkey $result supported_archs]
                     if {$::macports::os_arch eq "i386" && !${is_64bit_capable} && $supported_archs ne "" && ("x86_64" ni $supported_archs || "i386" ni $supported_archs)} {
                         puts stderr "Excluding $portinfo(name) because the ${::macports::macosx_version}_x86_64 builder will build it"
@@ -157,6 +217,10 @@ while {$todo ne {}} {
 
         array unset portinfo
     }
+}
+
+if {$jobs_dir ne "" && $license_db_dir ne ""} {
+    write_license_db $license_db_dir
 }
 
 set portlist [list]

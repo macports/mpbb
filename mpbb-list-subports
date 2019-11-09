@@ -31,60 +31,15 @@ print-subports() {
     local archive_site_public=$1
     local archive_site_private=$2
     local portnames=$3
-    local port
-    local ports
-    local exclude
-    local exclude_reasons
-    local reason
 
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     tclsh=${option_prefix}/bin/port-tclsh
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    ports=$("${tclsh}" "${thisdir}/tools/sort-with-subports.tcl" ${portnames}) || return
-    for port in $ports; do
-        exclude=0
-        exclude_reasons=()
-
-        if [[ -n "${archive_site_public}" || -n "${archive_site_private}" ]]; then
-            # FIXME: this doesn't take selected variants into account
-            # $thisdir is set in mpbb
-            # shellcheck disable=SC2154
-            archive_path=$("${tclsh}" "${thisdir}/tools/archive-path.tcl" "${port}")
-            archive_basename=$(basename "${archive_path}")
-
-            # $option_jobs_dir is set in mpbb
-            # shellcheck disable=SC2154
-            if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" "${port}"; then
-                archive_type=public
-                archive_distributable="distributable"
-                archive_site="${archive_site_public}"
-            else
-                archive_type=private
-                archive_distributable="not distributable"
-                archive_site="${archive_site_private}"
-            fi
-
-            if [[ -n "${archive_site}" ]] && curl -fIsL "${archive_site}/${port}/${archive_basename}" > /dev/null; then
-                exclude=1
-                exclude_reasons+=("it is ${archive_distributable} and has already been built and uploaded to the ${archive_type} server")
-            fi
-        fi
-
-        if [ $exclude -eq 0 ]; then
-            echo "$port"
-        else
-            if [ ${#exclude_reasons[@]} -eq 1 ]; then
-                echo >&2 "Excluding '${port}' because ${exclude_reasons[0]}."
-            else
-                echo >&2 "Excluding '${port}' for the following reasons:"
-                for reason in "${exclude_reasons[@]}"; do
-                    echo >&2 " - ${reason}"
-                done
-            fi
-        fi
-    done
+    "${tclsh}" "${thisdir}/tools/sort-with-subports.tcl" --jobs_dir "${option_jobs_dir}" \
+        --license_db_dir "${option_license_db_dir}" --archive_site_public "${archive_site_public}" \
+        --archive_site_private "${archive_site_private}" ${portnames} || return
 }
 
 list-subports() {
