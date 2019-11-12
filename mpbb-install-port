@@ -9,17 +9,30 @@ install-port-usage() {
     # "prog" is defined in mpbb-help.
     # shellcheck disable=SC2154
     cat <<EOF
-usage: $prog [<global opts>] install-port <port>
+usage: $prog [<global opts>] install-port [--source] <port>
 
 Build and install the given port.
+
+Options:
+
+  --source
+    Build the port from source, ignoring binary archives.
 
 Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 
 install-port() {
+    local args
+    parseopt source "$@" || return
+    # $option_source is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_source=0}"
+    set -- ${args+"${args[@]}"}
+    local source_flag
+    [[ "${option_source}" -eq 1 ]] && source_flag=s
     local port=${1-}
-    if [[ -z $port ]]; then
+    if [[ -z "$port" ]]; then
         err "Must specify a port"
         return 1
     fi
@@ -60,7 +73,7 @@ install-port() {
     fi
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    if "${option_prefix}/bin/port" -dkns install --unrequested "$@"; then
+    if "${option_prefix}/bin/port" "-dkn${source_flag}" install --unrequested "$@"; then
         # Remove failcache if it exists
         failcache_success "$@"
         if [ $? -ne 0 ]; then
