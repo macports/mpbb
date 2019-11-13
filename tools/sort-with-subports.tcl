@@ -94,7 +94,7 @@ while {[string range [lindex $::argv 0] 0 1] eq "--"} {
     set ::argv [lrange $::argv 1 end]
 }
 
-if {$jobs_dir ne ""} {
+if {$jobs_dir ne "" && $archive_site_public ne "" && $archive_site_private ne ""} {
     source ${jobs_dir}/distributable_lib.tcl
     if {$license_db_dir ne ""} {
         init_license_db $license_db_dir
@@ -219,7 +219,7 @@ while {$todo ne {}} {
     }
 }
 
-if {$jobs_dir ne "" && $license_db_dir ne ""} {
+if {$jobs_dir ne "" && $license_db_dir ne "" && $archive_site_public ne "" && $archive_site_private ne ""} {
     write_license_db $license_db_dir
 }
 
