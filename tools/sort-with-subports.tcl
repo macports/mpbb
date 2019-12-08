@@ -163,7 +163,7 @@ while {$todo ne {}} {
                 if {![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
                     set opened 1
                     set workername [ditem_key $result workername]
-                    set archive_name [$workername eval get_portimage_name]
+                    set archive_name [$workername eval {portfetch::percent_encode [get_portimage_name]}]
                     if {![catch {curl getsize ${archive_site_public}/$portinfo(name)/${archive_name}} size] && $size > 0} {
                         puts stderr "Excluding $portinfo(name) because it has already been built and uploaded to the public server"
                         set outputports($p) 0
