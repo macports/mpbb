@@ -1,0 +1,30 @@
+#!/bin/bash
+# -*- coding: utf-8; mode: sh; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=sh:et:sw=4:ts=4:sts=4
+
+# Note:
+# This script is sourced by the mpbb wrapper script.
+# Do not execute this directly!
+
+port-version-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global opts>] port-version <port>
+
+Print the version of the given port.
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
+}
+
+port-version() {
+    local port=${1-}
+    if [[ -z $port ]]; then
+        err "Must specify a port"
+        return 1
+    fi
+
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    "${option_prefix}/bin/port" info --index --line --version "$port"
+}
