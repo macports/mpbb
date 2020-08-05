@@ -1,0 +1,80 @@
+#!/bin/bash
+# -*- coding: utf-8; mode: sh; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=sh:et:sw=4:ts=4:sts=4
+
+# Note:
+# This script is sourced by the mpbb wrapper script.
+# Do not execute this directly!
+
+print-info-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global opts>] port-get-info [<port>]
+
+Prints the macOS and Xcode versions and the version, revision, and last
+modified commit of the port if given.
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
+}
+
+print-info() {
+    local port=${1-}
+    if [[ -n $port ]]; then
+        local portversion portrevision portdir portcommit
+
+        # $option_prefix is set in mpbb
+        # shellcheck disable=SC2154
+        portversion=$("${option_prefix}/bin/port" info --index --line --version "$port") || true
+        if [[ -n $portversion ]]; then
+            printf "portversion=%s\n" "$portversion"
+        fi
+
+        # $option_prefix is set in mpbb
+        # shellcheck disable=SC2154
+        portrevision=$("${option_prefix}/bin/port" info --index --line --revision "$port") || true
+        if [[ -n $portrevision ]]; then
+            printf "portrevision=%s\n" "$portrevision"
+        fi
+
+        # $option_prefix is set in mpbb
+        # shellcheck disable=SC2154
+        portdir=$("${option_prefix}/bin/port" dir "$port") || true
+        if [[ -n $portdir ]]; then
+            portcommit=$(git -C "$portdir" log -n 1 --pretty=format:%H .) || true
+            if [[ -n $portcommit ]]; then
+                printf "portcommit=%s\n" "$portcommit"
+            fi
+        fi
+
+        # TODO: print portvariants
+    fi
+
+    if command -v sw_vers >/dev/null; then
+        local macosversion macosbuild
+
+        macosversion=$(sw_vers -productVersion) || true
+        if [[ -n $macosversion ]]; then
+            macosbuild=$(sw_vers -buildVersion) || true
+            if [[ -z $macosbuild ]]; then
+                printf "macosversion=%s\n" "$macosversion"
+            else
+                printf "macosversion=%s (%s)\n" "$macosversion" "$macosbuild"
+            fi
+        fi
+    fi
+
+    if command -v xcodebuild >/dev/null; then
+        local xcodeversion xcodebuild
+
+        xcodeversion=$(xcodebuild -version | sed -En 's,^Xcode (.*)$,\1,p') || true
+        if [[ -n $xcodeversion ]]; then
+            xcodebuild=$(xcodebuild -version | sed -En 's,^Build ?[Vv]ersion:? (.*)$,\1,p') || true
+            if [[ -z $xcodebuild ]]; then
+                printf "xcodeversion=%s\n" "$xcodeversion"
+            else
+                printf "xcodeversion=%s (%s)\n" "$xcodeversion" "$xcodebuild"
+            fi
+        fi
+    fi
+}
