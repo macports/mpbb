@@ -9,10 +9,10 @@ print-info-usage() {
     # "prog" is defined in mpbb-help.
     # shellcheck disable=SC2154
     cat <<EOF
-usage: $prog [<global opts>] port-get-info [<port>]
+usage: $prog [<global opts>] print-info [<port>]
 
-Prints the macOS and Xcode versions and the version, revision, and last
-modified commit of the port if given.
+Prints the macOS and Xcode versions and the version, revision, variants,
+and last modified commit of the port if given.
 
 Run \`$prog help' for global options and a list of other subcommands.
 EOF
@@ -21,45 +21,43 @@ EOF
 print-info() {
     local port=${1-}
     if [[ -n $port ]]; then
-        local portversion portrevision portdir portcommit
+        local portversion portrevision portvariants portdir portcommit
 
         # $option_prefix is set in mpbb
         # shellcheck disable=SC2154
-        portversion=$("${option_prefix}/bin/port" info --index --line --version "$port") || true
-        if [[ -n $portversion ]]; then
+        if portversion=$("${option_prefix}/bin/port" info --index --line --version "$port"); then
             printf "portversion=%s\n" "$portversion"
         fi
 
         # $option_prefix is set in mpbb
         # shellcheck disable=SC2154
-        portrevision=$("${option_prefix}/bin/port" info --index --line --revision "$port") || true
-        if [[ -n $portrevision ]]; then
+        if portrevision=$("${option_prefix}/bin/port" info --index --line --revision "$port"); then
             printf "portrevision=%s\n" "$portrevision"
         fi
 
         # $option_prefix is set in mpbb
         # shellcheck disable=SC2154
-        portdir=$("${option_prefix}/bin/port" dir "$port") || true
-        if [[ -n $portdir ]]; then
-            portcommit=$(git -C "$portdir" log -n 1 --pretty=format:%H .) || true
-            if [[ -n $portcommit ]]; then
+        if portvariants=$("${option_prefix}/bin/port-tclsh" tools/canonical-variants.tcl "$port"); then
+            printf "portvariants=%s\n" "$portvariants"
+        fi
+
+        # $option_prefix is set in mpbb
+        # shellcheck disable=SC2154
+        if portdir=$("${option_prefix}/bin/port" dir "$port"); then
+            if portcommit=$(git -C "$portdir" log -n 1 --pretty=format:%H .); then
                 printf "portcommit=%s\n" "$portcommit"
             fi
         fi
-
-        # TODO: print portvariants
     fi
 
     if command -v sw_vers >/dev/null; then
         local macosversion macosbuild
 
-        macosversion=$(sw_vers -productVersion) || true
-        if [[ -n $macosversion ]]; then
-            macosbuild=$(sw_vers -buildVersion) || true
-            if [[ -z $macosbuild ]]; then
-                printf "macosversion=%s\n" "$macosversion"
-            else
+        if macosversion=$(sw_vers -productVersion); then
+            if macosbuild=$(sw_vers -buildVersion); then
                 printf "macosversion=%s (%s)\n" "$macosversion" "$macosbuild"
+            else
+                printf "macosversion=%s\n" "$macosversion"
             fi
         fi
     fi
@@ -67,13 +65,11 @@ print-info() {
     if command -v xcodebuild >/dev/null; then
         local xcodeversion xcodebuild
 
-        xcodeversion=$(xcodebuild -version | sed -En 's,^Xcode (.*)$,\1,p') || true
-        if [[ -n $xcodeversion ]]; then
-            xcodebuild=$(xcodebuild -version | sed -En 's,^Build ?[Vv]ersion:? (.*)$,\1,p') || true
-            if [[ -z $xcodebuild ]]; then
-                printf "xcodeversion=%s\n" "$xcodeversion"
-            else
+        if xcodeversion=$(xcodebuild -version | sed -En 's,^Xcode (.*)$,\1,p'); then
+            if xcodebuild=$(xcodebuild -version | sed -En 's,^Build ?[Vv]ersion:? (.*)$,\1,p'); then
                 printf "xcodeversion=%s (%s)\n" "$xcodeversion" "$xcodebuild"
+            else
+                printf "xcodeversion=%s\n" "$xcodeversion"
             fi
         fi
     fi
