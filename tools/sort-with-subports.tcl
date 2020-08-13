@@ -184,12 +184,20 @@ while {$todo ne {}} {
             if {$outputports($p) == 1 && $::macports::os_major <= 10} {
                 if {$opened == 1 || ![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
                     set supported_archs [_mportkey $result supported_archs]
-                    if {$::macports::os_arch eq "i386" && !${is_64bit_capable} && $supported_archs ne "" && ("x86_64" ni $supported_archs || "i386" ni $supported_archs)} {
-                        puts stderr "Excluding $portinfo(name) because the ${::macports::macosx_version}_x86_64 builder will build it"
-                        set outputports($p) 0
-                    } elseif {$::macports::os_arch eq "powerpc" && $supported_archs ne "" && $supported_archs ne "noarch" && "ppc" ni $supported_archs} {
-                        puts stderr "Excluding $portinfo(name) because it does not support the ppc arch"
-                        set outputports($p) 0
+                    switch $::macports::os_arch {
+                        i386 {
+                            if {!${is_64bit_capable} && $supported_archs ne "" && ("x86_64" ni $supported_archs || "i386" ni $supported_archs)} {
+                                puts stderr "Excluding $portinfo(name) because the ${::macports::macosx_version}_x86_64 builder will build it"
+                                set outputports($p) 0
+                            }
+                        }
+                        powerpc {
+                            if {$supported_archs ne "" && $supported_archs ne "noarch" && "ppc" ni $supported_archs} {
+                                puts stderr "Excluding $portinfo(name) because it does not support the ppc arch"
+                                set outputports($p) 0
+                            }
+                        }
+                        default {}
                     }
                 } else {
                     puts stderr "Excluding $portinfo(name) because it failed to open: $result"
