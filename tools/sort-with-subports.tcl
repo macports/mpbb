@@ -181,10 +181,19 @@ while {$todo ne {}} {
                     }
                 }
             }
-            if {$outputports($p) == 1 && $::macports::os_major <= 10} {
+            if {$outputports($p) == 1 && ($::macports::os_major <= 10 || $::macports::os_major >= 20)} {
                 if {$opened == 1 || ![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
                     set supported_archs [_mportkey $result supported_archs]
                     switch $::macports::os_arch {
+                        arm {
+                            if {$supported_archs eq "noarch"} {
+                                puts stderr "Excluding $portinfo(name) because the ${::macports::macosx_version}_x86_64 builder will build it"
+                                set outputports($p) 0
+                            } elseif {$supported_archs ne "" && "arm64" ni $supported_archs} {
+                                puts stderr "Excluding $portinfo(name) because it does not support the arm64 arch"
+                                set outputports($p) 0
+                            }
+                        }
                         i386 {
                             if {!${is_64bit_capable} && $supported_archs ne "" && ("x86_64" ni $supported_archs || "i386" ni $supported_archs)} {
                                 puts stderr "Excluding $portinfo(name) because the ${::macports::macosx_version}_x86_64 builder will build it"
