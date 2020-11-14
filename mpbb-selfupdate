@@ -22,7 +22,7 @@ selfupdate() {
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     if [ ! -f "${option_prefix}/bin/port" ]; then
-        macports_version=2.6.3
+        macports_version=2.6.4
         macports_distname=MacPorts-${macports_version}
         macports_distfile=${macports_distname}.tar.bz2
         if [ ! -d ${macports_distname} ]; then
