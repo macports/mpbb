@@ -82,7 +82,7 @@ gather-archives() {
         if ! curl -fIsL "${archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
             echo "Staging ${archive_type} archive for upload: ${archive_basename}"
             mkdir -p "${archive_dir}" || { status=$?; break; }
-            if [ "$(device-of-path "${archive_path}")" = "$(device-of-path "${archive_dir}/${archive_basename}")" ]; then
+            if [ "$(device-of-path "${archive_path}")" = "$(device-of-path "${archive_dir}")" ]; then
                 ln "${archive_path}" "${archive_dir}/${archive_basename}" || { status=$?; break; }
             else
                 cp -p "${archive_path}" "${archive_dir}/${archive_basename}" || { status=$?; break; }
