@@ -32,6 +32,10 @@ Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 
+device-of-path() {
+    df -P -- "$1" | awk 'NR==2 {print $1}'
+}
+
 gather-archives() {
     local args
     parseopt archive-site:,archive-site-private:,staging-dir: "$@" || return
@@ -78,7 +82,11 @@ gather-archives() {
         if ! curl -fIsL "${archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
             echo "Staging ${archive_type} archive for upload: ${archive_basename}"
             mkdir -p "${archive_dir}" || { status=$?; break; }
-            ln "${archive_path}" "${archive_dir}/${archive_basename}" || { status=$?; break; }
+            if [ "$(device-of-path "${archive_path}")" = "$(device-of-path "${archive_dir}/${archive_basename}")" ]; then
+                ln "${archive_path}" "${archive_dir}/${archive_basename}" || { status=$?; break; }
+            else
+                cp -p "${archive_path}" "${archive_dir}/${archive_basename}" || { status=$?; break; }
+            fi
         else
             echo "Already uploaded ${archive_type} archive: ${archive_basename}"
         fi
