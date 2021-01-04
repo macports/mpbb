@@ -178,12 +178,6 @@ failcache_test() {
         return 1
     fi
 
-    # Delete stale entries first
-    if ! failcache_cleanup $(echo "${key}" | cut -d ' ' -f1) $(echo "${key}" | cut -d ' ' -f3); then
-        # Nothing in the cache for this port, no need to check further
-        return 0
-    fi
-
     if [ -f "${option_failcache_dir}/${key}" ]; then
         printf "port %s previously failed in build %s\n" "${key}" "$(<"${option_failcache_dir}/${key}")"
         return 1

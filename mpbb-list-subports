@@ -38,8 +38,10 @@ print-subports() {
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     "${tclsh}" "${thisdir}/tools/sort-with-subports.tcl" --jobs_dir "${option_jobs_dir}" \
-        --license_db_dir "${option_license_db_dir}" --archive_site_public "${archive_site_public}" \
-        --archive_site_private "${archive_site_private}" ${portnames} || return
+        --license_db_dir "${option_license_db_dir}" --failcache_dir "${option_failcache_dir}" \
+        --archive_site_public "${archive_site_public}" \
+        --archive_site_private "${archive_site_private}" --include_deps \
+        ${portnames} || return
 }
 
 list-subports() {

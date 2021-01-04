@@ -38,6 +38,9 @@ install-dependencies() {
     mkdir -p "${option_log_dir}"
     > "$log_status_dependencies"
 
+    # clear the port list
+    rm -f "${option_work_dir}/all_ports"
+
     # calculate list of dependencies in-order
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
@@ -89,8 +92,6 @@ install-dependencies() {
         echo "Aborting build because $failcachecounter dependencies are known to fail." >&2
         return 1
     fi
-
-    rm -f "${option_work_dir}/all_ports"
 
     while read -r dependency; do
         # Split portname +variant1+variant2 into portname and active and

@@ -34,6 +34,7 @@
 #
 
 package require macports
+package require sha256
 
 
 proc ui_prefix {priority} {
@@ -59,6 +60,71 @@ proc process_port_deps {portname portdeps_in portlist_in} {
     lappend portlist $portname
 }
 
+proc check_failing_deps {portname} {
+    if {[info exists ::failingports($portname)]} {
+        return $::failingports($portname)
+    }
+    if {![info exists ::portdepinfo($portname)]} {
+        set ::failingports($portname) [list 0 ""]
+        return $::failingports($portname)
+    }
+    foreach portdep $::portdepinfo($portname) {
+        set dep_ret [check_failing_deps $portdep]
+        # 0 = ok, 1 = known_fail, 2 = failcache
+        set status [lindex $dep_ret 0]
+        if {$status != 0} {
+            set failed_dep [lindex $dep_ret 1]
+            if {[info exists ::outputports($portname)] && $::outputports($portname) == 1} {
+                if {$status == 1} {
+                    if {[info exists ::requestedports($portname)]} {
+                        puts stderr "Excluding $::canonicalnames($portname) because its dependency '$failed_dep' is known to fail"
+                    }
+                    set ::outputports($portname) 0
+                } elseif {$status == 2 && ![info exists ::requestedports($portname)]} {
+                    # Exclude deps that will fail due to their own dep being in the failcache.
+                    # But still output requested ports so the failure will be reported.
+                    set ::outputports($portname) 0
+                }
+            }
+            set ::failingports($portname) [list $status $failed_dep]
+            return $::failingports($portname)
+        }
+    }
+    set ::failingports($portname) [list 0 ""]
+    return $::failingports($portname)
+}
+
+proc canonical_variants {mport} {
+    array set info [mportinfo $mport]
+    return $info(canonical_active_variants)
+}
+
+# slightly odd method as per mpbb's compute_failcache_hash
+proc port_files_checksum {porturl} {
+    set portdir [macports::getportdir $porturl]
+    foreach f [list ${portdir}/Portfile {*}[glob -nocomplain -directory ${portdir}/files -types f *]] {
+        lappend hashlist [::sha2::sha256 -hex -file $f]
+    }
+    foreach hash [lsort $hashlist] {
+        append compound_hash "${hash}\n"
+    }
+    return [::sha2::sha256 -hex $compound_hash]
+}
+
+proc check_failcache {portname porturl mport} {
+    set hash [port_files_checksum $porturl]
+    set key "$portname [canonical_variants $mport] $hash"
+    set ret 0
+    foreach f [glob -directory $::failcache_dir -nocomplain -tails "${portname} *"] {
+        if {$f eq $key} {
+            set ret 1
+        } elseif {[lindex [split $f " "] end] ne $hash} {
+            puts stderr "removing stale failcache entry: $f"
+            file delete -force $f
+        }
+    }
+    return $ret
+}
 
 if {[catch {mportinit "" "" ""} result]} {
    puts stderr "$errorInfo"
@@ -67,8 +133,10 @@ if {[catch {mportinit "" "" ""} result]} {
 
 set archive_site_private ""
 set archive_site_public ""
+set failcache_dir ""
 set jobs_dir ""
 set license_db_dir ""
+set include_deps no
 while {[string range [lindex $::argv 0] 0 1] eq "--"} {
     switch -- [lindex $::argv 0] {
         --archive_site_private {
@@ -79,6 +147,10 @@ while {[string range [lindex $::argv 0] 0 1] eq "--"} {
             set archive_site_public [lindex $::argv 1]
             set ::argv [lrange $::argv 1 end]
         }
+        --failcache_dir {
+            set failcache_dir [lindex $::argv 1]
+            set ::argv [lrange $::argv 1 end]
+        }
         --jobs_dir {
             set jobs_dir [lindex $::argv 1]
             set ::argv [lrange $::argv 1 end]
@@ -86,6 +158,9 @@ while {[string range [lindex $::argv 0] 0 1] eq "--"} {
         --license_db_dir {
             set license_db_dir [lindex $::argv 1]
             set ::argv [lrange $::argv 1 end]
+        }
+        --include_deps {
+            set include_deps yes
         }
         default {
             error "unknown option: [lindex $::argv 0]"
@@ -119,10 +194,11 @@ if {[lindex $argv 0] eq "-"} {
 foreach p $todo {
     set inputports($p) 1
     set outputports($p) 1
+    set requestedports($p) 1
 }
 # process all recursive deps
-set depstypes {depends_fetch depends_extract depends_patch depends_build depends_lib depends_run}
-while {$todo ne {}} {
+set depstypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run]
+while {[llength $todo] > 0} {
     set p [lindex $todo 0]
     set todo [lrange $todo 1 end]
 
@@ -144,8 +220,9 @@ while {$todo ne {}} {
                 if {![info exists portdepinfo($splower)]} {
                     lappend todo $splower
                 }
-                if {![info exists outputports($splower)]} {
+                if {![info exists requestedports($splower)]} {
                     set outputports($splower) 1
+                    set requestedports($splower) 1
                 }
             }
         }
@@ -153,37 +230,69 @@ while {$todo ne {}} {
         set opened 0
         if {[info exists outputports($p)] && $outputports($p) == 1} {
             if {[info exists portinfo(replaced_by)]} {
-                puts stderr "Excluding $portinfo(name) because it is replaced by $portinfo(replaced_by)"
+                if {[info exists requestedports($p)]} {
+                    puts stderr "Excluding $portinfo(name) because it is replaced by $portinfo(replaced_by)"
+                }
                 set outputports($p) 0
             } elseif {[info exists portinfo(known_fail)] && [string is true -strict $portinfo(known_fail)]} {
-                puts stderr "Excluding $portinfo(name) because it is known to fail"
+                if {[info exists requestedports($p)]} {
+                    puts stderr "Excluding $portinfo(name) because it is known to fail"
+                }
                 set outputports($p) 0
-            } elseif {$archive_site_public ne ""} {
-                # FIXME: support non-default variants
+                set failingports($p) [list 1 $portinfo(name)]
+            } elseif {$failcache_dir ne "" && ![info exists requestedports($p)]} {
+                # exclude dependencies with a failcache entry
                 if {![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
                     set opened 1
-                    set workername [ditem_key $result workername]
+                    set mport $result
+                    if {[check_failcache $portinfo(name) $portinfo(porturl) $mport] != 0} {
+                        set outputports($p) 0
+                        set failingports($p) [list 2 $portinfo(name)]
+                    }
+                } else {
+                    set outputports($p) 0
+                }
+            }
+            if {$archive_site_public ne "" && [info exists outputports($p)] && $outputports($p) == 1} {
+                # FIXME: support non-default variants
+                if {$opened == 1 || ![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
+                    if {$opened != 1} {
+                        set opened 1
+                        set mport $result
+                    }
+                    set workername [ditem_key $mport workername]
                     set archive_name [$workername eval {portfetch::percent_encode [get_portimage_name]}]
                     if {![catch {curl getsize ${archive_site_public}/$portinfo(name)/${archive_name}} size] && $size > 0} {
-                        puts stderr "Excluding $portinfo(name) because it has already been built and uploaded to the public server"
+                        if {[info exists requestedports($p)]} {
+                            puts stderr "Excluding $portinfo(name) because it has already been built and uploaded to the public server"
+                        }
                         set outputports($p) 0
                     }
                 } else {
-                    puts stderr "Excluding $portinfo(name) because it failed to open: $result"
+                    if {[info exists requestedports($p)]} {
+                        puts stderr "Excluding $portinfo(name) because it failed to open: $result"
+                    }
                     set outputports($p) 0
                 }
                 if {$outputports($p) == 1 && $archive_site_private ne "" && $jobs_dir ne ""} {
                     # FIXME: support non-default variants
                     set results [check_licenses $portinfo(name) [list]]
                     if {[lindex $results 0] == 1 && ![catch {curl getsize ${archive_site_private}/$portinfo(name)/${archive_name}} size] && $size > 0} {
-                        puts stderr "Excluding $portinfo(name) because it is not distributable and it has already been built and uploaded to the private server"
+                        if {[info exists requestedports($p)]} {
+                            puts stderr "Excluding $portinfo(name) because it is not distributable and it has already been built and uploaded to the private server"
+                        }
                         set outputports($p) 0
                     }
                 }
             }
-            if {$outputports($p) == 1 && ($::macports::os_major <= 10 || $::macports::os_major >= 20)} {
+            if {[info exists requestedports($p)] && ($::macports::os_major <= 10 || $::macports::os_major >= 20) &&
+                $outputports($p) == 1} {
                 if {$opened == 1 || ![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
-                    set supported_archs [_mportkey $result supported_archs]
+                    if {$opened != 1} {
+                        set opened 1
+                        set mport $result
+                    }
+                    set supported_archs [_mportkey $mport supported_archs]
                     switch $::macports::os_arch {
                         arm {
                             if {$supported_archs eq "noarch"} {
@@ -213,9 +322,10 @@ while {$todo ne {}} {
                     set outputports($p) 0
                 }
             }
-            if {$outputports($p) == 1} {
-                set canonicalnames($p) $portinfo(name)
-            }
+        }
+
+        if {[info exists outputports($p)] && $outputports($p) == 1} {
+            set canonicalnames($p) $portinfo(name)
         }
 
         if {![info exists outputports($p)] || $outputports($p) == 1} {
@@ -225,7 +335,12 @@ while {$todo ne {}} {
                     foreach onedep $portinfo($depstype) {
                         set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
                         lappend deplist $depname
-                        lappend todo $depname
+                        if {![info exists portdepinfo($depname)]} {
+                            lappend todo $depname
+                        }
+                        if {$include_deps && ![info exists outputports($depname)]} {
+                            set outputports($depname) 1
+                        }
                     }
                 }
             }
@@ -240,8 +355,13 @@ if {$jobs_dir ne "" && $license_db_dir ne "" && $archive_site_public ne "" && $a
     write_license_db $license_db_dir
 }
 
+set sorted_portnames [lsort -dictionary [array names portdepinfo]]
+foreach portname $sorted_portnames {
+    check_failing_deps $portname
+}
+
 set portlist [list]
-foreach portname [lsort -dictionary [array names portdepinfo]] {
+foreach portname $sorted_portnames {
    if {[info exists portdepinfo($portname)]} {
       process_port_deps $portname portdepinfo portlist
    }
