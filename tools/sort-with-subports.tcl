@@ -47,17 +47,19 @@ proc ui_channels {priority} {
 }
 
 
-proc process_port_deps {portname portdeps_in portlist_in} {
-    upvar $portdeps_in portdeps
-    upvar $portlist_in portlist
-    set deplist $portdeps($portname)
-    unset portdeps($portname)
+proc process_port_deps {portname} {
+    set deplist $::portdepinfo($portname)
+    unset ::portdepinfo($portname)
+    if {[info exists ::portsoftdeps($portname)]} {
+        lappend deplist {*}$::portsoftdeps($portname)
+        unset ::portsoftdeps($portname)
+    }
     foreach portdep $deplist {
-        if {[info exists portdeps($portdep)]} {
-            process_port_deps $portdep portdeps portlist
+        if {[info exists ::portdepinfo($portdep)]} {
+            process_port_deps $portdep
         }
     }
-    lappend portlist $portname
+    lappend ::portlist $portname
 }
 
 proc check_failing_deps {portname} {
@@ -182,6 +184,7 @@ if {$jobs_dir ne "" && $archive_site_public ne "" && $archive_site_private ne ""
 set is_64bit_capable [sysctl hw.cpu64bit_capable]
 
 array set portdepinfo {}
+array set portsoftdeps {}
 array set canonicalnames {}
 set todo [list]
 if {[lindex $argv 0] eq "-"} {
@@ -334,12 +337,19 @@ while {[llength $todo] > 0} {
             set canonicalnames($p) $portinfo(name)
         }
 
-        set deplist [list]
+        set portdepinfo($p) [list]
         foreach depstype $depstypes {
             if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
                 foreach onedep $portinfo($depstype) {
                     set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
-                    lappend deplist $depname
+                    if {[string match port:* $onedep]} {
+                        lappend portdepinfo($p) $depname
+                    } else {
+                        # soft deps are installed before their dependents, but
+                        # don't cause exclusion if they are failing
+                        # real problematic example: bin:xattr:xattr
+                        lappend portsoftdeps($p) $depname
+                    }
                     if {![info exists portdepinfo($depname)]} {
                         lappend todo $depname
                     }
@@ -349,7 +359,6 @@ while {[llength $todo] > 0} {
                 }
             }
         }
-        set portdepinfo($p) $deplist
 
         array unset portinfo
     }
@@ -367,7 +376,7 @@ foreach portname $sorted_portnames {
 set portlist [list]
 foreach portname $sorted_portnames {
    if {[info exists portdepinfo($portname)]} {
-      process_port_deps $portname portdepinfo portlist
+      process_port_deps $portname
    }
 }
 
