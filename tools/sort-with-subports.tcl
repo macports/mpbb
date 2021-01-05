@@ -94,11 +94,6 @@ proc check_failing_deps {portname} {
     return $::failingports($portname)
 }
 
-proc canonical_variants {mport} {
-    array set info [mportinfo $mport]
-    return $info(canonical_active_variants)
-}
-
 # slightly odd method as per mpbb's compute_failcache_hash
 proc port_files_checksum {porturl} {
     set portdir [macports::getportdir $porturl]
@@ -111,9 +106,9 @@ proc port_files_checksum {porturl} {
     return [::sha2::sha256 -hex $compound_hash]
 }
 
-proc check_failcache {portname porturl mport} {
+proc check_failcache {portname porturl canonical_variants} {
     set hash [port_files_checksum $porturl]
-    set key "$portname [canonical_variants $mport] $hash"
+    set key "$portname $canonical_variants $hash"
     set ret 0
     foreach f [glob -directory $::failcache_dir -nocomplain -tails "${portname} *"] {
         if {$f eq $key} {
@@ -245,7 +240,8 @@ while {[llength $todo] > 0} {
                 if {![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
                     set opened 1
                     set mport $result
-                    if {[check_failcache $portinfo(name) $portinfo(porturl) $mport] != 0} {
+                    array set portinfo [mportinfo $mport]
+                    if {[check_failcache $portinfo(name) $portinfo(porturl) $portinfo(canonical_active_variants)] != 0} {
                         set outputports($p) 0
                         set failingports($p) [list 2 $portinfo(name)]
                     }
@@ -259,6 +255,7 @@ while {[llength $todo] > 0} {
                     if {$opened != 1} {
                         set opened 1
                         set mport $result
+                        array set portinfo [mportinfo $mport]
                     }
                     set workername [ditem_key $mport workername]
                     set archive_name [$workername eval {portfetch::percent_encode [get_portimage_name]}]
@@ -291,6 +288,7 @@ while {[llength $todo] > 0} {
                     if {$opened != 1} {
                         set opened 1
                         set mport $result
+                        array set portinfo [mportinfo $mport]
                     }
                     set supported_archs [_mportkey $mport supported_archs]
                     switch $::macports::os_arch {
@@ -328,24 +326,22 @@ while {[llength $todo] > 0} {
             set canonicalnames($p) $portinfo(name)
         }
 
-        if {![info exists outputports($p)] || $outputports($p) == 1} {
-            set deplist [list]
-            foreach depstype $depstypes {
-                if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
-                    foreach onedep $portinfo($depstype) {
-                        set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
-                        lappend deplist $depname
-                        if {![info exists portdepinfo($depname)]} {
-                            lappend todo $depname
-                        }
-                        if {$include_deps && ![info exists outputports($depname)]} {
-                            set outputports($depname) 1
-                        }
+        set deplist [list]
+        foreach depstype $depstypes {
+            if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
+                foreach onedep $portinfo($depstype) {
+                    set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
+                    lappend deplist $depname
+                    if {![info exists portdepinfo($depname)]} {
+                        lappend todo $depname
+                    }
+                    if {$include_deps && ![info exists outputports($depname)]} {
+                        set outputports($depname) 1
                     }
                 }
             }
-            set portdepinfo($p) $deplist
         }
+        set portdepinfo($p) $deplist
 
         array unset portinfo
     }
