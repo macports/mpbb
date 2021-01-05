@@ -326,22 +326,24 @@ while {[llength $todo] > 0} {
             set canonicalnames($p) $portinfo(name)
         }
 
-        set deplist [list]
-        foreach depstype $depstypes {
-            if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
-                foreach onedep $portinfo($depstype) {
-                    set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
-                    lappend deplist $depname
-                    if {![info exists portdepinfo($depname)]} {
-                        lappend todo $depname
-                    }
-                    if {$include_deps && ![info exists outputports($depname)]} {
-                        set outputports($depname) 1
+        if {![info exists outputports($p)] || $outputports($p) == 1} {
+            set deplist [list]
+            foreach depstype $depstypes {
+                if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
+                    foreach onedep $portinfo($depstype) {
+                        set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
+                        lappend deplist $depname
+                        if {![info exists portdepinfo($depname)]} {
+                            lappend todo $depname
+                        }
+                        if {$include_deps && ![info exists outputports($depname)]} {
+                            set outputports($depname) 1
+                        }
                     }
                 }
             }
+            set portdepinfo($p) $deplist
         }
-        set portdepinfo($p) $deplist
 
         array unset portinfo
     }
