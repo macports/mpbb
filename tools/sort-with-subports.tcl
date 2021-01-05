@@ -84,13 +84,18 @@ proc check_failing_deps {portname} {
                     set ::outputports($portname) 0
                 } elseif {$status == 3} {
                     if {[info exists ::requestedports($portname)]} {
-                        puts stderr "Excluding $::canonicalnames($portname) because of a cyclic dependency involving '$portdep'"
+                        puts stderr "Warning: $::canonicalnames($portname) appears to have a cyclic dependency involving '$portdep'"
                     }
-                    set ::outputports($portname) 0
+                    # Some cycles involving depends_test exist, which don't cause
+                    # problems yet only because we don't run tests.
+                    #set ::outputports($portname) 0
                 }
             }
-            set ::failingports($portname) [list $status $failed_dep]
-            return $::failingports($portname)
+            # keep processing other deps for now if there was a dep cycle
+            if {$status != 3} {
+                set ::failingports($portname) [list $status $failed_dep]
+                return $::failingports($portname)
+            }
         }
     }
     set ::failingports($portname) [list 0 ""]
