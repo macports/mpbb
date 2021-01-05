@@ -64,13 +64,11 @@ proc check_failing_deps {portname} {
     if {[info exists ::failingports($portname)]} {
         return $::failingports($portname)
     }
-    if {![info exists ::portdepinfo($portname)]} {
-        set ::failingports($portname) [list 0 ""]
-        return $::failingports($portname)
-    }
+    # Protect against dependency cycles
+    set ::failingports($portname) [list 3 $portname]
     foreach portdep $::portdepinfo($portname) {
         set dep_ret [check_failing_deps $portdep]
-        # 0 = ok, 1 = known_fail, 2 = failcache
+        # 0 = ok, 1 = known_fail, 2 = failcache, 3 = dep cycle
         set status [lindex $dep_ret 0]
         if {$status != 0} {
             set failed_dep [lindex $dep_ret 1]
@@ -83,6 +81,11 @@ proc check_failing_deps {portname} {
                 } elseif {$status == 2 && ![info exists ::requestedports($portname)]} {
                     # Exclude deps that will fail due to their own dep being in the failcache.
                     # But still output requested ports so the failure will be reported.
+                    set ::outputports($portname) 0
+                } elseif {$status == 3} {
+                    if {[info exists ::requestedports($portname)]} {
+                        puts stderr "Excluding $::canonicalnames($portname) because of a cyclic dependency involving '$portdep'"
+                    }
                     set ::outputports($portname) 0
                 }
             }
@@ -326,24 +329,22 @@ while {[llength $todo] > 0} {
             set canonicalnames($p) $portinfo(name)
         }
 
-        if {![info exists outputports($p)] || $outputports($p) == 1} {
-            set deplist [list]
-            foreach depstype $depstypes {
-                if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
-                    foreach onedep $portinfo($depstype) {
-                        set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
-                        lappend deplist $depname
-                        if {![info exists portdepinfo($depname)]} {
-                            lappend todo $depname
-                        }
-                        if {$include_deps && ![info exists outputports($depname)]} {
-                            set outputports($depname) 1
-                        }
+        set deplist [list]
+        foreach depstype $depstypes {
+            if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
+                foreach onedep $portinfo($depstype) {
+                    set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
+                    lappend deplist $depname
+                    if {![info exists portdepinfo($depname)]} {
+                        lappend todo $depname
+                    }
+                    if {$include_deps && ![info exists outputports($depname)]} {
+                        set outputports($depname) 1
                     }
                 }
             }
-            set portdepinfo($p) $deplist
         }
+        set portdepinfo($p) $deplist
 
         array unset portinfo
     }
