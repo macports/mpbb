@@ -125,7 +125,7 @@ proc check_failcache {portname porturl canonical_variants} {
             set ret 1
         } elseif {[lindex [split $f " "] end] ne $hash} {
             puts stderr "removing stale failcache entry: $f"
-            file delete -force $f
+            file delete -force [file join $::failcache_dir $f]
         }
     }
     return $ret
