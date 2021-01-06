@@ -58,6 +58,9 @@ install-port() {
         echo "Building '$port' ... [OK]" >> "$log_subports_progress"
         echo "$@" >> "${option_work_dir}/requested_port"
         return 0
+    elif [[ -n "$("${option_prefix}/bin/port" -q installed "$@")" ]]; then
+        # archive name differs, supported_archs probably changed
+        "${option_prefix}/bin/port" -fv uninstall "$@"
     fi
 
     local time_start
