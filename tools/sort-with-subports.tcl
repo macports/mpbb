@@ -350,6 +350,10 @@ while {[llength $todo] > 0} {
             }
         }
 
+        if {$opened} {
+            mportclose $mport
+        }
+
         if {[info exists outputports($p)] && $outputports($p) == 1} {
             set canonicalnames($p) $portinfo(name)
         }
@@ -367,11 +371,13 @@ while {[llength $todo] > 0} {
                         # real problematic example: bin:xattr:xattr
                         lappend portsoftdeps($p) $depname
                     }
-                    if {![info exists portdepinfo($depname)]} {
+                    if {![info exists outputports($depname)]} {
                         lappend todo $depname
-                    }
-                    if {$include_deps && ![info exists outputports($depname)]} {
-                        set outputports($depname) 1
+                        if {$include_deps} {
+                            set outputports($depname) 1
+                        } else {
+                            set outputports($depname) 0
+                        }
                     }
                 }
             }
