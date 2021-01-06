@@ -30,17 +30,23 @@ EOF
 print-subports() {
     local archive_site_public=$1
     local archive_site_private=$2
-    local portnames=$3
+    local include_deps=$3
+    local portnames=$4
 
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     tclsh=${option_prefix}/bin/port-tclsh
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
+    if [ "${include_deps}" = "yes" ]; then
+        include_deps=--include_deps
+    else
+        include_deps=
+    fi
     "${tclsh}" "${thisdir}/tools/sort-with-subports.tcl" --jobs_dir "${option_jobs_dir}" \
         --license_db_dir "${option_license_db_dir}" --failcache_dir "${option_failcache_dir}" \
         --archive_site_public "${archive_site_public}" \
-        --archive_site_private "${archive_site_private}" --include_deps \
+        --archive_site_private "${archive_site_private}" ${include_deps} \
         ${portnames} || return
 }
 
@@ -50,13 +56,16 @@ list-subports() {
     local log_subports_progress="${option_log_dir}/ports-progress.txt"
 
     local args
-    parseopt archive-site:,archive-site-private: "$@" || return
+    parseopt archive-site:,archive-site-private:,include-deps: "$@" || return
     # $option_archive_site is set by parseopt
     # shellcheck disable=SC2154
     : "${option_archive_site=https://packages.macports.org}"
     # $option_archive_site_private is set by parseopt
     # shellcheck disable=SC2154
     : "${option_archive_site_private=https://packages-private.macports.org}"
+    # $option_include_deps is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_include_deps=yes}"
     set -- ${args+"${args[@]}"}
 
     if [ $# -le 0 ]; then
@@ -70,7 +79,7 @@ list-subports() {
     mkdir -p "$option_log_dir"
     > "$log_subports_progress"
 
-    print-subports "${option_archive_site}" "${option_archive_site_private}" "$*" && success=1
+    print-subports "${option_archive_site}" "${option_archive_site_private}" "${option_include_deps}" "$*" && success=1
 
     if [ $success -eq 0 ]; then
         err "None of the specified ports were found in the port index."
