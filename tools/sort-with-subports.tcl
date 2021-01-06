@@ -320,7 +320,7 @@ while {[llength $todo] > 0} {
                         }
                         i386 {
                             if {${is_64bit_capable}} {
-                                if {$::macports::os_major >= 18 && $supported_archs ne "" $supported_archs ne "noarch" && "x86_64" ni $supported_archs} {
+                                if {$::macports::os_major >= 18 && $supported_archs ne "" && $supported_archs ne "noarch" && "x86_64" ni $supported_archs} {
                                     if {[info exists requestedports($p)]} {
                                         puts stderr "Excluding $portinfo(name) because it does not support the x86_64 arch"
                                     }
