@@ -74,7 +74,7 @@ proc check_failing_deps {portname} {
         set status [lindex $dep_ret 0]
         if {$status != 0} {
             set failed_dep [lindex $dep_ret 1]
-            if {[info exists ::outputports($portname)] && $::outputports($portname) == 1} {
+            if {$::outputports($portname) == 1} {
                 if {$status == 1} {
                     if {[info exists ::requestedports($portname)]} {
                         puts stderr "Excluding $::canonicalnames($portname) because its dependency '$failed_dep' is known to fail"
@@ -236,7 +236,7 @@ while {[llength $todo] > 0} {
         }
 
         set opened 0
-        if {[info exists outputports($p)] && $outputports($p) == 1} {
+        if {$outputports($p) == 1} {
             if {[info exists portinfo(replaced_by)]} {
                 if {[info exists requestedports($p)]} {
                     puts stderr "Excluding $portinfo(name) because it is replaced by $portinfo(replaced_by)"
@@ -262,7 +262,7 @@ while {[llength $todo] > 0} {
                     set outputports($p) 0
                 }
             }
-            if {$archive_site_public ne "" && [info exists outputports($p)] && $outputports($p) == 1} {
+            if {$archive_site_public ne "" && $outputports($p) == 1} {
                 # FIXME: support non-default variants
                 if {$opened == 1 || ![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
                     if {$opened != 1} {
@@ -295,7 +295,7 @@ while {[llength $todo] > 0} {
                     }
                 }
             }
-            if {[info exists outputports($p)] && $outputports($p) == 1 &&
+            if {$outputports($p) == 1 &&
                 ($::macports::os_major <= 10 || $::macports::os_major >= 18)} {
                 if {$opened == 1 || ![catch {mportopen $portinfo(porturl) [list subport $portinfo(name)] ""} result]} {
                     if {$opened != 1} {
@@ -354,33 +354,45 @@ while {[llength $todo] > 0} {
             mportclose $mport
         }
 
-        if {[info exists outputports($p)] && $outputports($p) == 1} {
+        if {$outputports($p) == 1} {
             set canonicalnames($p) $portinfo(name)
         }
 
-        set portdepinfo($p) [list]
-        foreach depstype $depstypes {
-            if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
-                foreach onedep $portinfo($depstype) {
-                    set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
-                    if {[string match port:* $onedep]} {
-                        lappend portdepinfo($p) $depname
-                    } else {
-                        # soft deps are installed before their dependents, but
-                        # don't cause exclusion if they are failing
-                        # real problematic example: bin:xattr:xattr
-                        lappend portsoftdeps($p) $depname
-                    }
-                    if {![info exists outputports($depname)]} {
-                        lappend todo $depname
-                        if {$include_deps} {
-                            set outputports($depname) 1
+        # If $requestedports($p) == 0, we're seeing the port again as a dependency of
+        # something else and thus need to follow its deps even if it was excluded.
+        if {$outputports($p) == 1 || ![info exists requestedports($p)] || $requestedports($p) == 0} {
+            set portdepinfo($p) [list]
+            foreach depstype $depstypes {
+                if {[info exists portinfo($depstype)] && $portinfo($depstype) ne ""} {
+                    foreach onedep $portinfo($depstype) {
+                        set depname [string tolower [lindex [split [lindex $onedep 0] :] end]]
+                        if {[string match port:* $onedep]} {
+                            lappend portdepinfo($p) $depname
                         } else {
-                            set outputports($depname) 0
+                            # soft deps are installed before their dependents, but
+                            # don't cause exclusion if they are failing
+                            # real problematic example: bin:xattr:xattr
+                            lappend portsoftdeps($p) $depname
+                        }
+                        if {![info exists outputports($depname)]} {
+                            lappend todo $depname
+                            if {$include_deps} {
+                                set outputports($depname) 1
+                            } else {
+                                set outputports($depname) 0
+                            }
+                        } elseif {[info exists requestedports($depname)] && ![info exists portdepinfo($depname)]} {
+                            # may or may not have been checked for exclusion yet
+                            lappend todo $depname
                         }
                     }
                 }
             }
+        }
+
+        # Mark as having been processed at least once.
+        if {[info exists requestedports($p)]} {
+            set requestedports($p) 0
         }
 
         array unset portinfo
@@ -404,7 +416,7 @@ foreach portname $sorted_portnames {
 }
 
 foreach portname $portlist {
-    if {[info exists outputports($portname)] && $outputports($portname) == 1} {
+    if {$outputports($portname) == 1} {
         puts $canonicalnames($portname)
     }
 }
