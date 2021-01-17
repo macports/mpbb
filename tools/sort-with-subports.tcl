@@ -107,8 +107,11 @@ proc check_failing_deps {portname} {
 # slightly odd method as per mpbb's compute_failcache_hash
 proc port_files_checksum {porturl} {
     set portdir [macports::getportdir $porturl]
-    foreach f [list ${portdir}/Portfile {*}[glob -nocomplain -directory ${portdir}/files -types f *]] {
-        lappend hashlist [::sha2::sha256 -hex -file $f]
+    lappend hashlist [::sha2::sha256 -hex -file ${portdir}/Portfile]
+    fs-traverse f [list ${portdir}/files] {
+        if {[file type $f] eq "file"} {
+            lappend hashlist [::sha2::sha256 -hex -file $f]
+        }
     }
     foreach hash [lsort $hashlist] {
         append compound_hash "${hash}\n"
