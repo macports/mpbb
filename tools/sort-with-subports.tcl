@@ -108,9 +108,11 @@ proc check_failing_deps {portname} {
 proc port_files_checksum {porturl} {
     set portdir [macports::getportdir $porturl]
     lappend hashlist [::sha2::sha256 -hex -file ${portdir}/Portfile]
-    fs-traverse f [list ${portdir}/files] {
-        if {[file type $f] eq "file"} {
-            lappend hashlist [::sha2::sha256 -hex -file $f]
+    if {[file exists ${portdir}/files]} {
+        fs-traverse f [list ${portdir}/files] {
+            if {[file type $f] eq "file"} {
+                lappend hashlist [::sha2::sha256 -hex -file $f]
+            }
         }
     }
     foreach hash [lsort $hashlist] {
