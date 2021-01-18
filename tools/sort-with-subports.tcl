@@ -34,6 +34,7 @@
 #
 
 package require macports
+package require fetch_common
 package require sha256
 
 
@@ -276,12 +277,28 @@ while {[llength $todo] > 0} {
                         array set portinfo [mportinfo $mport]
                     }
                     set workername [ditem_key $mport workername]
-                    set archive_name [$workername eval {portfetch::percent_encode [get_portimage_name]}]
-                    if {![catch {curl getsize ${archive_site_public}/$portinfo(name)/${archive_name}} size] && $size > 0} {
-                        if {[info exists requestedports($p)]} {
-                            puts stderr "Excluding $portinfo(name) because it has already been built and uploaded to the public server"
+                    set archive_name [$workername eval {get_portimage_name}]
+                    set archive_name_encoded [portfetch::percent_encode $archive_name]
+                    if {![catch {curl getsize ${archive_site_public}/$portinfo(name)/${archive_name_encoded}} size] && $size > 0} {
+                        # Check for other installed variants that might not have been uploaded
+                        set archives_prefix ${macports::portdbpath}/software/$portinfo(name)/$portinfo(name)-$portinfo(version)_$portinfo(revision)
+                        set any_archive_missing 0
+                        foreach installed_archive [glob -nocomplain -tails -path ${archives_prefix} *] {
+                            if {$installed_archive ne $archive_name} {
+                                set installed_archive_encoded [portfetch::percent_encode $installed_archive]
+                                if {[catch {curl getsize ${archive_site_public}/$portinfo(name)/${installed_archive_encoded}} size] || $size <= 0} {
+                                    set any_archive_missing 1
+                                    puts stderr "$installed_archive installed but not uploaded"
+                                    break
+                                }
+                            }
                         }
-                        set outputports($p) 0
+                        if {!$any_archive_missing} {
+                            if {[info exists requestedports($p)]} {
+                                puts stderr "Excluding $portinfo(name) because it has already been built and uploaded to the public server"
+                            }
+                            set outputports($p) 0
+                        }
                     }
                 } else {
                     if {[info exists requestedports($p)]} {
@@ -292,7 +309,7 @@ while {[llength $todo] > 0} {
                 if {$outputports($p) == 1 && $archive_site_private ne "" && $jobs_dir ne ""} {
                     # FIXME: support non-default variants
                     set results [check_licenses $portinfo(name) [list]]
-                    if {[lindex $results 0] == 1 && ![catch {curl getsize ${archive_site_private}/$portinfo(name)/${archive_name}} size] && $size > 0} {
+                    if {[lindex $results 0] == 1 && ![catch {curl getsize ${archive_site_private}/$portinfo(name)/${archive_name_encoded}} size] && $size > 0} {
                         if {[info exists requestedports($p)]} {
                             puts stderr "Excluding $portinfo(name) because it is not distributable and it has already been built and uploaded to the private server"
                         }
