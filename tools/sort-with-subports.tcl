@@ -330,7 +330,7 @@ while {[llength $todo] > 0} {
                         arm {
                             if {$supported_archs eq "noarch"} {
                                 if {[info exists requestedports($p)]} {
-                                    puts stderr "Excluding $portinfo(name) because the ${::macports::macosx_version}_x86_64 builder will build it"
+                                    puts stderr "Excluding $portinfo(name) because the [lindex [split ${::macports::macosx_version} .] 0]_x86_64 builder will build it"
                                 }
                                 set outputports($p) 0
                             } elseif {$supported_archs ne "" && "arm64" ni $supported_archs} {
