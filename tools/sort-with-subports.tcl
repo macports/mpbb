@@ -260,6 +260,10 @@ while {[llength $todo] > 0} {
                     set opened 1
                     set mport $result
                     array set portinfo [mportinfo $mport]
+                    if {![info exists portinfo(canonical_active_variants)]} {
+                        puts stderr "Warning: $portinfo(name) has no canonical_active_variants, mport=${mport}"
+                        set portinfo(canonical_active_variants) ""
+                    }
                     if {[check_failcache $portinfo(name) $portinfo(porturl) $portinfo(canonical_active_variants)] != 0} {
                         set outputports($p) 0
                         set failingports($p) [list 2 $portinfo(name)]
