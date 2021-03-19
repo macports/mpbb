@@ -99,8 +99,10 @@ foreach port [registry::entry imaged] {
         } else {
             set lowercase_name [string tolower $installed_name]
             if {![info exists dependents($lowercase_name)]} {
-                # Nothing depends on it
                 ui_msg "Removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because no port in the PortIndex depends on it"
+                set uninstall yes
+            } elseif {$dependents($lowercase_name) == 1} {
+                ui_msg "Removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because only 1 port in the PortIndex depends on it"
                 set uninstall yes
             } elseif {no} {
                 ui_msg "Not removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because it has $dependents($lowercase_name) dependents"
