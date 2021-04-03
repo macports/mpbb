@@ -49,6 +49,7 @@ foreach source $macports::sources {
         try -pass_signal {
             while {[gets $fd line] >= 0} {
                 array unset portinfo
+                set name [lindex $line 0]
                 set len  [lindex $line 1]
                 set line [read $fd $len]
                 array set portinfo $line
@@ -57,8 +58,9 @@ foreach source $macports::sources {
                 foreach field {depends_build depends_extract depends_fetch depends_lib depends_patch depends_run} {
                     if {[info exists portinfo($field)]} {
                         foreach dependency $portinfo($field) {
-                            set dependency_name [lindex [split $dependency {:}] end]
-                            incr dependents([string tolower $dependency_name])
+                            set lowercase_dependency_name [string tolower [lindex [split $dependency :] end]]
+                            incr dependents($lowercase_dependency_name)
+                            set a_dependency($lowercase_dependency_name) $name
                         }
                     }
                 }
@@ -72,6 +74,21 @@ foreach source $macports::sources {
     } catch {*} {
         ui_warn "Can't open index file for source: $source"
     }
+}
+
+proc removal_reason {installed_name} {
+    global dependents a_dependency
+    set reason ""
+    set lowercase_name [string tolower $installed_name]
+    if {![info exists dependents($lowercase_name)]} {
+        set reason "no port in the PortIndex depends on $installed_name"
+    } elseif {$dependents($lowercase_name) == 1} {
+        set dependency_reason [removal_reason $a_dependency($lowercase_name)]
+        if {$dependency_reason ne ""} {
+            set reason "only $a_dependency($lowercase_name) depends on $installed_name and $dependency_reason"
+        }
+    }
+    return $reason
 }
 
 foreach port [registry::entry imaged] {
@@ -92,20 +109,22 @@ foreach port [registry::entry imaged] {
         array unset portinfo
         array set portinfo [lindex $portindex_match 1]
 
+        set portspec "$installed_name @${installed_version}_$installed_revision$installed_variants"
         if {$portinfo(version) ne $installed_version || $portinfo(revision) != $installed_revision} {
             # The version in the index is different than the installed one
-            ui_msg "Removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because there is a newer version in the PortIndex"
+            ui_msg "Removing $portspec because there is a newer version in the PortIndex"
             set uninstall yes
         } else {
             set lowercase_name [string tolower $installed_name]
-            if {![info exists dependents($lowercase_name)]} {
-                ui_msg "Removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because no port in the PortIndex depends on it"
+            set reason [removal_reason $lowercase_name]
+            if {$reason ne ""} {
                 set uninstall yes
-            } elseif {$dependents($lowercase_name) == 1} {
-                ui_msg "Removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because only 1 port in the PortIndex depends on it"
-                set uninstall yes
-            } elseif {no} {
-                ui_msg "Not removing ${installed_name} @${installed_version}_${installed_revision}${installed_variants} because it has $dependents($lowercase_name) dependents"
+                ui_msg "Removing $portspec because $reason"
+            } else {
+                set uninstall no
+                if {no} {
+                    ui_msg "Not removing $portspec because it has $dependents($lowercase_name) dependents"
+                }
             }
         }
     }
