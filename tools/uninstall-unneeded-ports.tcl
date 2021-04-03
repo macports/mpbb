@@ -115,14 +115,14 @@ foreach port [registry::entry imaged] {
             ui_msg "Removing $portspec because there is a newer version in the PortIndex"
             set uninstall yes
         } else {
-            set lowercase_name [string tolower $installed_name]
-            set reason [removal_reason $lowercase_name]
+            set reason [removal_reason $installed_name]
             if {$reason ne ""} {
                 set uninstall yes
                 ui_msg "Removing $portspec because $reason"
             } else {
                 set uninstall no
                 if {no} {
+                    set lowercase_name [string tolower $installed_name]
                     ui_msg "Not removing $portspec because it has $dependents($lowercase_name) dependents"
                 }
             }
