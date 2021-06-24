@@ -50,6 +50,29 @@ cleanup() {
         return
     fi
 
+    # Provide a way to pause builds to deal with situations like
+    # https://trac.macports.org/ticket/53587
+    if [[ ${BUILDBOT_BUILDERNAME:-unknown} == *-watcher ]]; then
+        # $option_work_dir is set in mpbb
+        # shellcheck disable=SC2154
+        waitfile="$option_work_dir/wait"
+        if [ -f "$waitfile" ]; then
+            echo "----> Waiting"
+            waitcount=0
+            while [ -f "$waitfile" ]; do
+                if [ "$waitcount" -eq 0 ]; then
+                    echo "waiting while $waitfile exists"
+                    waitcount=100
+                    waitcount=2
+                else
+                    waitcount=$((waitcount - 1))
+                fi
+                sleep 6
+            done
+            echo
+        fi
+    fi
+
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     disk_free_before=$(disk_free "$option_prefix")
