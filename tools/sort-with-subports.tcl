@@ -331,12 +331,7 @@ while {[llength $todo] > 0} {
                     set supported_archs [_mportkey $mport supported_archs]
                     switch $::macports::os_arch {
                         arm {
-                            if {$supported_archs eq "noarch"} {
-                                if {[info exists requestedports($p)]} {
-                                    puts stderr "Excluding $portinfo(name) because the [lindex [split ${::macports::macosx_version} .] 0]_x86_64 builder will build it"
-                                }
-                                set outputports($p) 0
-                            } elseif {$supported_archs ne "" && "arm64" ni $supported_archs} {
+                            if {$supported_archs ne "" && $supported_archs ne "noarch" && "arm64" ni $supported_archs} {
                                 if {[info exists requestedports($p)]} {
                                     puts stderr "Excluding $portinfo(name) because it does not support the arm64 arch"
                                 }
@@ -344,8 +339,15 @@ while {[llength $todo] > 0} {
                             }
                         }
                         i386 {
-                            if {${is_64bit_capable}} {
-                                if {$::macports::os_major >= 18 && $supported_archs ne "" && $supported_archs ne "noarch" && "x86_64" ni $supported_archs} {
+                            if {$supported_archs eq "noarch"} {
+                                if {$::macports::os_major >= 20} {
+                                    if {[info exists requestedports($p)]} {
+                                        puts stderr "Excluding $portinfo(name) because the [lindex [split ${::macports::macosx_version} .] 0]_arm64 builder will build it"
+                                    }
+                                    set outputports($p) 0
+                                }
+                            } elseif {${is_64bit_capable}} {
+                                if {$::macports::os_major >= 18 && $supported_archs ne "" && "x86_64" ni $supported_archs} {
                                     if {[info exists requestedports($p)]} {
                                         puts stderr "Excluding $portinfo(name) because it does not support the x86_64 arch"
                                     }
