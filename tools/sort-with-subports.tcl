@@ -339,21 +339,14 @@ while {[llength $todo] > 0} {
                             }
                         }
                         i386 {
-                            if {$supported_archs eq "noarch"} {
-                                if {$::macports::os_major >= 20} {
-                                    if {[info exists requestedports($p)]} {
-                                        puts stderr "Excluding $portinfo(name) because the [lindex [split ${::macports::macosx_version} .] 0]_arm64 builder will build it"
-                                    }
-                                    set outputports($p) 0
-                                }
-                            } elseif {${is_64bit_capable}} {
-                                if {$::macports::os_major >= 18 && $supported_archs ne "" && "x86_64" ni $supported_archs} {
+                            if {${is_64bit_capable}} {
+                                if {$::macports::os_major >= 18 && $supported_archs ne "" && $supported_archs ne "noarch" && "x86_64" ni $supported_archs} {
                                     if {[info exists requestedports($p)]} {
                                         puts stderr "Excluding $portinfo(name) because it does not support the x86_64 arch"
                                     }
                                     set outputports($p) 0
                                 }
-                            } elseif {$supported_archs ne "" && ("x86_64" ni $supported_archs || "i386" ni $supported_archs)} {
+                            } elseif {$supported_archs ne "" && $supported_archs ne "noarch" && ("x86_64" ni $supported_archs || "i386" ni $supported_archs)} {
                                 if {[info exists requestedports($p)]} {
                                     puts stderr "Excluding $portinfo(name) because the ${::macports::macosx_version}_x86_64 builder will build it"
                                 }
