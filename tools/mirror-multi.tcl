@@ -46,7 +46,7 @@ foreach vers {10 11 12 13 14 15 16 17 18 19} {
         lappend platforms $vers i386
     }
 }
-foreach vers {20} {
+foreach vers {20 21} {
     if {${macports::os_major} != $vers} {
         lappend platforms $vers arm $vers i386
     }
