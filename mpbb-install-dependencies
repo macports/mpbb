@@ -41,6 +41,17 @@ install-dependencies() {
     # clear the port list
     rm -f "${option_work_dir}/all_ports"
 
+    # save $@ since 'set' is used below
+    orig_args="$@"
+
+    # Only install deps if we're actually going to build the requested port.
+    # $option_prefix and $thisdir are set in mpbb
+    # shellcheck disable=SC2154
+    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" ${orig_args}) ]]; then
+        echo "${orig_args} Already installed, not installing or activating dependencies"
+        return 0
+    fi
+
     # calculate list of dependencies in-order
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
@@ -62,9 +73,6 @@ install-dependencies() {
     echo "Installing $dependencies_count dependencies of $port:" | tee -a "$log_status_dependencies"
     echo "$dependencies" | sed -E 's/^/ - /' | tee -a "$log_status_dependencies"
     echo >> "$log_status_dependencies"
-
-    # save $@ since 'set' is used below
-    orig_args="$@"
 
     # Check whether any of the dependencies have previously failed
     failcachecounter=0
@@ -177,22 +185,14 @@ install-dependencies() {
         echo "$depname $deprequestedvariants" >> "${option_work_dir}/all_ports"
     done <<<"$dependencies"
 
-    # Activate everything now that we know it's all built and installed,
-    # but only if we're actually going to build the requested port.
-
-    # $option_prefix and $thisdir are set in mpbb
-    # shellcheck disable=SC2154
-    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" ${orig_args}) ]]; then
-        echo "${orig_args} Already installed, not activating dependencies"
-    else
-        echo "Activating all dependencies..."
-        # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
-        # shellcheck disable=SC2154,SC2086
-        if ! "${option_prefix}/bin/port" -dn install --unrequested $(cat "${option_work_dir}/all_ports"); then
-            echo "Activating all dependencies failed, aborting." >&2
-            return 1
-        fi
-        echo "Done."
+    # Activate everything now that we know it's all built and installed.
+    echo "Activating all dependencies..."
+    # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
+    # shellcheck disable=SC2154,SC2086
+    if ! "${option_prefix}/bin/port" -dn install --unrequested $(cat "${option_work_dir}/all_ports"); then
+        echo "Activating all dependencies failed, aborting." >&2
+        return 1
     fi
+    echo "Done."
 }
 
