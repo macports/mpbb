@@ -319,7 +319,7 @@ proc mirror_port {portinfo_list} {
         }
     }
 
-    if {$dep_failed == 0 && $succeeded > 0} {
+    if {$dep_failed == 0 && ($attempted == 0 || $succeeded > 0)} {
         if {$succeeded == $attempted} {
             set_mirror_done $portname 1
         } else {
