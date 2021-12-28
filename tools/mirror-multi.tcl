@@ -53,8 +53,9 @@ foreach vers {20 21} {
 }
 set deptypes {depends_fetch depends_extract depends_build depends_lib depends_run depends_test}
 
-array set processed {}
-array set mirror_done {}
+array set processed [list]
+array set mirror_done [list]
+array set distfiles_results [list]
 
 proc check_mirror_done {portname} {
     global mirror_done mirrorcache_dir
@@ -151,18 +152,76 @@ proc get_variants {portinfovar} {
 # work around the bug where the mirror target claims to succeed when
 # the distfile checksums did not match
 proc check_distfiles {mport} {
-    set distpath [_mportkey $mport distpath]
+    global distfiles_results
     if {[catch {_mportkey $mport all_dist_files} all_dist_files]} {
         # no distfiles, no problem
         return 0
     }
+    set distpath [_mportkey $mport distpath]
+    set ret 0
     foreach distfile $all_dist_files {
-        if {![file exists [file join $distpath $distfile]]} {
-            return 1
+        set filepath [file join $distpath $distfile]
+        if {[file exists $filepath]} {
+            set distfiles_results($filepath) 1
+        } else {
+            set distfiles_results($filepath) 0
+            set ret 1
         }
+    }
+    return $ret
+}
+
+# Given a distribution file name, return the name without an attached tag
+# Example : getdistname distfile.tar.gz:tag1 returns "distfile.tar.gz"
+# / isn't included in the regexp, thus allowing port specification in URLs.
+proc getdistname {name} {
+    regexp {(.+):[0-9A-Za-z_-]+$} $name match name
+    return $name
+}
+
+# check if mirroring should be skipped due to all distfiles having
+# previously been successfully mirrored, or any distfile previously
+# having a checksum mismatch
+# Returns:
+# 0 - mirror needed
+# 1 - mirror not needed
+# 2 - mirror already failed for at least one distfile
+proc skip_mirror {mport identifier} {
+    if {([catch {_mportkey $mport distfiles} distfiles] || $distfiles eq "")
+        && ([catch {_mportkey $mport patchfiles} patchfiles] || $patchfiles eq "")} {
+        # no distfiles, no need to mirror
+        return 1
+    }
+    if {![info exists distfiles]} {
+        set distfiles [list]
+    }
+    if {![info exists patchfiles]} {
+        set patchfiles [list]
+    }
+    global distfiles_results
+    set distpath [_mportkey $mport distpath]
+    set filespath [_mportkey $mport filespath]
+    set any_unmirrored 0
+    foreach distfile [concat $distfiles $patchfiles] {
+        if {[file exists [file join $filespath $distfile]]} {
+            continue
+        }
+        set distfile [getdistname $distfile]
+        set filepath [file join $distpath $distfile]
+        if {![info exists distfiles_results($filepath)]} {
+            set any_unmirrored 1
+        } elseif {$distfiles_results($filepath) == 0} {
+            ui_msg "Skipping ${identifier}: $distfile already failed checksum"
+            return 2
+        }
+    }
+    if {$any_unmirrored == 0} {
+        ui_msg "Skipping ${identifier}: all distfiles already mirrored"
+        return 1
     }
     return 0
 }
+
 
 proc mirror_port {portinfo_list} {
     global platforms deptypes processed
@@ -185,12 +244,16 @@ proc mirror_port {portinfo_list} {
     array unset portinfo
     array set portinfo [mportinfo $mport]
 
-    if {$do_mirror} {
+    set skip_result [skip_mirror $mport $portname]
+    if {$do_mirror && $skip_result == 0} {
         incr attempted
         mportexec $mport clean
         if {[mportexec $mport mirror] == 0 && [check_distfiles $mport] == 0} {
             incr succeeded
         }
+    } elseif {$skip_result == 2} {
+        # count as a failure
+        incr attempted
     }
     mportclose $mport
 
@@ -199,7 +262,6 @@ proc mirror_port {portinfo_list} {
 
     foreach variant $variants {
         ui_msg "$portname +${variant}"
-        incr attempted
         if {[catch {mportopen $porturl [list subport $portname] [list $variant +]} mport]} {
             ui_error "mportopen $porturl failed: $mport"
             continue
@@ -207,20 +269,21 @@ proc mirror_port {portinfo_list} {
         array unset portinfo
         array set portinfo [mportinfo $mport]
         lappend deps {*}[get_dep_list portinfo]
-        if {$do_mirror} {
+        set skip_result [skip_mirror $mport "$portname +${variant}"]
+        if {$do_mirror && $skip_result == 0} {
+            incr attempted
             mportexec $mport clean
             if {[mportexec $mport mirror] == 0  && [check_distfiles $mport] == 0} {
                 incr succeeded
             }
-        } else {
-            incr succeeded
+        } elseif {$skip_result == 2} {
+            incr attempted
         }
         mportclose $mport
     }
 
     foreach {os_major os_arch} $platforms {
         ui_msg "$portname with platform 'darwin $os_major $os_arch'"
-        incr attempted
         if {[catch {mportopen $porturl [list subport $portname os_major $os_major os_arch $os_arch] {}} mport]} {
             ui_error "mportopen $porturl failed: $mport"
             continue
@@ -228,13 +291,15 @@ proc mirror_port {portinfo_list} {
         array unset portinfo
         array set portinfo [mportinfo $mport]
         lappend deps {*}[get_dep_list portinfo]
-        if {$do_mirror} {
+        set skip_result [skip_mirror $mport "$portname darwin $os_major $os_arch"]
+        if {$do_mirror && $skip_result == 0} {
+            incr attempted
             mportexec $mport clean
             if {[mportexec $mport mirror] == 0 && [check_distfiles $mport] == 0} {
                 incr succeeded
             }
-        } else {
-            incr succeeded
+        } elseif {$skip_result == 2} {
+            incr attempted
         }
         mportclose $mport
     }
