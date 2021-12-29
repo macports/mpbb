@@ -216,7 +216,7 @@ proc skip_mirror {mport identifier} {
         }
     }
     if {$any_unmirrored == 0} {
-        ui_msg "Skipping ${identifier}: all distfiles already mirrored"
+        #ui_msg "Skipping ${identifier}: all distfiles already mirrored"
         return 1
     }
     return 0
