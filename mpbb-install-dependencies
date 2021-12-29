@@ -29,6 +29,7 @@ install-dependencies() {
     local depname
     local depvariants
     local failcachecounter
+    local start_time
     # $option_log_dir is set in mpbb
     # shellcheck disable=SC2154
     local log_status_dependencies="${option_log_dir}/dependencies-progress.txt"
@@ -44,6 +45,9 @@ install-dependencies() {
     # save $@ since 'set' is used below
     orig_args="$@"
 
+    # for timing
+    start_time=$(date +%s)
+
     # Only install deps if we're actually going to build the requested port.
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
@@ -51,6 +55,9 @@ install-dependencies() {
         echo "${orig_args} Already installed, not installing or activating dependencies"
         return 0
     fi
+
+    echo "archive-path took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
+    start_time=$(date +%s)
 
     # calculate list of dependencies in-order
     # $option_prefix and $thisdir are set in mpbb
@@ -61,6 +68,9 @@ install-dependencies() {
         echo "Building '$port' ... [ERROR] (failed to calculate dependencies) maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
         return 1
     fi
+
+    echo "dependencies took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
+    start_time=$(date +%s)
 
     if [ -z "$dependencies" ]; then
         echo "'$port' has no dependencies, continuing." >&2
@@ -95,6 +105,9 @@ install-dependencies() {
             failcachecounter=$((failcachecounter + 1))
         fi
     done <<<"$dependencies"
+
+    echo "failcache took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
+    start_time=$(date +%s)
 
     if [ $failcachecounter -gt 0 ]; then
         echo "Aborting build because $failcachecounter dependencies are known to fail." >&2
@@ -185,6 +198,9 @@ install-dependencies() {
         echo "$depname $deprequestedvariants" >> "${option_work_dir}/all_ports"
     done <<<"$dependencies"
 
+    echo "installing took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
+    start_time=$(date +%s)
+
     # Activate everything now that we know it's all built and installed.
     echo "Activating all dependencies..."
     # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
@@ -193,6 +209,9 @@ install-dependencies() {
         echo "Activating all dependencies failed, aborting." >&2
         return 1
     fi
+
+    echo "activating took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
+
     echo "Done."
 }
 
