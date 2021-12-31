@@ -35,7 +35,6 @@
 
 package require macports
 package require fetch_common
-package require sha256
 
 
 proc ui_prefix {priority} {
@@ -105,37 +104,7 @@ proc check_failing_deps {portname} {
     return $::failingports($portname)
 }
 
-# slightly odd method as per mpbb's compute_failcache_hash
-proc port_files_checksum {porturl} {
-    set portdir [macports::getportdir $porturl]
-    lappend hashlist [::sha2::sha256 -hex -file ${portdir}/Portfile]
-    if {[file exists ${portdir}/files]} {
-        fs-traverse f [list ${portdir}/files] {
-            if {[file type $f] eq "file"} {
-                lappend hashlist [::sha2::sha256 -hex -file $f]
-            }
-        }
-    }
-    foreach hash [lsort $hashlist] {
-        append compound_hash "${hash}\n"
-    }
-    return [::sha2::sha256 -hex $compound_hash]
-}
-
-proc check_failcache {portname porturl canonical_variants} {
-    set hash [port_files_checksum $porturl]
-    set key "$portname $canonical_variants $hash"
-    set ret 0
-    foreach f [glob -directory $::failcache_dir -nocomplain -tails "${portname} *"] {
-        if {$f eq $key} {
-            set ret 1
-        } elseif {[lindex [split $f " "] end] ne $hash} {
-            puts stderr "removing stale failcache entry: $f"
-            file delete -force [file join $::failcache_dir $f]
-        }
-    }
-    return $ret
-}
+source [file join [file dirname [info script]] failcache.tcl]
 
 if {[catch {mportinit "" "" ""} result]} {
    puts stderr "$errorInfo"
