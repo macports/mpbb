@@ -445,11 +445,19 @@ proc install_dep {ditem} {
         if {$::failcache_dir ne ""} {
             failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 0
         }
-        # The interp delete hack in _mportexec makes the mport more or
-        # less unusable after installing. Make sure it really gets
-        # closed even if there are dangling refs.
-        ditem_key $ditem refcnt 1
-        mportclose $ditem
+        # The interp delete hack in _mportexec makes the mport of
+        # dependencies basically unusable after installing. Fortunately
+        # they should all have been processed previously, being
+        # dependencies. Make sure they all get closed now even if there
+        # are dangling refs. Then mportexec will open fresh copies if
+        # needed later.
+        foreach mport $macports::open_mports {
+            set workername [ditem_key $mport workername]
+            if {![interp exists $workername]} {
+                ditem_key $mport refcnt 1
+                mportclose $mport
+            }
+        }
     }
 }
 
