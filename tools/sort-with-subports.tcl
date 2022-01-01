@@ -180,8 +180,8 @@ foreach p $todo {
 # process all recursive deps
 set depstypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run]
 while {[llength $todo] > 0} {
-    set p [lindex $todo end]
-    set todo [lreplace ${todo}[set todo {}] end end]
+    set p [lindex $todo 0]
+    set todo [lreplace ${todo}[set todo {}] 0 0]
 
     if {![info exists portdepinfo($p)]} {
         if {[catch {mportlookup $p} result]} {
