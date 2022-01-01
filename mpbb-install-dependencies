@@ -23,195 +23,21 @@ install-dependencies() {
         err "Must specify a port"
         return 1
     fi
-    local dependencies
-    local dependencies_count
-    local dependencies_counter
-    local depname
-    local depvariants
-    local failcachecounter
-    local start_time
-    # $option_log_dir is set in mpbb
-    # shellcheck disable=SC2154
-    local log_status_dependencies="${option_log_dir}/dependencies-progress.txt"
     local log_subports_progress="${option_log_dir}/ports-progress.txt"
+    local result
 
-    # prepare the log file and make sure to start with an empty one
-    mkdir -p "${option_log_dir}"
-    > "$log_status_dependencies"
-
-    # clear the port list
-    rm -f "${option_work_dir}/all_ports"
-
-    # save $@ since 'set' is used below
-    orig_args="$@"
-
-    # for timing
-    start_time=$(date +%s)
-
-    # Only install deps if we're actually going to build the requested port.
+    # Script attempts to get to a state where all dependencies (and
+    # only dependencies) of the port are active
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
-    if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" ${orig_args}) ]]; then
-        echo "${orig_args} Already installed, not installing or activating dependencies"
-        return 0
-    fi
-
-    echo "archive-path took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
-    start_time=$(date +%s)
-
-    # calculate list of dependencies in-order
-    # $option_prefix and $thisdir are set in mpbb
-    # shellcheck disable=SC2154
-    dependencies=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" "$@")
-    if [ $? -ne 0 ]; then
-        echo "Calculating dependencies for '$port' failed, aborting." >&2
-        echo "Building '$port' ... [ERROR] (failed to calculate dependencies) maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
-        return 1
-    fi
-
-    echo "dependencies took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
-    start_time=$(date +%s)
-
-    if [ -z "$dependencies" ]; then
-        echo "'$port' has no dependencies, continuing." >&2
-        return 0
-    fi
-
-    dependencies_count=$(echo "$dependencies" | wc -l | sed 's/ *//g')
-    dependencies_counter=1
-
-    echo "Installing $dependencies_count dependencies of $port:" | tee -a "$log_status_dependencies"
-    echo "$dependencies" | sed -E 's/^/ - /' | tee -a "$log_status_dependencies"
-    echo >> "$log_status_dependencies"
-
-    # Check whether any of the dependencies have previously failed
-    failcachecounter=0
-    while read -r dependency; do
-        # Split portname +variant1+variant2 into portname and active
-        # variants, where the variants are optional.
-        set $dependency
-        depname="$1"
-        # remove surrounding quotes
-        depvariants="${2%\"}"
-        depvariants="${depvariants#\"}"
-
-        # $depvariants isn't quoted on purpose
-        # shellcheck disable=SC2086
-        if ! failcache_test "$depname" $depvariants; then
-            text="Dependency '${depname}' with variants '${depvariants}' has previously failed and is required."
-            echo "$text" >&2
-            echo "$text" >> "$log_status_dependencies"
-            echo "Building '$port' ... [ERROR] (failed to install dependency '${depname}') maintainers: $(get-maintainers "$port" "${depname}")." >> "$log_subports_progress"
-            failcachecounter=$((failcachecounter + 1))
+    "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" --failcache_dir "${option_failcache_dir}" \
+        --logs_dir "${option_log_dir}" "$@"
+    result=$?
+    if [ $result -ne 0 ]; then
+        echo "Processing dependencies for '$port' failed, aborting." >&2
+        if [ $result -eq 2 ]; then
+            echo "Building '$port' ... [ERROR] (failed to activate dependencies) maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
         fi
-    done <<<"$dependencies"
-
-    echo "failcache took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
-    start_time=$(date +%s)
-
-    if [ $failcachecounter -gt 0 ]; then
-        echo "Aborting build because $failcachecounter dependencies are known to fail." >&2
         return 1
     fi
-
-    while read -r dependency; do
-        # Split portname +variant1+variant2 into portname and active and
-        # requested variants, where the variants are optional.
-        set $dependency
-        depname=$1
-        # remove surrounding quotes
-        depvariants="${2%\"}"
-        depvariants="${depvariants#\"}"
-        deprequestedvariants="${3%\"}"
-        deprequestedvariants="${deprequestedvariants#\"}"
-
-        text="Installing dependency ($dependencies_counter of $dependencies_count) '${depname}' with variants '${depvariants}' (requesting '${deprequestedvariants}')"
-        echo "----> ${text}"
-        echo -n "${text} ... " >> "$log_status_dependencies"
-        # $option_prefix and $thisdir are set in mpbb
-        # shellcheck disable=SC2154
-        if [[ -f $("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "${depname}" "${deprequestedvariants}") ]]; then
-            echo "Already installed, nothing to do"
-            echo "[OK]" >> "$log_status_dependencies"
-            dependencies_counter=$((dependencies_counter + 1))
-        else
-            # First try to get a binary archive in case the local archives were deleted.
-            # $deprequestedvariants isn't quoted on purpose
-            # shellcheck disable=SC2154,SC2086
-            if ! "${option_prefix}/bin/port" -d archivefetch "$depname" $deprequestedvariants; then
-                # This port command should never fail. If no archive was
-                # available, it will still return with 0.
-                echo "Fetching archive for dependency '${depname}' with variants '${deprequestedvariants}' failed, aborting." >&2
-                echo "[FAIL] (archivefetch)" >> "$log_status_dependencies"
-                echo "Building '$port' ... [ERROR] (failed to archivefetch dependency '${depname}')." >> "$log_subports_progress"
-                # Do not add to failcache.
-                return 1
-            fi
-            # Fetch distfiles to check for fetch failures. If the archivefetch
-            # above downloaded an archive, the fetch phase is already marked as
-            # completed in the statefile and this will do nothing.
-            # $deprequestedvariants isn't quoted on purpose
-            # shellcheck disable=SC2154,SC2086
-            if ! "${option_prefix}/bin/port" -d fetch "$depname" $deprequestedvariants; then
-                echo "Fetch of dependency '${depname}' with variants '${deprequestedvariants}' failed, aborting." >&2
-                echo "[FAIL] (fetch)" >> "$log_status_dependencies"
-                echo "Building '$port' ... [ERROR] (failed to fetch dependency '${depname}') maintainers: $(get-maintainers "$port" "${depname}")." >> "$log_subports_progress"
-                # Do not add to failcache. This could be a temporary problem that will
-                # be resolved once the file appears on mirrors.
-                return 1
-            fi
-            # $deprequestedvariants isn't quoted on purpose
-            # shellcheck disable=SC2154,SC2086
-            if ! "${option_prefix}/bin/port" -dn install --unrequested "$depname" $deprequestedvariants; then
-                echo "Build of dependency '${depname}' with variants '${deprequestedvariants}' failed, aborting." >&2
-                echo "[FAIL]" >> "$log_status_dependencies"
-                echo "Building '$port' ... [ERROR] (failed to install dependency '${depname}') maintainers: $(get-maintainers "$port" "${depname}")." >> "$log_subports_progress"
-
-                # Update failcache
-                # $depvariants isn't quoted on purpose
-                # shellcheck disable=SC2086
-                failcache_failure "$depname" $depvariants
-                if [ $? -ne 0 ]; then
-                    err "failcache_failure $depname $depvariants failed."
-                    return 1
-                fi
-                return 1
-            else
-                echo "[OK]" >> "$log_status_dependencies"
-
-                # Remove failcache if it exists
-                # $depvariants isn't quoted on purpose
-                # shellcheck disable=SC2086
-                failcache_success "$depname" $depvariants
-                if [ $? -ne 0 ]; then
-                    err "failcache_success $depname $depvariants failed."
-                    return 1
-                fi
-                dependencies_counter=$((dependencies_counter + 1))
-                # deactivate everything between builds
-                # $option_prefix is set by mpbb
-                # shellcheck disable=SC2154
-                "${option_prefix}/bin/port" -fp deactivate active
-            fi
-        fi
-        # add to the list for gather_archives
-        echo "$depname $deprequestedvariants" >> "${option_work_dir}/all_ports"
-    done <<<"$dependencies"
-
-    echo "installing took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
-    start_time=$(date +%s)
-
-    # Activate everything now that we know it's all built and installed.
-    echo "Activating all dependencies..."
-    # $option_prefix is set by mpbb, and dependencies isn't quoted on purpose
-    # shellcheck disable=SC2154,SC2086
-    if ! "${option_prefix}/bin/port" -dn install --unrequested $(cat "${option_work_dir}/all_ports"); then
-        echo "Activating all dependencies failed, aborting." >&2
-        return 1
-    fi
-
-    echo "activating took $(expr $(date +%s) - $start_time) seconds" | tee -a "$log_status_dependencies"
-
-    echo "Done."
 }
-

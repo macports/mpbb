@@ -78,13 +78,6 @@ cleanup() {
     echo "----> Free disk space before cleanup: $(format_size "$disk_free_before")"
     echo
 
-    echo "----> Deactivating ports"
-    # $option_prefix is set by mpbb
-    # shellcheck disable=SC2154
-    if [ -n "$("${option_prefix}/bin/port" -q echo active)" ]; then
-        "${option_prefix}/bin/port" -fp deactivate active
-    fi
-
     if [[ ${BUILDBOT_BUILDERNAME:-unknown} == *-watcher ]]; then
         echo
         echo "----> Uninstalling unneeded ports"
