@@ -72,7 +72,8 @@ if {[llength $::argv] == 0} {
 }
 
 # initialize macports
-if {[catch {mportinit "" "" ""} result]} {
+set my_global_options(ports_nodeps) yes
+if {[catch {mportinit "" my_global_options ""} result]} {
    ui_error "$errorInfo"
    ui_error "Failed to initialize ports system: $result"
    exit 2
@@ -273,9 +274,10 @@ proc deactivate_unneeded {portinfovar} {
     set dependents_check_list [list]
     foreach e [registry::entry installed] {
         # Deactivate everything we don't need and also ports we do need that
-        # are active with non-default variants. The latter will reduce
-        # performance for universal installations a bit, but those are much
-        # less common and this ensures consistent behaviour.
+        # are active with an old version or non-default variants. The
+        # latter will reduce performance for universal installations a
+        # bit, but those are much less common and this ensures
+        # consistent behaviour.
         if {![info exists needed_array([$e name])]} {
             if {![registry::run_target $e deactivate [list ports_force yes]]
                       && [catch {portimage::deactivate [$e name] [$e version] [$e revision] [$e variants] [list ports_force yes]} result]} {
@@ -286,7 +288,9 @@ proc deactivate_unneeded {portinfovar} {
         } else {
             array unset entryinfo
             array set entryinfo $::mportinfo_array($mports_array([$e name]))
-            if {$entryinfo(canonical_active_variants) ne [$e variants]} {
+            if {$entryinfo(version) ne [$e version]
+                    || $entryinfo(revision) != [$e revision]
+                    || $entryinfo(canonical_active_variants) ne [$e variants]} {
                 lappend dependents_check_list {*}[$e dependents]
             }
         }
