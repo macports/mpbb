@@ -419,6 +419,15 @@ proc install_dep {ditem} {
         # No archive. This should be rare, but can happen in some
         # cases. Will build from source.
 
+        # The known_fail case should normally be caught before now, but
+        # it's quick and easy to check and may save a build.
+        if {[info exists depinfo(known_fail)] && [string is true -strict $depinfo(known_fail)]} {
+            puts stderr "Dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' is known to fail, aborting."
+            puts $::log_status_dependencies {[FAIL] (known_fail)}
+            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (dependency '$depinfo(name)' known to fail) maintainers: [get_maintainers $::portname $depinfo(name)]."
+            exit 1
+        }
+
         # Fetch and checksum the distfiles
         # (Bad things happen if you run fetch and checksum separately on the same mport, because
         # init functions get called twice and add duplicate distfiles. Yes, that's a bug.)
