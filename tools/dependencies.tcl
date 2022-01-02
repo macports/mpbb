@@ -388,10 +388,10 @@ proc install_dep {ditem} {
         puts $::log_status_dependencies {[OK]}
         return 0
     }
+    set fail 0
     set workername [ditem_key $ditem workername]
     if {[$workername eval [list _archive_available]]} {
         # First fetch the archive
-        set fail 0
         if {[catch {mportexec $ditem archivefetch} result]} {
             puts stderr $::errorInfo
             ui_error "Archivefetch failed: $result"
@@ -403,15 +403,25 @@ proc install_dep {ditem} {
             puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to archivefetch dependency '$depinfo(name)')."
             exit 1
         }
+        # Now install it
+        if {[catch {$workername eval [list eval_targets install]} result]} {
+            puts stderr $::errorInfo
+            ui_error "Install failed: $result"
+            set fail 1
+        }
+        if {$fail || $result > 0} {
+            puts stderr "Installing from archive for dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+            puts $::log_status_dependencies {[FAIL]}
+            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)')."
+            exit 1
+        }
     } else {
-        # No archive. This should be rare, but can happen in some cases. Will build from source.
-        set ::any_built 1
-        # Deactivate ports not needed for this build so they don't interfere
-        deactivate_unneeded depinfo
+        # No archive. This should be rare, but can happen in some
+        # cases. Will build from source.
+
         # Fetch and checksum the distfiles
         # (Bad things happen if you run fetch and checksum separately on the same mport, because
         # init functions get called twice and add duplicate distfiles. Yes, that's a bug.)
-        set fail 0
         if {[catch {mportexec $ditem checksum} result]} {
             puts stderr $::errorInfo
             ui_error "Checksum failed: $result"
@@ -423,25 +433,26 @@ proc install_dep {ditem} {
             puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to fetch dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
             exit 1
         }
-    }
-    # Now install
-    if {[catch {mportexec $ditem install} result]} {
-        puts stderr $::errorInfo
-        ui_error "Install failed: $result"
-        set fail 1
-    }
-    if {$fail || $result > 0} {
-        puts stderr "Build of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
-        puts $::log_status_dependencies {[FAIL]}
-        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
-
-        if {$::failcache_dir ne ""} {
-            failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 1
+        # Deactivate ports not needed for this build so they don't interfere
+        deactivate_unneeded depinfo
+        # Now install
+        if {[catch {mportexec $ditem install} result]} {
+            puts stderr $::errorInfo
+            ui_error "Install failed: $result"
+            set fail 1
         }
-        exit 1
-    } else {
-        puts $::log_status_dependencies {[OK]}
-        # Clear any failcache entry
+        if {$fail || $result > 0} {
+            puts stderr "Build of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+            puts $::log_status_dependencies {[FAIL]}
+            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+
+            if {$::failcache_dir ne ""} {
+                failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 1
+            }
+            exit 1
+        }
+        set ::any_built 1
+        # Success. Clear any failcache entry.
         if {$::failcache_dir ne ""} {
             failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 0
         }
@@ -459,6 +470,7 @@ proc install_dep {ditem} {
             }
         }
     }
+    puts $::log_status_dependencies {[OK]}
 }
 
 # Show all output for anything that gets installed
