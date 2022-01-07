@@ -2,6 +2,11 @@
 
 package require sha256
 
+# save in case env gets cleared
+if {[info exists ::env(BUILDBOT_BUILDURL)]} {
+    set failcache_buildurl $::env(BUILDBOT_BUILDURL)
+}
+
 # slightly odd method as per mpbb's compute_failcache_hash
 proc port_files_checksum {porturl} {
     set portdir [macports::getportdir $porturl]
@@ -48,6 +53,8 @@ proc failcache_update {portname porturl canonical_variants failed} {
         set fd [open $entry_path w]
         if {[info exists ::env(BUILDBOT_BUILDURL)]} {
             puts $fd $::env(BUILDBOT_BUILDURL)
+        } elseif {[info exists ::failcache_buildurl]} {
+            puts $fd $::failcache_buildurl
         } else {
             puts $fd "unknown"
         }
