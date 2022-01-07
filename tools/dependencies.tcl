@@ -479,6 +479,10 @@ proc install_dep {ditem} {
             }
         }
     }
+    catch {
+        ditem_key $ditem refcnt 1
+        mportclose $ditem
+    }
     puts $::log_status_dependencies {[OK]}
 }
 
