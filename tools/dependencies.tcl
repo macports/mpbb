@@ -298,7 +298,7 @@ proc deactivate_unneeded {portinfovar} {
     # also deactivate dependents of any needed deactivated ports
     while {$dependents_check_list ne ""} {
         set e [lindex $dependents_check_list end]
-        set dependents_check_list [lreplace ${dependents_check_list}[set dependents_check_list {}] 0 0]
+        set dependents_check_list [lreplace ${dependents_check_list}[set dependents_check_list {}] end end]
         if {[$e state] eq "installed"} {
             lappend dependents_check_list {*}[$e dependents]
             if {![registry::run_target $e deactivate [list ports_force yes]]
