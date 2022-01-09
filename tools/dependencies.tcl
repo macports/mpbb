@@ -309,6 +309,12 @@ proc deactivate_unneeded {portinfovar} {
             }
         }
     }
+    # For ports that remain active, close the mport that was opened
+    # earlier - it most likely won't be used again (and will be
+    # reopened in the uncommon case that it is needed.)
+    foreach e [registry::entry installed] {
+        mportclose $mports_array([$e name])
+    }
 }
 
 puts stderr "init took [expr {[clock seconds] - $start_time}] seconds"
