@@ -320,31 +320,42 @@ proc deactivate_unneeded {portinfovar} {
 puts stderr "init took [expr {[clock seconds] - $start_time}] seconds"
 set start_time [clock seconds]
 
-deactivate_unneeded portinfo
+if {[catch {deactivate_unneeded portinfo} result]} {
+    ui_error $::errorInfo
+    ui_error "deactivate_unneeded failed: $result"
+    exit 2
+}
 
 puts stderr "deactivating unneeded ports took [expr {[clock seconds] - $start_time}] seconds"
 set start_time [clock seconds]
 
 # gather a list of dependencies with the correct variants (+universal is dealt
 # with in specific ways)
-if {[mportdepends $mport "activate"] != 0} {
-    ui_error "mportdepends $portname activate failed."
+if {[catch {mportdepends $mport "activate"} result] || $result != 0} {
+    ui_error $::errorInfo
+    ui_error "mportdepends $portname activate failed: $result"
     exit 2
 }
 
-# sort these dependencies topologically; exclude the given port itself
-set dlist [dlist_append_dependents $macports::open_mports $mport {}]
-dlist_delete dlist $mport
 
-# produce a list of deps in sorted order
-set dlist_sorted [list]
 proc append_it {ditem} {
     lappend ::dlist_sorted $ditem
     set ::mportinfo_array($ditem) [mportinfo $ditem]
     return 0
 }
-dlist_eval $dlist {} [list append_it]
-unset dlist
+try {
+    # sort these dependencies topologically; exclude the given port itself
+    set dlist [dlist_append_dependents $macports::open_mports $mport {}]
+    dlist_delete dlist $mport
+
+    # produce a list of deps in sorted order
+    set dlist_sorted [list]
+    dlist_eval $dlist {} [list append_it]
+    unset dlist
+} catch {{*} eCode eMessage} {
+    ui_error "sorting dlist failed: $eMessage"
+    exit 2
+}
 
 puts stderr "calculating deps took [expr {[clock seconds] - $start_time}] seconds"
 set start_time [clock seconds]
@@ -376,8 +387,13 @@ proc checkdep_failcache {ditem} {
 }
 
 if {$failcache_dir ne ""} {
-    foreach ditem $dlist_sorted {
-        checkdep_failcache $ditem
+    try {
+        foreach ditem $dlist_sorted {
+            checkdep_failcache $ditem
+        }
+    } catch {{*} eCode eMessage} {
+        ui_error "checkdep_failcache failed: $eMessage"
+        exit 2
     }
     puts stderr "checking failcache took [expr {[clock seconds] - $start_time}] seconds"
     set start_time [clock seconds]
@@ -497,8 +513,13 @@ set macports::channels(debug) stderr
 set macports::channels(info) stdout
 set dependencies_counter 0
 set any_built 0
-foreach ditem $dlist_sorted {
-    install_dep $ditem
+try {
+    foreach ditem $dlist_sorted {
+        install_dep $ditem
+    }
+} catch {{*} eCode eMessage} {
+    ui_error "install_dep failed: $eMessage"
+    exit 2
 }
 # Go back to being quiet
 set macports::channels(debug) {}
@@ -509,7 +530,12 @@ set start_time [clock seconds]
 
 if {$any_built} {
     # active ports likely changed, so do this again
-    deactivate_unneeded portinfo
+    try {
+        deactivate_unneeded portinfo
+    } catch {{*} eCode eMessage} {
+        ui_error "deactivate_unneeded failed: $eMessage"
+        exit 2
+    }
 }
 
 proc activate_dep {ditem} {
@@ -532,8 +558,13 @@ proc activate_dep {ditem} {
 }
 
 puts "Activating all dependencies..."
-foreach ditem $dlist_sorted {
-    activate_dep $ditem
+try {
+    foreach ditem $dlist_sorted {
+        activate_dep $ditem
+    }
+} catch {{*} eCode eMessage} {
+    ui_error "activate_dep failed: $eMessage"
+    exit 2
 }
 
 puts stderr "activating deps took [expr {[clock seconds] - $start_time}] seconds"
