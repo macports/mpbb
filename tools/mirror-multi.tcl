@@ -34,7 +34,8 @@
 
 package require macports
 
-if {[catch {mportinit "" "" ""} result]} {
+set ui_options(ports_verbose) yes
+if {[catch {mportinit ui_options "" ""} result]} {
    ui_error "$errorInfo"
    ui_error "Failed to initialize ports system: $result"
    exit 1
