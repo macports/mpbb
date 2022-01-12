@@ -51,7 +51,7 @@ foreach vers {20 21} {
         lappend platforms $vers arm $vers i386
     }
 }
-set deptypes {depends_fetch depends_extract depends_build depends_lib depends_run depends_test}
+set deptypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run depends_test]
 
 array set processed [list]
 array set mirror_done [list]
