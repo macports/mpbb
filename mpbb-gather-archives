@@ -63,34 +63,11 @@ gather-archives() {
 
     mkdir -p "${option_staging_dir}"/public "${option_staging_dir}"/private || return
 
-    status=0
-    for archive_path in $("${option_prefix}/bin/port" -q location installed and \( $(cat "${option_work_dir}/requested_port") \)); do
-        archive_port=$(basename "$(dirname "${archive_path}")")
-        archive_basename=$(basename "${archive_path}")
-
-        # $option_jobs_dir is set in mpbb
-        # shellcheck disable=SC2154
-        if "${tclsh}" "${option_jobs_dir}/port_binary_distributable.tcl" -d "${option_license_db_dir}" -v "${archive_port}"; then
-            archive_type=public
-            archive_site="${option_archive_site}"
-        else
-            archive_type=private
-            archive_site="${option_archive_site_private}"
-        fi
-        archive_dir="${option_staging_dir}/${archive_type}/${archive_port}"
-
-        if ! curl -fIsL "${archive_site}/${archive_port}/${archive_basename}" > /dev/null; then
-            echo "Staging ${archive_type} archive for upload: ${archive_basename}"
-            mkdir -p "${archive_dir}" || { status=$?; break; }
-            if [ "$(device-of-path "${archive_path}")" = "$(device-of-path "${archive_dir}")" ]; then
-                ln "${archive_path}" "${archive_dir}/${archive_basename}" || { status=$?; break; }
-            else
-                cp -p "${archive_path}" "${archive_dir}/${archive_basename}" || { status=$?; break; }
-            fi
-        else
-            echo "Already uploaded ${archive_type} archive: ${archive_basename}"
-        fi
-    done
-
-    return $status
+    # $thisdir is set in mpbb
+    # shellcheck disable=SC2154
+    "${tclsh}" "${thisdir}/tools/gather-archives.tcl" --archive_site_private "${option_archive_site_private}" \
+        --archive_site_public "${option_archive_site}" --jobs_dir "${option_jobs_dir}" \
+        --license_db_dir "${option_license_db_dir}" --staging_dir "${option_staging_dir}" \
+        "${option_work_dir}/requested_port"
+    return $?
 }
