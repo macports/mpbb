@@ -216,7 +216,7 @@ proc open_port {portname} {
         set result [mportlookup $portname]
         if {[llength $result] < 2} {
             ui_error "No such port: $portname"
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (unknown dependency '$portname') maintainers: [get_maintainers $::portname])."
+            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (unknown dependency '$portname') maintainers: [get_maintainers $::portname]."
             exit 1
         }
     } catch {{*} eCode eMessage} {
