@@ -331,8 +331,11 @@ set start_time [clock seconds]
 
 # gather a list of dependencies with the correct variants (+universal is dealt
 # with in specific ways)
-if {[catch {mportdepends $mport "activate"} result] || $result != 0} {
+if {[catch {mportdepends $mport "activate"} result]} {
     ui_error $::errorInfo
+    ui_error "mportdepends $portname activate failed: $result"
+    exit 2
+} elseif {$result != 0} {
     ui_error "mportdepends $portname activate failed: $result"
     exit 2
 }
