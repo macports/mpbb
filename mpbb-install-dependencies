@@ -28,9 +28,10 @@ install-dependencies() {
 
     # Script attempts to get to a state where all dependencies (and
     # only dependencies) of the port are active
+    # Use of readlink is due to https://trac.macports.org/ticket/64507
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
-    "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/dependencies.tcl" --failcache_dir "${option_failcache_dir}" \
+    "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/dependencies.tcl" --failcache_dir "${option_failcache_dir}" \
         --logs_dir "${option_log_dir}" "$@"
     result=$?
     if [ $result -ne 0 ]; then

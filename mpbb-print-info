@@ -37,7 +37,7 @@ print-info() {
 
         # $option_prefix is set in mpbb
         # shellcheck disable=SC2154
-        if portvariants=$("${option_prefix}/bin/port-tclsh" tools/canonical-variants.tcl "$port"); then
+        if portvariants=$("$(readlink "${option_prefix}/bin/port-tclsh")" tools/canonical-variants.tcl "$port"); then
             printf "portvariants=%s\n" "$portvariants"
         fi
 
