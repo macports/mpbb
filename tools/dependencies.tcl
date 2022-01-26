@@ -112,7 +112,9 @@ try {
 }
 
 array set portinfo [mportinfo $mport]
-if {[registry::entry imaged $portinfo(name) $portinfo(version) $portinfo(revision) $portinfo(canonical_active_variants)] ne ""} {
+# Also checking for matching archive, in case supported_archs changed
+if {[registry::entry imaged $portinfo(name) $portinfo(version) $portinfo(revision) $portinfo(canonical_active_variants)] ne ""
+        && [[ditem_key $mport workername] eval [list _archive_available]]} {
     puts "$::argv already installed, not installing or activating dependencies"
     exit 0
 }
