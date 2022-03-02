@@ -64,8 +64,23 @@ set staging_device $stat_array(dev)
 set infd [open [lindex $::argv 0] r]
 while {[gets $infd line] >= 0} {
     set portname [lindex [split $line] 0]
+    if {[catch {mportlookup $portname} result]} {
+        puts stderr "$errorInfo"
+        puts stderr "Failed to look up port '$portname': $result"
+        continue
+    } elseif {[llength $result] < 2} {
+        puts stderr "port $portname not found in the index"
+        continue
+    }
 
-    foreach e [registry::entry imaged $portname] {
+    array unset portinfo
+    array set portinfo [lindex $result 1]
+
+    foreach e [registry::entry imaged $portinfo(name)] {
+        if {[$e version] ne $portinfo(version) || [$e revision] != $portinfo(revision)} {
+            puts "Skipping [$e name] @[$e version]_[$e revision][$e variants] (not current)"
+            continue
+        }
         set requested_variations [split_variants [$e requested_variants]]
         
         lassign [check_licenses [$e name] $requested_variations] license_result license_reason
