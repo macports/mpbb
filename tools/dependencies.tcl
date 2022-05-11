@@ -420,6 +420,12 @@ proc install_dep {ditem} {
         }
         return
     }
+    # clean up any work directories left over from earlier
+    # (avoids possible errors with different variants in the statefile)
+    set build_dir [file join $macports::portdbpath build]
+    foreach dir [glob -nocomplain -directory $build_dir *] {
+        file delete -force -- $dir
+    }
     set fail 0
     set workername [ditem_key $ditem workername]
     if {[$workername eval [list _archive_available]]} {
