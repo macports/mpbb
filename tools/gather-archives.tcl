@@ -105,9 +105,11 @@ while {[gets $infd line] >= 0} {
         file mkdir $archive_staging_dir
         file stat $archive_path stat_array
         if {$stat_array(dev) == $staging_device} {
+            puts "creating hardlink to $archive_path at [file join $archive_staging_dir $archive_basename]"
             file link -hard [file join $archive_staging_dir $archive_basename] $archive_path
         } else {
-            file copy -force $archive_path $archive_staging_dir
+            puts "copying $archive_path to $archive_staging_dir"
+            file copy -force -- $archive_path $archive_staging_dir
         }
     }
 }
