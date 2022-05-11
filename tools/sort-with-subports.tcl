@@ -197,15 +197,20 @@ while {[llength $todo] > 0} {
 
         array set portinfo [lindex $result 1]
 
-        if {[info exists inputports($p)] && [info exists portinfo(subports)]} {
-            foreach subport $portinfo(subports) {
-                set splower [string tolower $subport]
-                if {![info exists portdepinfo($splower)]} {
-                    lappend todo $splower
-                }
-                if {![info exists requestedports($splower)]} {
-                    set outputports($splower) 1
-                    set requestedports($splower) 1
+        if {[info exists inputports($p)]} {
+            if {$failcache_dir ne ""} {
+                failcache_clear_all $portinfo(name)
+            }
+            if {[info exists portinfo(subports)]} {
+                foreach subport $portinfo(subports) {
+                    set splower [string tolower $subport]
+                    if {![info exists portdepinfo($splower)]} {
+                        lappend todo $splower
+                    }
+                    if {![info exists requestedports($splower)]} {
+                        set outputports($splower) 1
+                        set requestedports($splower) 1
+                    }
                 }
             }
         }

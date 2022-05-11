@@ -63,3 +63,11 @@ proc failcache_update {portname porturl canonical_variants failed} {
         file delete -force $entry_path
     }
 }
+
+# clear all entries for portname
+proc failcache_clear_all {portname} {
+    foreach f [glob -directory $::failcache_dir -nocomplain "${portname} *"] {
+        puts stderr "clearing failcache entry: [file tail $f]"
+        file delete -force $f
+    }
+}
