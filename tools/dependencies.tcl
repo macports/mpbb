@@ -315,6 +315,7 @@ proc deactivate_unneeded {portinfovar} {
     # earlier - it most likely won't be used again (and will be
     # reopened in the uncommon case that it is needed.)
     foreach e [registry::entry installed] {
+        ditem_key $mports_array([$e name]) refcnt 1
         mportclose $mports_array([$e name])
     }
 }
@@ -413,7 +414,11 @@ proc install_dep {ditem} {
     if {[registry::entry imaged $depinfo(name) $depinfo(version) $depinfo(revision) $depinfo(canonical_active_variants)] ne ""} {
         puts "Already installed, nothing to do"
         puts $::log_status_dependencies {[OK]}
-        return 0
+        catch {
+            ditem_key $ditem refcnt 1
+            mportclose $ditem
+        }
+        return
     }
     set fail 0
     set workername [ditem_key $ditem workername]
@@ -500,7 +505,7 @@ proc install_dep {ditem} {
         # needed later.
         foreach mport $macports::open_mports {
             set workername [ditem_key $mport workername]
-            if {![interp exists $workername]} {
+            if {$workername eq "" || ![interp exists $workername]} {
                 ditem_key $mport refcnt 1
                 mportclose $mport
             }
