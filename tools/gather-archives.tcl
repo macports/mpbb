@@ -4,11 +4,6 @@ package require macports
 package require registry2
 package require fetch_common
 
-if {[catch {mportinit "" "" ""} result]} {
-   puts stderr "$errorInfo"
-   error "Failed to initialize ports system: $result"
-}
-
 set archive_site_private https://packages-private.macports.org
 set archive_site_public https://packages.macports.org
 set jobs_dir ""
@@ -25,15 +20,15 @@ while {[string range [lindex $::argv 0] 0 1] eq "--"} {
             set ::argv [lreplace $::argv 0 0]
         }
         --jobs_dir {
-            set jobs_dir [lindex $::argv 1]
+            set jobs_dir [file normalize [lindex $::argv 1]]
             set ::argv [lreplace $::argv 0 0]
         }
         --license_db_dir {
-            set license_db_dir [lindex $::argv 1]
+            set license_db_dir [file normalize [lindex $::argv 1]]
             set ::argv [lreplace $::argv 0 0]
         }
         --staging_dir {
-            set staging_dir [lindex $::argv 1]
+            set staging_dir [file normalize [lindex $::argv 1]]
             set ::argv [lreplace $::argv 0 0]
         }
         default {
@@ -51,6 +46,11 @@ if {$jobs_dir eq ""} {
 }
 if {[llength $::argv] == 0} {
     error "must specify an input file"
+}
+
+if {[catch {mportinit "" "" ""} result]} {
+   puts stderr "$errorInfo"
+   error "Failed to initialize ports system: $result"
 }
 
 source ${jobs_dir}/distributable_lib.tcl
