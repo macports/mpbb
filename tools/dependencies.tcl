@@ -274,6 +274,7 @@ proc deactivate_unneeded {portinfovar} {
     }
 
     set dependents_check_list [list]
+    puts "Deactivating unneeded ports:"
     foreach e [registry::entry installed] {
         # Deactivate everything we don't need and also ports we do need that
         # are active with an old version or non-default variants. The
@@ -293,11 +294,13 @@ proc deactivate_unneeded {portinfovar} {
             if {$entryinfo(version) ne [$e version]
                     || $entryinfo(revision) != [$e revision]
                     || $entryinfo(canonical_active_variants) ne [$e variants]} {
-                lappend dependents_check_list {*}[$e dependents]
+                lappend dependents_check_list $e
+                puts stderr "[$e name] installed version @[$e version]_[$e revision][$e variants] doesn't match tree version $entryinfo(version)_$entryinfo(revision)$entryinfo(canonical_active_variants)"
             }
         }
     }
     # also deactivate dependents of any needed deactivated ports
+    puts "Deactivating ports with differing versions/variants and their dependents:"
     while {$dependents_check_list ne ""} {
         set e [lindex $dependents_check_list end]
         set dependents_check_list [lreplace ${dependents_check_list}[set dependents_check_list {}] end end]
