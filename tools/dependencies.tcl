@@ -300,7 +300,9 @@ proc deactivate_unneeded {portinfovar} {
         }
     }
     # also deactivate dependents of any needed deactivated ports
-    puts "Deactivating ports with differing versions/variants and their dependents:"
+    if {$dependents_check_list ne ""} {
+        puts "Deactivating ports with outdated versions/variants and their dependents:"
+    }
     while {$dependents_check_list ne ""} {
         set e [lindex $dependents_check_list end]
         set dependents_check_list [lreplace ${dependents_check_list}[set dependents_check_list {}] end end]
