@@ -90,6 +90,12 @@ cleanup() {
             find "${option_prefix}/var/macports/distfiles" -type f \! -newerat "4 hours ago" -print -delete | sed -E 's/^/Deleting distfile /'
             find "${option_prefix}/var/macports/distfiles" -type d -mindepth 1 -empty -print -delete | sed -E 's/^/Deleting directory /'
         fi
+        # clean out failcache at most once every 24 hours
+        timestamp="${option_work_dir}/failcache-cleanup.timestamp"
+        if [[ ! -f "$timestamp" || $(($(date +%s) - $(stat -f %m "$timestamp"))) -gt 86400 ]]; then
+            "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/failcache-cleanup.tcl" --failcache_dir "${option_failcache_dir}"
+            touch "$timestamp"
+        fi
     fi
     echo
     for dir in build logs; do
