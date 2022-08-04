@@ -118,6 +118,13 @@ if {[registry::entry imaged $portinfo(name) $portinfo(version) $portinfo(revisio
     puts "$::argv already installed, not installing or activating dependencies"
     exit 0
 }
+# Ensure build-time deps are always included for the top-level port,
+# because CI will do a build of all ports affected by a commit even if
+# the version hasn't changed and an archive is available. This
+# shouldn't result in unnecessary installations, because the check
+# above will skip installing deps for already installed ports, and the
+# buildbot will exclude ports that have an archive deployed.
+[ditem_key $mport workername] eval [list set portutil::archive_available_result 0]
 
 set toplevel_depstypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run]
 set recursive_depstypes [list depends_lib depends_run]
