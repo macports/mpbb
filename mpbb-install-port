@@ -68,12 +68,23 @@ install-port() {
     time_start=$(date +%s)
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    if ! "${option_prefix}/bin/port" -dk fetch "$@"; then
+    if ! "${option_prefix}/bin/port" -d fetch "$@"; then
         echo "Fetch of '$port' failed."
         # log: summary for the portwatcher
         echo "Fetching '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
         # Do not add to failcache. This could be a temporary problem that will
         # be resolved once the file appears on mirrors.
+        return 1
+    fi
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    if ! "${option_prefix}/bin/port" -d checksum "$@"; then
+        echo "Checksum of '$port' failed."
+        # log: summary for the portwatcher
+        echo "Checksum '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
+        # Do not add to failcache. This could be a temporary network or server problem.
+        # Delete the files so they will be re-fetched next time (hopefully correctly).
+        "${option_prefix}/bin/port" -d clean --dist "$@"
         return 1
     fi
     # $option_prefix is set in mpbb
