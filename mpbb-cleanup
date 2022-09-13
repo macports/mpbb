@@ -77,8 +77,10 @@ cleanup() {
     disk_free_before=$(disk_free "$option_prefix")
     echo "----> Free disk space before cleanup: $(format_size "$disk_free_before")"
     echo
+    # Do extra cleanup if free space is less than this (in KiB)
+    DISK_FREE_THRESHOLD=15000000
 
-    if [[ ${BUILDBOT_BUILDERNAME:-unknown} == *-watcher ]]; then
+    if [[ ${BUILDBOT_BUILDERNAME:-unknown} == *-watcher || "$disk_free_before" -lt "$DISK_FREE_THRESHOLD" ]]; then
         echo
         echo "----> Uninstalling unneeded ports"
         # $thisdir is set by mpbb and points to the directory in which this script resides
