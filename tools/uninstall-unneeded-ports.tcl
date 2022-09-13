@@ -129,6 +129,10 @@ foreach port [registry::entry imaged] {
         }
     }
     if {$uninstall} {
-        registry_uninstall::uninstall $installed_name $installed_version $installed_revision $installed_variants [list ports_force 1]
+        # Try to run the target via the portfile first, so pre/post code runs
+        if {![registry::run_target $port uninstall [list ports_force 1]]} {
+            # Portfile failed, use the registry directly
+            registry_uninstall::uninstall $installed_name $installed_version $installed_revision $installed_variants [list ports_force 1]
+        }
     }
 }
