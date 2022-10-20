@@ -55,7 +55,7 @@ try {
         ui_error "No such port: $portname"
         exit 1
     }
-} catch {{*} eCode eMessage} {
+} on error {eMessage} {
     ui_error "mportlookup $portname failed: $eMessage"
     exit 1
 }
@@ -73,7 +73,7 @@ array set portinfo [lindex $result 1]
 #try -pass_signal {...}
 try {
     set mport [mportopen $portinfo(porturl) [list subport $portname] [array get variants]]
-} catch {{*} eCode eMessage} {
+} on error {eMessage} {
     ui_error "mportopen ${portinfo(porturl)} failed: $eMessage"
     exit 1
 }

@@ -43,10 +43,10 @@ if {$showVersion} {
 # (regardless of whether or not those dependents are currently installed)
 foreach source $macports::sources {
     set source [lindex $source 0]
-    try -pass_signal {
+    macports_try -pass_signal {
         set fd [open [macports::getindex $source] r]
 
-        try -pass_signal {
+        macports_try -pass_signal {
             while {[gets $fd line] >= 0} {
                 array unset portinfo
                 set name [lindex $line 0]
@@ -65,13 +65,13 @@ foreach source $macports::sources {
                     }
                 }
             }
-        } catch {*} {
+        } on error {} {
             ui_warn "It looks like your PortIndex file for $source may be corrupt."
             throw
         } finally {
             close $fd
         }
-    } catch {*} {
+    } on error {} {
         ui_warn "Can't open index file for source: $source"
     }
 }

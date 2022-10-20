@@ -88,7 +88,7 @@ try {
         ui_error "No such port: $portname"
         exit 1
     }
-} catch {{*} eCode eMessage} {
+} on error {eMessage} {
     ui_error "mportlookup $portname failed: $eMessage"
     exit 2
 }
@@ -106,7 +106,7 @@ array set portinfo [lindex $result 1]
 #try -pass_signal {...}
 try {
     set mport [mportopen $portinfo(porturl) [list subport $portinfo(name)] [array get variants]]
-} catch {{*} eCode eMessage} {
+} on error {eMessage} {
     ui_error "mportopen ${portinfo(porturl)} failed: $eMessage"
     exit 2
 }
@@ -203,7 +203,7 @@ proc get_maintainers {args} {
             if {[llength $result] < 2} {
                 continue
             }
-        } catch {{*} eCode eMessage} {
+        } on error {eMessage} {
             ui_error "mportlookup $portname failed: $eMessage"
             continue
         }
@@ -228,14 +228,14 @@ proc open_port {portname} {
             puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (unknown dependency '$portname') maintainers: [get_maintainers $::portname]."
             exit 1
         }
-    } catch {{*} eCode eMessage} {
+    } on error {eMessage} {
         ui_error "mportlookup $portname failed: $eMessage"
         exit 2
     }
     array set portinfo [lindex $result 1]
     try {
         set mport [mportopen $portinfo(porturl) [list subport $portinfo(name)] [list]]
-    } catch {{*} eCode eMessage} {
+    } on error {eMessage} {
         ui_error "mportopen $portinfo(porturl) failed: $eMessage"
         exit 2
     }
@@ -370,7 +370,7 @@ try {
     set dlist_sorted [list]
     dlist_eval $dlist {} [list append_it]
     unset dlist
-} catch {{*} eCode eMessage} {
+} on error {eMessage} {
     ui_error "sorting dlist failed: $eMessage"
     exit 2
 }
@@ -409,7 +409,7 @@ if {$failcache_dir ne ""} {
         foreach ditem $dlist_sorted {
             checkdep_failcache $ditem
         }
-    } catch {{*} eCode eMessage} {
+    } on error {eMessage} {
         ui_error "checkdep_failcache failed: $eMessage"
         exit 2
     }
@@ -545,7 +545,7 @@ try {
     foreach ditem $dlist_sorted {
         install_dep $ditem
     }
-} catch {{*} eCode eMessage} {
+} on error {eMessage} {
     ui_error "install_dep failed: $eMessage"
     exit 2
 }
@@ -560,7 +560,7 @@ if {$any_built} {
     # active ports likely changed, so do this again
     try {
         deactivate_unneeded portinfo
-    } catch {{*} eCode eMessage} {
+    } on error {eMessage} {
         ui_error "deactivate_unneeded failed: $eMessage"
         exit 2
     }
@@ -590,7 +590,7 @@ try {
     foreach ditem $dlist_sorted {
         activate_dep $ditem
     }
-} catch {{*} eCode eMessage} {
+} on error {eMessage} {
     ui_error "activate_dep failed: $eMessage"
     exit 2
 }
