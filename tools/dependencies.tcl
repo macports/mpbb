@@ -194,7 +194,7 @@ proc collect_deps {portinfovar retvar} {
     }
 }
 
-# return mantainer email addresses for the given port names
+# return maintainer email addresses for the given port names
 proc get_maintainers {args} {
     set retlist [list]
     foreach portname $args {
@@ -327,7 +327,6 @@ proc deactivate_unneeded {portinfovar} {
     # earlier - it most likely won't be used again (and will be
     # reopened in the uncommon case that it is needed.)
     foreach e [registry::entry installed] {
-        ditem_key $mports_array([$e name]) refcnt 1
         mportclose $mports_array([$e name])
     }
 }
@@ -426,10 +425,7 @@ proc install_dep {ditem} {
     if {[registry::entry imaged $depinfo(name) $depinfo(version) $depinfo(revision) $depinfo(canonical_active_variants)] ne ""} {
         puts "Already installed, nothing to do"
         puts $::log_status_dependencies {[OK]}
-        catch {
-            ditem_key $ditem refcnt 1
-            mportclose $ditem
-        }
+        catch {mportclose $ditem}
         return
     }
     # clean up any work directories left over from earlier
@@ -479,17 +475,26 @@ proc install_dep {ditem} {
         }
 
         # Fetch and checksum the distfiles
-        # (Bad things happen if you run fetch and checksum separately on the same mport, because
-        # init functions get called twice and add duplicate distfiles. Yes, that's a bug.)
+        if {[catch {mportexec $ditem fetch} result]} {
+            puts stderr $::errorInfo
+            ui_error "Fetch failed: $result"
+            set fail 1
+        }
+        if {$fail || $result > 0} {
+            puts stderr "Fetch of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+            puts $::log_status_dependencies {[FAIL] (fetch)}
+            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to fetch dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+            exit 1
+        }
         if {[catch {mportexec $ditem checksum} result]} {
             puts stderr $::errorInfo
             ui_error "Checksum failed: $result"
             set fail 1
         }
         if {$fail || $result > 0} {
-            puts stderr "Fetch/checksum of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
-            puts $::log_status_dependencies {[FAIL] (fetch)}
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to fetch dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+            puts stderr "Checksum of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+            puts $::log_status_dependencies {[FAIL] (checksum)}
+            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to checksum dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
             exit 1
         }
         # Deactivate ports not needed for this build so they don't interfere
@@ -515,24 +520,8 @@ proc install_dep {ditem} {
         if {$::failcache_dir ne ""} {
             failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 0
         }
-        # The interp delete hack in _mportexec makes the mport of
-        # dependencies basically unusable after installing. Fortunately
-        # they should all have been processed previously, being
-        # dependencies. Make sure they all get closed now even if there
-        # are dangling refs. Then mportexec will open fresh copies if
-        # needed later.
-        foreach mport $macports::open_mports {
-            set workername [ditem_key $mport workername]
-            if {$workername eq "" || ![interp exists $workername]} {
-                ditem_key $mport refcnt 1
-                mportclose $mport
-            }
-        }
     }
-    catch {
-        ditem_key $ditem refcnt 1
-        mportclose $ditem
-    }
+    catch {mportclose $ditem}
     puts $::log_status_dependencies {[OK]}
 }
 
