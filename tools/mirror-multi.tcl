@@ -59,11 +59,10 @@ array set mirror_done [list]
 array set distfiles_results [list]
 
 proc check_mirror_done {portname} {
-    global mirror_done mirrorcache_dir
-    if {[info exists mirror_done($portname)]} {
-        return $mirror_done($portname)
+    if {[info exists ::mirror_done($portname)]} {
+        return $::mirror_done($portname)
     }
-    set cache_entry [file join $mirrorcache_dir [string toupper [string index $portname 0]] $portname]
+    set cache_entry [file join $::mirrorcache_dir [string toupper [string index $portname 0]] $portname]
     if {[file isfile $cache_entry]} {
         set result [mportlookup $portname]
         if {[llength $result] < 2} {
@@ -80,33 +79,32 @@ proc check_mirror_done {portname} {
             close $fd
             if {$portfile_hash eq $entry_hash} {
                 if {$partial eq ""} {
-                    set mirror_done($portname) 1
+                    set ::mirror_done($portname) 1
                     return 1
                 } else {
-                    set mirror_done($portname) $partial
+                    set ::mirror_done($portname) $partial
                     return $partial
                 }
             } else {
                 file delete -force $cache_entry
-                set mirror_done($portname) 0
+                set ::mirror_done($portname) 0
             }
         }
     } else {
-        set mirror_done($portname) 0
+        set ::mirror_done($portname) 0
     }
     return 0
 }
 
 proc set_mirror_done {portname value} {
-    global mirror_done mirrorcache_dir
-    if {![info exists mirror_done($portname)] || $mirror_done($portname) != 1} {
+    if {![info exists ::mirror_done($portname)] || $::mirror_done($portname) != 1} {
         set result [mportlookup $portname]
         array unset portinfo
         array set portinfo [lindex $result 1]
         set portfile [file join [macports::getportdir $portinfo(porturl)] Portfile]
         set portfile_hash [sha256 file $portfile]
 
-        set cache_dir [file join $mirrorcache_dir [string toupper [string index $portname 0]]]
+        set cache_dir [file join $::mirrorcache_dir [string toupper [string index $portname 0]]]
         file mkdir $cache_dir
         set cache_entry [file join $cache_dir $portname]
         set fd [open $cache_entry w]
@@ -115,15 +113,14 @@ proc set_mirror_done {portname value} {
             puts $fd $value
         }
         close $fd
-        set mirror_done($portname) 1
+        set ::mirror_done($portname) 1
     }
 }
 
 proc get_dep_list {portinfovar} {
-    global deptypes
     upvar $portinfovar portinfo
     set deps {}
-    foreach deptype $deptypes {
+    foreach deptype $::deptypes {
         if {[info exists portinfo($deptype)]} {
             foreach dep $portinfo($deptype) {
                 lappend deps [lindex [split $dep :] end]
@@ -150,26 +147,18 @@ proc get_variants {portinfovar} {
     return $variants
 }
 
-# work around the bug where the mirror target claims to succeed when
-# the distfile checksums did not match
-proc check_distfiles {mport} {
-    global distfiles_results
+# Remember that the distfiles have been tried already
+# (same distfiles can be shared by multiple ports)
+proc save_distfiles_results {mport succeeded} {
     if {[catch {_mportkey $mport all_dist_files} all_dist_files]} {
         # no distfiles, no problem
-        return 0
+        return
     }
     set distpath [_mportkey $mport distpath]
-    set ret 0
     foreach distfile $all_dist_files {
         set filepath [file join $distpath $distfile]
-        if {[file exists $filepath]} {
-            set distfiles_results($filepath) 1
-        } else {
-            set distfiles_results($filepath) 0
-            set ret 1
-        }
+        set ::distfiles_results($filepath) $succeeded
     }
-    return $ret
 }
 
 # Given a distribution file name, return the name without an attached tag
@@ -199,7 +188,6 @@ proc skip_mirror {mport identifier} {
     if {![info exists patchfiles]} {
         set patchfiles [list]
     }
-    global distfiles_results
     set distpath [_mportkey $mport distpath]
     set filespath [_mportkey $mport filespath]
     set any_unmirrored 0
@@ -209,9 +197,9 @@ proc skip_mirror {mport identifier} {
         }
         set distfile [getdistname $distfile]
         set filepath [file join $distpath $distfile]
-        if {![info exists distfiles_results($filepath)]} {
+        if {![info exists ::distfiles_results($filepath)]} {
             set any_unmirrored 1
-        } elseif {$distfiles_results($filepath) == 0} {
+        } elseif {$::distfiles_results($filepath) == 0} {
             ui_msg "Skipping ${identifier}: $distfile already failed checksum"
             return 2
         }
@@ -225,12 +213,10 @@ proc skip_mirror {mport identifier} {
 
 
 proc mirror_port {portinfo_list} {
-    global platforms deptypes processed
-
     array set portinfo $portinfo_list
     set portname $portinfo(name)
     set porturl $portinfo(porturl)
-    set processed($portname) 1
+    set ::processed($portname) 1
     set do_mirror 1
     set attempted 0
     set succeeded 0
@@ -249,8 +235,11 @@ proc mirror_port {portinfo_list} {
     if {$do_mirror && $skip_result == 0} {
         incr attempted
         mportexec $mport clean
-        if {[mportexec $mport mirror] == 0 && [check_distfiles $mport] == 0} {
+        if {[mportexec $mport mirror] == 0} {
+            save_distfiles_results $mport 1
             incr succeeded
+        } else {
+            save_distfiles_results $mport 0
         }
     } elseif {$skip_result == 2} {
         # count as a failure
@@ -274,8 +263,11 @@ proc mirror_port {portinfo_list} {
         if {$do_mirror && $skip_result == 0} {
             incr attempted
             mportexec $mport clean
-            if {[mportexec $mport mirror] == 0  && [check_distfiles $mport] == 0} {
+            if {[mportexec $mport mirror] == 0} {
+                save_distfiles_results $mport 1
                 incr succeeded
+            } else {
+                save_distfiles_results $mport 0
             }
         } elseif {$skip_result == 2} {
             incr attempted
@@ -283,7 +275,7 @@ proc mirror_port {portinfo_list} {
         mportclose $mport
     }
 
-    foreach {os_major os_arch} $platforms {
+    foreach {os_major os_arch} $::platforms {
         ui_msg "$portname with platform 'darwin $os_major $os_arch'"
         if {[catch {mportopen $porturl [list subport $portname os_major $os_major os_arch $os_arch] {}} mport]} {
             ui_error "mportopen $porturl failed: $mport"
@@ -296,8 +288,11 @@ proc mirror_port {portinfo_list} {
         if {$do_mirror && $skip_result == 0} {
             incr attempted
             mportexec $mport clean
-            if {[mportexec $mport mirror] == 0 && [check_distfiles $mport] == 0} {
+            if {[mportexec $mport mirror] == 0} {
+                save_distfiles_results $mport 1
                 incr succeeded
+            } else {
+                save_distfiles_results $mport 0
             }
         } elseif {$skip_result == 2} {
             incr attempted
@@ -307,7 +302,7 @@ proc mirror_port {portinfo_list} {
 
     set dep_failed 0
     foreach dep [lsort -unique $deps] {
-        if {![info exists processed($dep)] && [check_mirror_done $dep] == 0} {
+        if {![info exists ::processed($dep)] && [check_mirror_done $dep] == 0} {
             set result [mportlookup $dep]
             if {[llength $result] < 2} {
                 ui_error "No such port: $dep"
@@ -339,7 +334,7 @@ if {[lindex $::argv 0] eq "-c"} {
 
 set exitval 0
 foreach portname $::argv {
-    if {[info exists processed($portname)]} {
+    if {[info exists ::processed($portname)]} {
         ui_msg "skipping ${portname}, already processed"
         continue
     }
