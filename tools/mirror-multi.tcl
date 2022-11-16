@@ -50,6 +50,10 @@ foreach vers {10 11 12 13 14 15 16 17 18 19} {
 foreach vers {20 21 22} {
     if {${macports::os_major} != $vers} {
         lappend platforms $vers arm $vers i386
+    } elseif {${macports::os_arch} eq "i386"} {
+        lappend platforms $vers arm
+    } else {
+        lappend platforms $vers i386
     }
 }
 set deptypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run depends_test]
