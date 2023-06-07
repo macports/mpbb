@@ -86,11 +86,11 @@ cleanup() {
         # $thisdir is set by mpbb and points to the directory in which this script resides
         # shellcheck disable=SC2154
         "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/uninstall-unneeded-ports.tcl"
-        if [ ! -L "${option_prefix}/var/macports/distfiles" ]; then
+        if [ ! -e "${option_prefix}/var/macports/distfiles/ports.tar.gz" ]; then
             echo
             echo "----> Deleting distfiles"
-            find "${option_prefix}/var/macports/distfiles" -type f \! -newerat "4 hours ago" -print -delete | sed -E 's/^/Deleting distfile /'
-            find "${option_prefix}/var/macports/distfiles" -type d -mindepth 1 -empty -print -delete | sed -E 's/^/Deleting directory /'
+            find "${option_prefix}/var/macports/distfiles/" -type f \! -newerat "4 hours ago" -print -delete | sed -E 's/^/Deleting distfile /'
+            find "${option_prefix}/var/macports/distfiles/" -type d -mindepth 1 -empty -print -delete | sed -E 's/^/Deleting directory /'
         fi
         # clean out failcache at most once every week
         timestamp="${option_work_dir}/failcache-cleanup.timestamp"
