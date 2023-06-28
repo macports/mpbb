@@ -462,8 +462,7 @@ proc install_dep {ditem} {
             exit 1
         }
     } else {
-        # No archive. This should be rare, but can happen in some
-        # cases. Will build from source.
+        # No archive on the public server. May build from source.
 
         # The known_fail case should normally be caught before now, but
         # it's quick and easy to check and may save a build.
@@ -472,6 +471,12 @@ proc install_dep {ditem} {
             puts $::log_status_dependencies {[FAIL] (known_fail)}
             puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (dependency '$depinfo(name)' known to fail) maintainers: [get_maintainers $::portname $depinfo(name)]."
             exit 1
+        }
+
+        # Try archivefetch in case there's one available from e.g. ARCHIVE_SITE_LOCAL.
+        if {[catch {mportexec $ditem archivefetch} result]} {
+            puts stderr $::errorInfo
+            ui_error "Archivefetch failed: $result"
         }
 
         # Fetch and checksum the distfiles
