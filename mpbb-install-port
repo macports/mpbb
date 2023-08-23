@@ -18,16 +18,20 @@ Options:
   --source
     Build the port from source, ignoring binary archives.
 
+  --test
+    Test the port by running \`port test <port>'.
+
 Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 
 install-port() {
     local args
-    parseopt source "$@" || return
+    parseopt source,test "$@" || return
     # $option_source is set by parseopt
     # shellcheck disable=SC2154
     : "${option_source=0}"
+    : "${option_test=0}"
     set -- ${args+"${args[@]}"}
     local source_flag
     [[ "${option_source}" -eq 1 ]] && source_flag=s
@@ -108,6 +112,18 @@ install-port() {
         fi
         return 1
     fi
+
+    if [[ "${option_test}" -eq 1 ]]; then
+        if "${option_prefix}/bin/port" "-d" test "$@"; then
+            echo "Testing '$port' ... [OK]" >> "$log_subports_progress"
+        else
+            echo "Testing of '$port' failed."
+            # log: summary for the portwatcher
+            echo "Testing '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
+            return 1
+        fi
+    fi
+
     time_stop=$(date +%s)
 
     # log: summary for the portwatcher
