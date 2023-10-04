@@ -425,7 +425,6 @@ proc install_dep {ditem} {
     if {[registry::entry imaged $depinfo(name) $depinfo(version) $depinfo(revision) $depinfo(canonical_active_variants)] ne ""} {
         puts "Already installed, nothing to do"
         puts $::log_status_dependencies {[OK]}
-        catch {mportclose $ditem}
         return
     }
     # clean up any work directories left over from earlier
@@ -526,7 +525,6 @@ proc install_dep {ditem} {
             failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 0
         }
     }
-    catch {mportclose $ditem}
     puts $::log_status_dependencies {[OK]}
 }
 
@@ -561,21 +559,17 @@ if {$any_built} {
 }
 
 proc activate_dep {ditem} {
-    array set depinfo $::mportinfo_array($ditem)
-    set entrylist [registry::entry imaged $depinfo(name) $depinfo(version) $depinfo(revision) $depinfo(canonical_active_variants)]
-    if {[llength $entrylist] < 1} {
-        puts stderr "Failed to activate $depinfo(name) @$depinfo(version)_$depinfo(revision)$depinfo(canonical_active_variants): Not installed?!"
-        exit 2
-    }
-    if {[llength $entrylist] > 1} {
-        puts stderr "Warning: got multiple registry entries matching $depinfo(name) @$depinfo(version)_$depinfo(revision)$depinfo(canonical_active_variants)"
-    }
-    set e [lindex $entrylist 0]
-    if {![registry::run_target $e activate [list]]
-              && [catch {portimage::activate [$e name] [$e version] [$e revision] [$e variants] [list]} result]} {
+    set fail 0
+    if {[catch {mportexec $ditem activate} result]} {
         puts stderr $::errorInfo
-        puts stderr "Activating [$e name] @[$e version]_[$e revision][$e variants] failed: $result"
-        exit 2
+        ui_error "Activate failed: $result"
+        set fail 1
+    }
+    if {$fail || $result > 0} {
+        array set depinfo $::mportinfo_array($ditem)
+        puts stderr "Activation of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to activate dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+        exit 1
     }
 }
 
