@@ -571,6 +571,7 @@ proc activate_dep {ditem} {
         puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to activate dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
         exit 1
     }
+    catch {mportclose $ditem}
 }
 
 puts "Activating all dependencies..."
