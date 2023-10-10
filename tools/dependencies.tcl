@@ -416,7 +416,8 @@ if {$failcache_dir ne ""} {
     set start_time [clock seconds]
 }
 
-proc install_dep {ditem} {
+# Returns 0 if dep is installed, 1 if not
+proc install_dep_archive {ditem} {
     array set depinfo $::mportinfo_array($ditem)
     incr ::dependencies_counter
     set msg "Installing dependency ($::dependencies_counter of $::dependencies_count) '$depinfo(name)' with variants '$depinfo(canonical_active_variants)'"
@@ -425,7 +426,7 @@ proc install_dep {ditem} {
     if {[registry::entry imaged $depinfo(name) $depinfo(version) $depinfo(revision) $depinfo(canonical_active_variants)] ne ""} {
         puts "Already installed, nothing to do"
         puts $::log_status_dependencies {[OK]}
-        return
+        return 0
     }
     # clean up any work directories left over from earlier
     # (avoids possible errors with different variants in the statefile)
@@ -435,34 +436,14 @@ proc install_dep {ditem} {
     }
     set fail 0
     set workername [ditem_key $ditem workername]
-    if {[$workername eval [list _archive_available]]} {
-        # First fetch the archive
-        if {[catch {mportexec $ditem archivefetch} result]} {
-            puts stderr $::errorInfo
-            ui_error "Archivefetch failed: $result"
-            set fail 1
-        }
-        if {$fail || $result > 0 || [$workername eval [list find_portarchive_path]] eq ""} {
-            puts stderr "Fetching archive for dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
-            puts $::log_status_dependencies {[FAIL] (archivefetch)}
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to archivefetch dependency '$depinfo(name)')."
-            exit 1
-        }
-        # Now install it
-        if {[catch {$workername eval [list eval_targets install]} result]} {
-            puts stderr $::errorInfo
-            ui_error "Install failed: $result"
-            set fail 1
-        }
-        if {$fail || $result > 0} {
-            puts stderr "Installing from archive for dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
-            puts $::log_status_dependencies {[FAIL]}
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)')."
-            exit 1
-        }
-    } else {
-        # No archive on the public server. May build from source.
 
+    # First fetch the archive
+    if {[catch {mportexec $ditem archivefetch} result]} {
+        puts stderr $::errorInfo
+        ui_error "Archivefetch failed: $result"
+        set fail 1
+    }
+    if {$fail || $result > 0 || [$workername eval [list find_portarchive_path]] eq ""} {
         # The known_fail case should normally be caught before now, but
         # it's quick and easy to check and may save a build.
         if {[info exists depinfo(known_fail)] && [string is true -strict $depinfo(known_fail)]} {
@@ -471,59 +452,97 @@ proc install_dep {ditem} {
             puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (dependency '$depinfo(name)' known to fail) maintainers: [get_maintainers $::portname $depinfo(name)]."
             exit 1
         }
+        # This dep will have to be built, not just installed
+        puts stderr "Fetching archive for dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed."
+        puts $::log_status_dependencies {[MISSING]}
+        return 1
+    }
+    # Now install it
+    if {[catch {$workername eval [list eval_targets install]} result]} {
+        puts stderr $::errorInfo
+        ui_error "Install failed: $result"
+        set fail 1
+    }
+    if {$fail || $result > 0} {
+        puts stderr "Installing from archive for dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts $::log_status_dependencies {[FAIL]}
+        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)')."
+        exit 1
+    }
 
-        # Try archivefetch in case there's one available from e.g. ARCHIVE_SITE_LOCAL.
-        if {[catch {mportexec $ditem archivefetch} result]} {
-            puts stderr $::errorInfo
-            ui_error "Archivefetch failed: $result"
-        }
+    puts $::log_status_dependencies {[OK]}
+    return 0
+}
 
-        # Fetch and checksum the distfiles
-        if {[catch {mportexec $ditem fetch} result]} {
-            puts stderr $::errorInfo
-            ui_error "Fetch failed: $result"
-            set fail 1
-        }
-        if {$fail || $result > 0} {
-            puts stderr "Fetch of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
-            puts $::log_status_dependencies {[FAIL] (fetch)}
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to fetch dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
-            exit 1
-        }
-        if {[catch {mportexec $ditem checksum} result]} {
-            puts stderr $::errorInfo
-            ui_error "Checksum failed: $result"
-            set fail 1
-        }
-        if {$fail || $result > 0} {
-            puts stderr "Checksum of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
-            puts $::log_status_dependencies {[FAIL] (checksum)}
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to checksum dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
-            exit 1
-        }
-        # Deactivate ports not needed for this build so they don't interfere
-        deactivate_unneeded depinfo
-        # Now install
-        if {[catch {mportexec $ditem install} result]} {
-            puts stderr $::errorInfo
-            ui_error "Install failed: $result"
-            set fail 1
-        }
-        if {$fail || $result > 0} {
-            puts stderr "Build of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
-            puts $::log_status_dependencies {[FAIL]}
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+# mportexec uses this global variable, so we have to clean up between
+# doing operations (that require deps) on different ports.
+proc close_open_mports {} {
+    foreach mport $macports::open_mports {
+        catch {mportclose $mport}
+    }
+}
 
-            if {$::failcache_dir ne ""} {
-                failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 1
-            }
-            exit 1
-        }
-        set ::any_built 1
-        # Success. Clear any failcache entry.
+proc install_dep_source {portinfo_list} {
+    array set depinfo $portinfo_list
+    incr ::build_counter
+    set msg "Building dependency ($::build_counter of $::build_count) '$depinfo(name)' with variants '$depinfo(canonical_active_variants)'"
+    puts -nonewline $::log_status_dependencies "$msg ... "
+    puts "----> ${msg}"
+    close_open_mports
+    array unset ::mportinfo_array
+    set ditem [lindex [open_port $depinfo(name)] 0]
+
+    # deactivate ports not needed for this dep
+    if {[catch {deactivate_unneeded depinfo} result]} {
+        ui_error $::errorInfo
+        ui_error "deactivate_unneeded failed: $result"
+        exit 2
+    }
+
+    # Fetch and checksum the distfiles
+    if {[catch {mportexec $ditem fetch} result]} {
+        puts stderr $::errorInfo
+        ui_error "Fetch failed: $result"
+        set fail 1
+    }
+    if {$fail || $result > 0} {
+        puts stderr "Fetch of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts $::log_status_dependencies {[FAIL] (fetch)}
+        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to fetch dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+        exit 1
+    }
+    if {[catch {mportexec $ditem checksum} result]} {
+        puts stderr $::errorInfo
+        ui_error "Checksum failed: $result"
+        set fail 1
+    }
+    if {$fail || $result > 0} {
+        puts stderr "Checksum of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts $::log_status_dependencies {[FAIL] (checksum)}
+        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to checksum dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+        exit 1
+    }
+
+    # Now install
+    if {[catch {mportexec $ditem install} result]} {
+        puts stderr $::errorInfo
+        ui_error "Install failed: $result"
+        set fail 1
+    }
+    if {$fail || $result > 0} {
+        puts stderr "Build of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts $::log_status_dependencies {[FAIL]}
+        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+
         if {$::failcache_dir ne ""} {
-            failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 0
+            failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 1
         }
+        exit 1
+    }
+
+    # Success. Clear any failcache entry.
+    if {$::failcache_dir ne ""} {
+        failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 0
     }
     puts $::log_status_dependencies {[OK]}
 }
@@ -532,35 +551,92 @@ proc install_dep {ditem} {
 set macports::channels(debug) stderr
 set macports::channels(info) stdout
 set dependencies_counter 0
-set any_built 0
+set missing_deps [list]
 try {
     foreach ditem $dlist_sorted {
-        install_dep $ditem
+        if {[install_dep $ditem]} {
+            lappend missing_deps $::mportinfo_array($ditem)
+        }
     }
 } on error {eMessage} {
     ui_error "install_dep failed: $eMessage"
     exit 2
 }
-# Go back to being quiet
-set macports::channels(debug) {}
-set macports::channels(info) {}
 
 puts stderr "installing deps took [expr {[clock seconds] - $start_time}] seconds"
 set start_time [clock seconds]
 
-if {$any_built} {
-    # active ports likely changed, so do this again
+set build_count [llength $missing_deps]
+if {$build_count > 0} {
+    # Some deps are neither installed nor able to be fetched as an archive.
+    # This should ideally never happen since each dep should have had
+    # its own build previously, but failures and out-of-order builds
+    # do happen sometimes for various reasons.
+    tee "Building $build_count dependencies of $portname:" $log_status_dependencies stdout
+    set build_counter 0
+    foreach missing_dep $missing_deps {
+        install_dep_source $missing_dep
+    }
+
+    puts stderr "building missing deps took [expr {[clock seconds] - $start_time}] seconds"
+    set start_time [clock seconds]
+
+    # Now effectively start again for the main port.
+    close_open_mports
+    array unset ::mportinfo_array
     try {
-        deactivate_unneeded portinfo
+        set mport [mportopen $portinfo(porturl) [list subport $portinfo(name)] [array get variants]]
     } on error {eMessage} {
-        ui_error "deactivate_unneeded failed: $eMessage"
+        ui_error "mportopen $portinfo(porturl) failed: $eMessage"
         exit 2
     }
+    [ditem_key $mport workername] eval [list set portutil::archive_available_result 0]
+    if {[catch {deactivate_unneeded portinfo} result]} {
+        ui_error $::errorInfo
+        ui_error "deactivate_unneeded failed: $result"
+        exit 2
+    }
+
+    puts stderr "deactivating unneeded ports (again) took [expr {[clock seconds] - $start_time}] seconds"
+    set start_time [clock seconds]
+
+    # gather a list of dependencies with the correct variants (+universal is dealt
+    # with in specific ways)
+    if {[catch {mportdepends $mport "activate"} result]} {
+        ui_error $::errorInfo
+        ui_error "mportdepends $portname activate failed: $result"
+        exit 2
+    } elseif {$result != 0} {
+        ui_error "mportdepends $portname activate failed: $result"
+        exit 2
+    }
+
+   try {
+        # sort these dependencies topologically; exclude the given port itself
+        set dlist [dlist_append_dependents $macports::open_mports $mport {}]
+        dlist_delete dlist $mport
+
+        # produce a list of deps in sorted order
+        set dlist_sorted [list]
+        dlist_eval $dlist {} [list append_it]
+        unset dlist
+    } on error {eMessage} {
+        ui_error "sorting dlist failed: $eMessage"
+        exit 2
+    }
+
+    puts stderr "calculating deps (again) took [expr {[clock seconds] - $start_time}] seconds"
+    set start_time [clock seconds]
 }
 
+# Go back to being quiet
+set macports::channels(debug) {}
+set macports::channels(info) {}
+
 proc activate_dep {ditem} {
+    set workername [ditem_key $ditem workername]
     set fail 0
-    if {[catch {mportexec $ditem activate} result]} {
+    if {[catch {$workername eval [list eval_targets activate]} result]} {
         puts stderr $::errorInfo
         ui_error "Activate failed: $result"
         set fail 1
@@ -571,7 +647,6 @@ proc activate_dep {ditem} {
         puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to activate dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
         exit 1
     }
-    catch {mportclose $ditem}
 }
 
 puts "Activating all dependencies..."
