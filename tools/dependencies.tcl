@@ -499,6 +499,7 @@ proc install_dep_source {portinfo_list} {
         exit 2
     }
 
+    set fail 0
     # Fetch and checksum the distfiles
     if {[catch {mportexec $ditem fetch} result]} {
         puts stderr $::errorInfo
