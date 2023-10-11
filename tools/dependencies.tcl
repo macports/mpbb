@@ -554,12 +554,12 @@ set dependencies_counter 0
 set missing_deps [list]
 try {
     foreach ditem $dlist_sorted {
-        if {[install_dep $ditem]} {
+        if {[install_dep_archive $ditem]} {
             lappend missing_deps $::mportinfo_array($ditem)
         }
     }
 } on error {eMessage} {
-    ui_error "install_dep failed: $eMessage"
+    ui_error "install_dep_archive failed: $eMessage"
     exit 2
 }
 
