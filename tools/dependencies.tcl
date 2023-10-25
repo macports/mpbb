@@ -247,6 +247,23 @@ proc open_port {portname} {
     return [list $mport [array get portinfo]]
 }
 
+# Deactivate the given port, first deactivating any active dependents
+# it has.
+proc deactivate_with_dependents {e} {
+    if {[$e state] ne "installed"} {
+        return
+    }
+    foreach dependent [$e dependents] {
+        deactivate_with_dependents $dependent
+    }
+    if {![registry::run_target $e deactivate [list ports_nodepcheck 1]]
+              && [catch {portimage::deactivate [$e name] [$e version] [$e revision] [$e variants] [list ports_nodepcheck 1]} result]} {
+        puts stderr $::errorInfo
+        puts stderr "Deactivating [$e name] @[$e version]_[$e revision][$e variants] failed: $result"
+        exit 2
+    }
+}
+
 proc deactivate_unneeded {portinfovar} {
     upvar $portinfovar portinfo
 
@@ -289,12 +306,7 @@ proc deactivate_unneeded {portinfovar} {
         # bit, but those are much less common and this ensures
         # consistent behaviour.
         if {![info exists needed_array([$e name])]} {
-            if {![registry::run_target $e deactivate [list ports_force yes]]
-                      && [catch {portimage::deactivate [$e name] [$e version] [$e revision] [$e variants] [list ports_force yes]} result]} {
-                puts stderr $::errorInfo
-                puts stderr "Deactivating [$e name] @[$e version]_[$e revision][$e variants] failed: $result"
-                exit 2
-            }
+            deactivate_with_dependents $e
         } else {
             array unset entryinfo
             array set entryinfo $::mportinfo_array($mports_array([$e name]))
@@ -310,18 +322,8 @@ proc deactivate_unneeded {portinfovar} {
     if {$dependents_check_list ne ""} {
         puts "Deactivating ports with outdated versions/variants and their dependents:"
     }
-    while {$dependents_check_list ne ""} {
-        set e [lindex $dependents_check_list end]
-        set dependents_check_list [lreplace ${dependents_check_list}[set dependents_check_list {}] end end]
-        if {[$e state] eq "installed"} {
-            lappend dependents_check_list {*}[$e dependents]
-            if {![registry::run_target $e deactivate [list ports_force yes]]
-                      && [catch {portimage::deactivate [$e name] [$e version] [$e revision] [$e variants] [list ports_force yes]} result]} {
-                puts stderr $::errorInfo
-                puts stderr "Deactivating [$e name] @[$e version]_[$e revision][$e variants] failed: $result"
-                exit 2
-            }
-        }
+    foreach e $dependents_check_list {
+        deactivate_with_dependents $e
     }
     # For ports that remain active, close the mport that was opened
     # earlier - it most likely won't be used again (and will be
