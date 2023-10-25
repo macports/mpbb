@@ -490,6 +490,10 @@ proc install_dep_source {portinfo_list} {
     set msg "Building dependency ($::build_counter of $::build_count) '$depinfo(name)' with variants '$depinfo(canonical_active_variants)'"
     puts -nonewline $::log_status_dependencies "$msg ... "
     puts "----> ${msg}"
+
+    # Be quiet during the prep operations
+    set macports::channels(debug) {}
+    set macports::channels(info) {}
     close_open_mports
     array unset ::mportinfo_array
     set ditem [lindex [open_port $depinfo(name)] 0]
@@ -500,6 +504,10 @@ proc install_dep_source {portinfo_list} {
         ui_error "deactivate_unneeded failed: $result"
         exit 2
     }
+
+    # Show all output for the installation
+    set macports::channels(debug) stderr
+    set macports::channels(info) stdout
 
     set fail 0
     # Fetch and checksum the distfiles
@@ -585,6 +593,10 @@ if {$build_count > 0} {
     set start_time [clock seconds]
 
     # Now effectively start again for the main port.
+
+    # Go back to being quiet
+    set macports::channels(debug) {}
+    set macports::channels(info) {}
     close_open_mports
     array unset ::mportinfo_array
     try {
@@ -630,11 +642,11 @@ if {$build_count > 0} {
 
     puts stderr "calculating deps (again) took [expr {[clock seconds] - $start_time}] seconds"
     set start_time [clock seconds]
+} else {
+    # Go back to being quiet
+    set macports::channels(debug) {}
+    set macports::channels(info) {}
 }
-
-# Go back to being quiet
-set macports::channels(debug) {}
-set macports::channels(info) {}
 
 proc activate_dep {ditem} {
     set workername [ditem_key $ditem workername]
