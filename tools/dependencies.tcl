@@ -497,6 +497,10 @@ proc install_dep_source {portinfo_list} {
     close_open_mports
     array unset ::mportinfo_array
     set ditem [lindex [open_port $depinfo(name)] 0]
+    # Ensure archivefetch is not attempted at all
+    set workername [ditem_key $ditem workername]
+    $workername eval [list set portutil::archive_available_result 0]
+    $workername eval [list archive_sites]
 
     # deactivate ports not needed for this dep
     if {[catch {deactivate_unneeded depinfo} result]} {
