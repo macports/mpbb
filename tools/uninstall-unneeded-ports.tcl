@@ -91,6 +91,22 @@ proc removal_reason {installed_name} {
     return $reason
 }
 
+# Deactivate the given port, first deactivating any active dependents
+# it has.
+proc deactivate_with_dependents {e} {
+    if {[$e state] ne "installed"} {
+        return
+    }
+    foreach dependent [$e dependents] {
+        deactivate_with_dependents $dependent
+    }
+    if {![registry::run_target $e deactivate [list ports_nodepcheck 1]]
+              && [catch {portimage::deactivate [$e name] [$e version] [$e revision] [$e variants] [list ports_nodepcheck 1]} result]} {
+        puts stderr $::errorInfo
+        puts stderr "Deactivating [$e name] @[$e version]_[$e revision][$e variants] failed: $result"
+    }
+}
+
 foreach port [registry::entry imaged] {
     # Set to yes if a port should be uninstalled
     set uninstall no
@@ -129,6 +145,10 @@ foreach port [registry::entry imaged] {
         }
     }
     if {$uninstall} {
+        # Deactivate any active dependents first
+        foreach dependent [$port dependents] {
+            deactivate_with_dependents $dependent
+        }
         # Try to run the target via the portfile first, so pre/post code runs
         if {![registry::run_target $port uninstall [list ports_force 1]]} {
             # Portfile failed, use the registry directly
