@@ -178,6 +178,12 @@ failcache_test() {
         return 1
     fi
 
+    # check that it doesn't exceed NAME_MAX
+    if [ "$(echo "$key" | wc -c)" -gt 255 ]; then
+        printf "failcache key too long: %s\n" "${key}"
+        return 0
+    fi
+
     if [ -f "${option_failcache_dir}/${key}" ]; then
         printf "port %s previously failed in build %s\n" "${key}" "$(<"${option_failcache_dir}/${key}")"
         return 1
@@ -198,6 +204,11 @@ failcache_success() {
         return 1
     fi
 
+    if [ "$(echo "$key" | wc -c)" -gt 255 ]; then
+        printf "failcache key too long: %s\n" "${key}"
+        return 0
+    fi
+
     # Only remove the entry for the successful configuration, leaving
     # other entries in case they are explicitly requested later. These
     # can be removed manually if desired.
@@ -215,6 +226,11 @@ failcache_failure() {
     if [ $? -ne 0 ]; then
         err "Could not determine failcache key for" "$@"
         return 1
+    fi
+
+    if [ "$(echo "$key" | wc -c)" -gt 255 ]; then
+        printf "failcache key too long: %s\n" "${key}"
+        return 0
     fi
 
     mkdir -p "${option_failcache_dir}"
