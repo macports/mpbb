@@ -418,6 +418,15 @@ if {$failcache_dir ne ""} {
     set start_time [clock seconds]
 }
 
+# clean up any work directories left over from earlier
+# (avoids possible errors with different variants in the statefile)
+proc clean_workdirs {} {
+    set build_dir [file join $macports::portdbpath build]
+    foreach dir [glob -nocomplain -directory $build_dir *] {
+        file delete -force -- $dir
+    }
+}
+
 # Returns 0 if dep is installed, 1 if not
 proc install_dep_archive {ditem} {
     array set depinfo $::mportinfo_array($ditem)
@@ -430,12 +439,7 @@ proc install_dep_archive {ditem} {
         puts $::log_status_dependencies {[OK]}
         return 0
     }
-    # clean up any work directories left over from earlier
-    # (avoids possible errors with different variants in the statefile)
-    set build_dir [file join $macports::portdbpath build]
-    foreach dir [glob -nocomplain -directory $build_dir *] {
-        file delete -force -- $dir
-    }
+    clean_workdirs
     set fail 0
     set workername [ditem_key $ditem workername]
 
@@ -495,6 +499,7 @@ proc install_dep_source {portinfo_list} {
     set macports::channels(debug) {}
     set macports::channels(info) {}
     close_open_mports
+    clean_workdirs
     array unset ::mportinfo_array
     set ditem [lindex [open_port $depinfo(name)] 0]
     # Ensure archivefetch is not attempted at all
