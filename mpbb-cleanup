@@ -109,7 +109,7 @@ cleanup() {
         ports="$(find "${option_prefix}/var/macports/${dir}" -name '.*' -prune -o -depth 2 -type d -print | sed 's,^.*/,,' | sort -fu)"
         for port in ${ports}; do
             echo "Deleting ${dir} for ${port}"
-            rm -rf "${option_prefix}/var/macports/${dir}"/*/"${port}"
+            "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/noisy-delete.tcl" "${option_prefix}/var/macports/${dir}"/*/"${port}"
         done
         rm -rf "${option_prefix}/var/macports/${dir}"/*
         echo
