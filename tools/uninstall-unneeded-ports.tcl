@@ -156,3 +156,6 @@ foreach port [registry::entry imaged] {
         }
     }
 }
+
+mportshutdown
+exit 0

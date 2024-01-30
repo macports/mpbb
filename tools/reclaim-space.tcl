@@ -83,4 +83,5 @@ while {$cur_free < $target && [llength $candidate_list] > 0} {
     }
 }
 
+mportshutdown
 exit 0
