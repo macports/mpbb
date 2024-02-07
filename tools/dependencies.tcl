@@ -347,7 +347,7 @@ set start_time [clock seconds]
 
 # gather a list of dependencies with the correct variants (+universal is dealt
 # with in specific ways)
-if {[catch {mportdepends $mport "activate"} result]} {
+if {[catch {mportdepends $mport "activate" 1 1 0 dlist} result]} {
     ui_error $::errorInfo
     ui_error "mportdepends $portname activate failed: $result"
     exit 2
@@ -363,10 +363,6 @@ proc append_it {ditem} {
     return 0
 }
 try {
-    # sort these dependencies topologically; exclude the given port itself
-    set dlist [dlist_append_dependents $macports::open_mports $mport {}]
-    dlist_delete dlist $mport
-
     # produce a list of deps in sorted order
     set dlist_sorted [list]
     dlist_eval $dlist {} [list append_it]
@@ -626,7 +622,7 @@ if {$build_count > 0} {
 
     # gather a list of dependencies with the correct variants (+universal is dealt
     # with in specific ways)
-    if {[catch {mportdepends $mport "activate"} result]} {
+    if {[catch {mportdepends $mport "activate" 1 1 0 dlist} result]} {
         ui_error $::errorInfo
         ui_error "mportdepends $portname activate failed: $result"
         exit 2
@@ -636,10 +632,6 @@ if {$build_count > 0} {
     }
 
    try {
-        # sort these dependencies topologically; exclude the given port itself
-        set dlist [dlist_append_dependents $macports::open_mports $mport {}]
-        dlist_delete dlist $mport
-
         # produce a list of deps in sorted order
         set dlist_sorted [list]
         dlist_eval $dlist {} [list append_it]
