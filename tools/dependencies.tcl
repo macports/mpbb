@@ -347,6 +347,7 @@ set start_time [clock seconds]
 
 # gather a list of dependencies with the correct variants (+universal is dealt
 # with in specific ways)
+set dlist [list]
 if {[catch {mportdepends $mport "activate" 1 1 0 dlist} result]} {
     ui_error $::errorInfo
     ui_error "mportdepends $portname activate failed: $result"
@@ -622,6 +623,7 @@ if {$build_count > 0} {
 
     # gather a list of dependencies with the correct variants (+universal is dealt
     # with in specific ways)
+    set dlist [list]
     if {[catch {mportdepends $mport "activate" 1 1 0 dlist} result]} {
         ui_error $::errorInfo
         ui_error "mportdepends $portname activate failed: $result"
