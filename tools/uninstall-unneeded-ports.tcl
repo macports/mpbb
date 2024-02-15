@@ -157,5 +157,17 @@ foreach port [registry::entry imaged] {
     }
 }
 
+# Deactivate anything with inactive dependencies
+# (can happen with non-port: deps)
+# https://trac.macports.org/ticket/68662
+foreach port [registry::entry installed] {
+    foreach dep [$port dependencies] {
+        if {[$dep state] ne "installed"} {
+            deactivate_with_dependents $port
+            break
+        }
+    }
+}
+
 mportshutdown
 exit 0
