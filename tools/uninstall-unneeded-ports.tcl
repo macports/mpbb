@@ -163,6 +163,7 @@ foreach port [registry::entry imaged] {
 foreach port [registry::entry installed] {
     foreach dep [$port dependencies] {
         if {[$dep state] ne "installed"} {
+            ui_msg "Deactivating [$port name] because its dependency [$dep name] is not active"
             deactivate_with_dependents $port
             break
         }
