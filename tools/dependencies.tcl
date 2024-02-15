@@ -554,6 +554,10 @@ proc install_dep_source {portinfo_list} {
         if {$::failcache_dir ne ""} {
             failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 1
         }
+        ui_debug "Open mports:"
+        foreach mport $macports::open_mports {
+            ui_debug [ditem_key $ditem]
+        }
         exit 1
     }
 
