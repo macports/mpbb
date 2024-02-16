@@ -481,8 +481,10 @@ proc install_dep_archive {ditem} {
 # doing operations (that require deps) on different ports.
 proc close_open_mports {} {
     foreach mport $macports::open_mports {
+        catch {ditem_key $mport refcnt 1}
         catch {mportclose $mport}
     }
+    set macports::open_mports [list]
 }
 
 proc install_dep_source {portinfo_list} {
