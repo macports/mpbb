@@ -160,9 +160,16 @@ foreach port [registry::entry imaged] {
 # Deactivate anything with inactive dependencies
 # (can happen with non-port: deps)
 # https://trac.macports.org/ticket/68662
+
+# Track if each port has any version active
+# (ports may have multiple installed variants, e.g. universal)
+set has_active [dict create]
 foreach port [registry::entry installed] {
     foreach dep [$port dependencies] {
-        if {[$dep state] ne "installed"} {
+        if {![dict exists $has_active [$dep name]]} {
+            dict set has_active [$dep name] [expr {[registry::entry installed [$dep name]] ne ""}]
+        }
+        if {![dict get $has_active [$dep name]]} {
             ui_msg "Deactivating [$port name] because its dependency [$dep name] is not active"
             deactivate_with_dependents $port
             break
