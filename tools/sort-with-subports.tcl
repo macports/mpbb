@@ -237,7 +237,7 @@ while {[llength $todo] > 0} {
                 if {![catch {mportopen [dict get $portinfo porturl] [dict create subport [dict get $portinfo name]] ""} result]} {
                     set opened 1
                     set mport $result
-                    set portinfo [mportinfo $mport]
+                    set portinfo [dict merge $portinfo [mportinfo $mport]]
                     if {![dict exists $portinfo canonical_active_variants]} {
                         puts stderr "Warning: [dict get $portinfo name] has no canonical_active_variants"
                         dict set outputports $p 0
@@ -255,7 +255,7 @@ while {[llength $todo] > 0} {
                     if {$opened != 1} {
                         set opened 1
                         set mport $result
-                        set portinfo [mportinfo $mport]
+                        set portinfo [dict merge $portinfo [mportinfo $mport]]
                     }
                     set workername [ditem_key $mport workername]
                     set archive_name [$workername eval {get_portimage_name}]
@@ -304,7 +304,7 @@ while {[llength $todo] > 0} {
                     if {$opened != 1} {
                         set opened 1
                         set mport $result
-                        set portinfo [mportinfo $mport]
+                        set portinfo [dict merge $portinfo [mportinfo $mport]]
                     }
                     set supported_archs [_mportkey $mport supported_archs]
                     switch $::macports::os_arch {
