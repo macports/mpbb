@@ -25,12 +25,12 @@ EOF
 test-port() {
     local args
     parseopt builtin-only "$@" || return
-    # $option_builtin-only is set by parseopt
+    # $option_builtin_only is set by parseopt
     # shellcheck disable=SC2154
-    : "${option_builtin-only=0}"
+    : "${option_builtin_only=0}"
     set -- ${args+"${args[@]}"}
     local test_run_flag
-    [[ "${option_builtin-only}" -eq 1 ]] && test_run_flag="test.run=no"
+    [[ "${option_builtin_only}" -eq 1 ]] && test_run_flag="test.run=no"
     local port=${1-}
     if [[ -z "$port" ]]; then
         err "Must specify a port"
