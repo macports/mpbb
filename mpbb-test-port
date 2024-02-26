@@ -22,7 +22,7 @@ Run \`$prog help' for global options and a list of other subcommands.
 EOF
 }
 
-install-port() {
+test-port() {
     local args
     parseopt builtin-only "$@" || return
     # $option_builtin-only is set by parseopt
