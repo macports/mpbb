@@ -94,26 +94,26 @@ try {
 }
 
 # parse the given variants from the command line
-array set variants {}
+set variants [dict create]
 foreach item [lrange $::argv 1 end] {
     foreach {_ sign variant} [regexp -all -inline -- {([-+])([[:alpha:]_]+[\w\.]*)} $item] {
-        set variants($variant) $sign
+        dict set variants $variant $sign
     }
 }
 
 # open the port so we can run dependency calculation
-array set portinfo [lindex $result 1]
+lassign $result portname portinfo
 #try -pass_signal {...}
 try {
-    set mport [mportopen $portinfo(porturl) [list subport $portinfo(name)] [array get variants]]
+    set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] $variants]
 } on error {eMessage} {
-    ui_error "mportopen ${portinfo(porturl)} failed: $eMessage"
+    ui_error "mportopen of $portname from [dict get $portinfo porturl] failed: $eMessage"
     exit 2
 }
 
-array set portinfo [mportinfo $mport]
+set portinfo [mportinfo $mport]
 # Also checking for matching archive, in case supported_archs changed
-if {[registry::entry imaged $portinfo(name) $portinfo(version) $portinfo(revision) $portinfo(canonical_active_variants)] ne ""
+if {[registry::entry imaged $portname [dict get $portinfo version] [dict get $portinfo revision] [dict get $portinfo canonical_active_variants]] ne ""
         && [[ditem_key $mport workername] eval [list _archive_available]]} {
     puts "$::argv already installed, not installing or activating dependencies"
     exit 0
@@ -182,12 +182,11 @@ proc check_dep_needs_port {depspec retvar} {
 }
 
 # Get the ports needed by a given port.
-proc collect_deps {portinfovar retvar} {
-    upvar $portinfovar portinfo
+proc collect_deps {portinfo retvar} {
     upvar $retvar ret
     foreach deptype $::recursive_depstypes {
-        if {[info exists portinfo($deptype)]} {
-            foreach depspec $portinfo($deptype) {
+        if {[dict exists $portinfo $deptype]} {
+            foreach depspec [dict get $portinfo $deptype] {
                 check_dep_needs_port $depspec ret
             }
         }
@@ -207,13 +206,10 @@ proc get_maintainers {args} {
             ui_error "mportlookup $portname failed: $eMessage"
             continue
         }
-        array unset portinfo
-        array set portinfo [lindex $result 1]
-        foreach sublist [macports::unobscure_maintainers $portinfo(maintainers)] {
-            foreach {key value} $sublist {
-                if {$key eq "email"} {
-                    lappend retlist $value
-                }
+        set portinfo [lindex $result 1]
+        foreach maintainer [macports::unobscure_maintainers [dict get $portinfo maintainers]] {
+            if {[dict exists $maintainer email]} {
+                lappend retlist [dict get $maintainer email]
             }
         }
     }
@@ -225,26 +221,26 @@ proc open_port {portname} {
         set result [mportlookup $portname]
         if {[llength $result] < 2} {
             ui_error "No such port: $portname"
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (unknown dependency '$portname') maintainers: [get_maintainers $::portname]."
+            puts $::log_subports_progress "Building '$::portname' ... \[FAIL\] (unknown dependency '$portname') maintainers: [get_maintainers $::portname]."
             exit 1
         }
     } on error {eMessage} {
         ui_error "mportlookup $portname failed: $eMessage"
         exit 2
     }
-    array set portinfo [lindex $result 1]
+    lassign $result portname portinfo
     try {
-        set mport [mportopen $portinfo(porturl) [list subport $portinfo(name)] [list]]
+        set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] ""]
     } on error {eMessage} {
-        ui_error "mportopen $portinfo(porturl) failed: $eMessage"
+        ui_error "mportopen $portname from [dict get $portinfo porturl] failed: $eMessage"
         exit 2
     }
 
-    if {![info exists ::mportinfo_array($mport)]} {
-        set ::mportinfo_array($mport) [mportinfo $mport]
+    set portinfo [mportinfo $mport]
+    if {![dict exists $::mportinfo_array $mport]} {
+        dict set ::mportinfo_array $mport $portinfo
     }
-    array set portinfo $::mportinfo_array($mport)
-    return [list $mport [array get portinfo]]
+    return [list $mport $portinfo]
 }
 
 # Deactivate the given port, first deactivating any active dependents
@@ -256,41 +252,41 @@ proc deactivate_with_dependents {e} {
     foreach dependent [$e dependents] {
         deactivate_with_dependents $dependent
     }
-    if {![registry::run_target $e deactivate [list ports_nodepcheck 1]]
-              && [catch {portimage::deactivate [$e name] [$e version] [$e revision] [$e variants] [list ports_nodepcheck 1]} result]} {
+    set options [dict create ports_nodepcheck 1]
+    if {![registry::run_target $e deactivate $options]
+              && [catch {portimage::deactivate [$e name] [$e version] [$e revision] [$e variants] $options} result]} {
         puts stderr $::errorInfo
         puts stderr "Deactivating [$e name] @[$e version]_[$e revision][$e variants] failed: $result"
         exit 2
     }
 }
 
-proc deactivate_unneeded {portinfovar} {
-    upvar $portinfovar portinfo
-
+proc deactivate_unneeded {portinfo} {
     # Unfortunately mportdepends doesn't have quite the right semantics
     # to be useful here. It's concerned with what is needed and not
     # present, whereas here we're concerned with removing what we can do
     # without. Future API opportunity?
     set deplist [list]
     foreach deptype $::toplevel_depstypes {
-        if {[info exists portinfo($deptype)]} {
-            foreach depspec $portinfo($deptype) {
+        if {[dict exists $portinfo $deptype]} {
+            foreach depspec [dict get $portinfo $deptype] {
                 check_dep_needs_port $depspec deplist
             }
         }
     }
+    set needed_array [dict create]
+    set mports_array [dict create]
     while {$deplist ne ""} {
         set dep [lindex $deplist end]
         set deplist [lreplace ${deplist}[set deplist {}] end end]
-        if {![info exists needed_array($dep)]} {
-            set needed_array($dep) 1
+        if {![dict exists $needed_array $dep]} {
+            dict set needed_array $dep 1
             set needed [list]
-            lassign [open_port $dep] mports_array($dep) infolist
-            array unset depportinfo
-            array set depportinfo $infolist
-            collect_deps depportinfo needed
+            lassign [open_port $dep] mport depportinfo
+            dict set mports_array $dep $mport
+            collect_deps $depportinfo needed
             foreach newdep $needed {
-                if {![info exists needed_array($newdep)]} {
+                if {![dict exists $needed_array $newdep]} {
                     lappend deplist $newdep
                 }
             }
@@ -305,16 +301,15 @@ proc deactivate_unneeded {portinfovar} {
         # latter will reduce performance for universal installations a
         # bit, but those are much less common and this ensures
         # consistent behaviour.
-        if {![info exists needed_array([$e name])]} {
+        if {![dict exists $needed_array [$e name]]} {
             deactivate_with_dependents $e
         } else {
-            array unset entryinfo
-            array set entryinfo $::mportinfo_array($mports_array([$e name]))
-            if {$entryinfo(version) ne [$e version]
-                    || $entryinfo(revision) != [$e revision]
-                    || $entryinfo(canonical_active_variants) ne [$e variants]} {
+            set entryinfo [dict get $::mportinfo_array [dict get $mports_array [$e name]]]
+            if {[dict get $entryinfo version] ne [$e version]
+                    || [dict get $entryinfo revision] != [$e revision]
+                    || [dict get $entryinfo canonical_active_variants] ne [$e variants]} {
                 lappend dependents_check_list $e
-                puts stderr "[$e name] installed version @[$e version]_[$e revision][$e variants] doesn't match tree version $entryinfo(version)_$entryinfo(revision)$entryinfo(canonical_active_variants)"
+                puts stderr "[$e name] installed version @[$e version]_[$e revision][$e variants] doesn't match tree version [dict get $entryinfo version]_[dict get $entryinfo revision][dict get $entryinfo canonical_active_variants]"
             }
         }
     }
@@ -329,14 +324,15 @@ proc deactivate_unneeded {portinfovar} {
     # earlier - it most likely won't be used again (and will be
     # reopened in the uncommon case that it is needed.)
     foreach e [registry::entry installed] {
-        mportclose $mports_array([$e name])
+        mportclose [dict get $mports_array [$e name]]
     }
 }
 
 puts stderr "init took [expr {[clock seconds] - $start_time}] seconds"
 set start_time [clock seconds]
 
-if {[catch {deactivate_unneeded portinfo} result]} {
+set mportinfo_array [dict create]
+if {[catch {deactivate_unneeded $portinfo} result]} {
     ui_error $::errorInfo
     ui_error "deactivate_unneeded failed: $result"
     exit 2
@@ -360,7 +356,7 @@ if {[catch {mportdepends $mport "activate" 1 1 0 dlist} result]} {
 
 proc append_it {ditem} {
     lappend ::dlist_sorted $ditem
-    set ::mportinfo_array($ditem) [mportinfo $ditem]
+    dict set ::mportinfo_array $ditem [mportinfo $ditem]
     return 0
 }
 try {
@@ -391,12 +387,12 @@ puts $log_status_dependencies ""
 
 ## ensure dependencies are installed and active
 proc checkdep_failcache {ditem} {
-    array set depinfo $::mportinfo_array($ditem)
+    set depinfo [dict get $::mportinfo_array $ditem]
 
-    if {[check_failcache $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants)]} {
-        tee "Dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' has previously failed and is required." $::log_status_dependencies stderr
-        puts "Port $depinfo(name) previously failed in build [check_failcache $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) yes]"
-        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+    if {[check_failcache [dict get $depinfo name] [ditem_key $ditem porturl] [dict get $depinfo canonical_active_variants]]} {
+        tee "Dependency '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]' has previously failed and is required." $::log_status_dependencies stderr
+        puts "Port [dict get $depinfo name] previously failed in build [check_failcache [dict get $depinfo name] [ditem_key $ditem porturl] [dict get $depinfo canonical_active_variants] yes]"
+        puts $::log_subports_progress "Building '$::portname' ... \[FAIL\] (failed to install dependency '[dict get $depinfo name]') maintainers: [get_maintainers $::portname [dict get $depinfo name]]."
         # could keep going to report all deps in the failcache, but failing fast seems better
         exit 1
     }
@@ -426,12 +422,12 @@ proc clean_workdirs {} {
 
 # Returns 0 if dep is installed, 1 if not
 proc install_dep_archive {ditem} {
-    array set depinfo $::mportinfo_array($ditem)
+    set depinfo [dict get $::mportinfo_array $ditem]
     incr ::dependencies_counter
-    set msg "Installing dependency ($::dependencies_counter of $::dependencies_count) '$depinfo(name)' with variants '$depinfo(canonical_active_variants)'"
+    set msg "Installing dependency ($::dependencies_counter of $::dependencies_count) '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]'"
     puts -nonewline $::log_status_dependencies "$msg ... "
     puts "----> ${msg}"
-    if {[registry::entry imaged $depinfo(name) $depinfo(version) $depinfo(revision) $depinfo(canonical_active_variants)] ne ""} {
+    if {[registry::entry imaged [dict get $depinfo name] [dict get $depinfo version] [dict get $depinfo revision] [dict get $depinfo canonical_active_variants]] ne ""} {
         puts "Already installed, nothing to do"
         puts $::log_status_dependencies {[OK]}
         return 0
@@ -449,14 +445,14 @@ proc install_dep_archive {ditem} {
     if {$fail || $result > 0 || [$workername eval [list find_portarchive_path]] eq ""} {
         # The known_fail case should normally be caught before now, but
         # it's quick and easy to check and may save a build.
-        if {[info exists depinfo(known_fail)] && [string is true -strict $depinfo(known_fail)]} {
-            puts stderr "Dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' is known to fail, aborting."
+        if {[dict exists $depinfo known_fail] && [string is true -strict [dict get $depinfo known_fail]]} {
+            puts stderr "Dependency '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]' is known to fail, aborting."
             puts $::log_status_dependencies {[FAIL] (known_fail)}
-            puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (dependency '$depinfo(name)' known to fail) maintainers: [get_maintainers $::portname $depinfo(name)]."
+            puts $::log_subports_progress "Building '$::portname' ... \[FAIL\] (dependency '[dict get $depinfo name]' known to fail) maintainers: [get_maintainers $::portname [dict get $depinfo name]]."
             exit 1
         }
         # This dep will have to be built, not just installed
-        puts stderr "Fetching archive for dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed."
+        puts stderr "Fetching archive for dependency '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]' failed."
         puts $::log_status_dependencies {[MISSING]}
         return 1
     }
@@ -467,9 +463,9 @@ proc install_dep_archive {ditem} {
         set fail 1
     }
     if {$fail || $result > 0} {
-        puts stderr "Installing from archive for dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts stderr "Installing from archive for dependency '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]' failed, aborting."
         puts $::log_status_dependencies {[FAIL]}
-        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)')."
+        puts $::log_subports_progress "Building '$::portname' ... \[FAIL\] (failed to install dependency '$depinfo(name)')."
         exit 1
     }
 
@@ -487,10 +483,9 @@ proc close_open_mports {} {
     set macports::open_mports [list]
 }
 
-proc install_dep_source {portinfo_list} {
-    array set depinfo $portinfo_list
+proc install_dep_source {depinfo} {
     incr ::build_counter
-    set msg "Building dependency ($::build_counter of $::build_count) '$depinfo(name)' with variants '$depinfo(canonical_active_variants)'"
+    set msg "Building dependency ($::build_counter of $::build_count) '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]'"
     puts -nonewline $::log_status_dependencies "$msg ... "
     puts "----> ${msg}"
 
@@ -499,15 +494,15 @@ proc install_dep_source {portinfo_list} {
     set macports::channels(info) {}
     close_open_mports
     clean_workdirs
-    array unset ::mportinfo_array
-    set ditem [lindex [open_port $depinfo(name)] 0]
+    set ::mportinfo_array [dict create]
+    set ditem [lindex [open_port [dict get $depinfo name]] 0]
     # Ensure archivefetch is not attempted at all
     set workername [ditem_key $ditem workername]
     $workername eval [list set portutil::archive_available_result 0]
     $workername eval [list archive_sites]
 
     # deactivate ports not needed for this dep
-    if {[catch {deactivate_unneeded depinfo} result]} {
+    if {[catch {deactivate_unneeded $depinfo} result]} {
         ui_error $::errorInfo
         ui_error "deactivate_unneeded failed: $result"
         exit 2
@@ -525,9 +520,9 @@ proc install_dep_source {portinfo_list} {
         set fail 1
     }
     if {$fail || $result > 0} {
-        puts stderr "Fetch of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts stderr "Fetch of dependency '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]' failed, aborting."
         puts $::log_status_dependencies {[FAIL] (fetch)}
-        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to fetch dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+        puts $::log_subports_progress "Building '$::portname' ... \[FAIL\] (failed to fetch dependency '[dict get $depinfo name]') maintainers: [get_maintainers $::portname [dict get $depinfo name]]."
         exit 1
     }
     if {[catch {mportexec $ditem checksum} result]} {
@@ -536,9 +531,9 @@ proc install_dep_source {portinfo_list} {
         set fail 1
     }
     if {$fail || $result > 0} {
-        puts stderr "Checksum of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts stderr "Checksum of dependency '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]' failed, aborting."
         puts $::log_status_dependencies {[FAIL] (checksum)}
-        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to checksum dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+        puts $::log_subports_progress "Building '$::portname' ... \[FAIL\] (failed to checksum dependency '[dict get $depinfo name]') maintainers: [get_maintainers $::portname [dict get $depinfo name]]."
         exit 1
     }
 
@@ -549,12 +544,12 @@ proc install_dep_source {portinfo_list} {
         set fail 1
     }
     if {$fail || $result > 0} {
-        puts stderr "Build of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
+        puts stderr "Build of dependency '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]' failed, aborting."
         puts $::log_status_dependencies {[FAIL]}
-        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to install dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+        puts $::log_subports_progress "Building '$::portname' ... \[FAIL\] (failed to install dependency '[dict get $depinfo name]') maintainers: [get_maintainers $::portname [dict get $depinfo name]]."
 
         if {$::failcache_dir ne ""} {
-            failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 1
+            failcache_update [dict get $depinfo name] [ditem_key $ditem porturl] [dict get $depinfo canonical_active_variants] 1
         }
         ui_debug "Open mports:"
         foreach mport $macports::open_mports {
@@ -565,7 +560,7 @@ proc install_dep_source {portinfo_list} {
 
     # Success. Clear any failcache entry.
     if {$::failcache_dir ne ""} {
-        failcache_update $depinfo(name) [ditem_key $ditem porturl] $depinfo(canonical_active_variants) 0
+        failcache_update [dict get $depinfo name] [ditem_key $ditem porturl] [dict get $depinfo canonical_active_variants] 0
     }
     puts $::log_status_dependencies {[OK]}
 }
@@ -578,7 +573,7 @@ set missing_deps [list]
 try {
     foreach ditem $dlist_sorted {
         if {[install_dep_archive $ditem]} {
-            lappend missing_deps $::mportinfo_array($ditem)
+            lappend missing_deps [dict get $::mportinfo_array $ditem]
         }
     }
 } on error {eMessage} {
@@ -610,15 +605,15 @@ if {$build_count > 0} {
     set macports::channels(debug) {}
     set macports::channels(info) {}
     close_open_mports
-    array unset ::mportinfo_array
+    set ::mportinfo_array [dict create]
     try {
-        set mport [mportopen $portinfo(porturl) [list subport $portinfo(name)] [array get variants]]
+        set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] $variants]
     } on error {eMessage} {
-        ui_error "mportopen $portinfo(porturl) failed: $eMessage"
+        ui_error "mportopen $portname from [dict get $portinfo porturl] failed: $eMessage"
         exit 2
     }
     [ditem_key $mport workername] eval [list set portutil::archive_available_result 0]
-    if {[catch {deactivate_unneeded portinfo} result]} {
+    if {[catch {deactivate_unneeded $portinfo} result]} {
         ui_error $::errorInfo
         ui_error "deactivate_unneeded failed: $result"
         exit 2
@@ -666,9 +661,9 @@ proc activate_dep {ditem} {
         set fail 1
     }
     if {$fail || $result > 0} {
-        array set depinfo $::mportinfo_array($ditem)
-        puts stderr "Activation of dependency '$depinfo(name)' with variants '$depinfo(canonical_active_variants)' failed, aborting."
-        puts $::log_subports_progress "Building '$::portname' ... \[ERROR\] (failed to activate dependency '$depinfo(name)') maintainers: [get_maintainers $::portname $depinfo(name)]."
+        set depinfo [dict get $::mportinfo_array $ditem]
+        puts stderr "Activation of dependency '[dict get $depinfo name]' with variants '[dict get $depinfo canonical_active_variants]' failed, aborting."
+        puts $::log_subports_progress "Building '$::portname' ... \[FAIL\] (failed to activate dependency '[dict get $depinfo name]') maintainers: [get_maintainers $::portname [dict get $depinfo name]]."
         exit 1
     }
 }

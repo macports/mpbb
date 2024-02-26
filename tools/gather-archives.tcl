@@ -73,11 +73,10 @@ while {[gets $infd line] >= 0} {
         continue
     }
 
-    array unset portinfo
-    array set portinfo [lindex $result 1]
+    lassign $result portname portinfo
 
-    foreach e [registry::entry imaged $portinfo(name)] {
-        if {[$e version] ne $portinfo(version) || [$e revision] != $portinfo(revision)} {
+    foreach e [registry::entry imaged $portname] {
+        if {[$e version] ne [dict get $portinfo version] || [$e revision] != [dict get $portinfo revision]} {
             puts "Skipping [$e name] @[$e version]_[$e revision][$e variants] (not current)"
             continue
         }

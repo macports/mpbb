@@ -19,18 +19,18 @@ package require Tclx
 mportinit
 
 random seed
-array set candidates {}
+set candidates [dict create]
 
 fs-traverse -ignoreErrors -- f [list ${macports::portdbpath}/distfiles] {
     if {[file type $f] eq "file"} {
         # 0 for distfile, 1 for port
-        set candidates($f) 0
+        dict set candidates $f 0
     }
 }
 
 foreach port [registry::entry imaged] {
     if {[$port dependents] eq ""} {
-        set candidates($port) 1
+        dict set candidates $port 1
     }
 }
 
@@ -44,7 +44,7 @@ proc active_files_size {port} {
     return $total
 }
 
-set candidate_list [array names candidates]
+set candidate_list [dict keys $candidates]
 # It is tempting to sort by size and delete the largest things first,
 # but picking randomly greatly reduces the chance that we will just
 # uninstall one huge port that will immediately be reinstalled as a
@@ -53,7 +53,7 @@ while {$cur_free < $target && [llength $candidate_list] > 0} {
     set i [random [llength $candidate_list]]
     set chosen [lindex $candidate_list $i]
     set candidate_list [lreplace ${candidate_list}[set candidate_list {}] $i $i]
-    if {$candidates($chosen) == 0} {
+    if {[dict get $candidates $chosen] == 0} {
         set size [file size $chosen]
         incr cur_free $size
         puts "Deleting $chosen ($size bytes)"
@@ -69,14 +69,14 @@ while {$cur_free < $target && [llength $candidate_list] > 0} {
         set deps [$chosen dependencies]
         puts "Uninstalling [$chosen name] @[$chosen version]_[$chosen revision][$chosen variants] ($size bytes)"
         if {!$dryrun} {
-            if {![registry::run_target $chosen uninstall [list]]} {
+            if {![registry::run_target $chosen uninstall ""]} {
                 # Portfile failed, use the registry directly
-                registry_uninstall::uninstall [$chosen name] [$chosen version] [$chosen revision] [$chosen variants] [list]
+                registry_uninstall::uninstall [$chosen name] [$chosen version] [$chosen revision] [$chosen variants] ""
             }
         }
         foreach dep $deps {
-            if {![info exists candidates($dep)] && [$dep dependents] eq ""} {
-                set candidates($dep) 1
+            if {![dict exists $candidates $dep] && [$dep dependents] eq ""} {
+                dict set candidates $dep 1
                 lappend candidate_list $dep
             }
         }

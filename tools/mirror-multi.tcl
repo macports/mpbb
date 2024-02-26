@@ -58,13 +58,13 @@ foreach vers {20 21 22 23} {
 }
 set deptypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run depends_test]
 
-array set processed [list]
-array set mirror_done [list]
-array set distfiles_results [list]
+set processed [dict create]
+set mirror_done [dict create]
+set distfiles_results [dict create]
 
 proc check_mirror_done {portname} {
-    if {[info exists ::mirror_done($portname)]} {
-        return $::mirror_done($portname)
+    if {[dict exists $::mirror_done $portname]} {
+        return [dict get $::mirror_done $portname]
     }
     set cache_entry [file join $::mirrorcache_dir [string toupper [string index $portname 0]] $portname]
     if {[file isfile $cache_entry]} {
@@ -72,9 +72,8 @@ proc check_mirror_done {portname} {
         if {[llength $result] < 2} {
             return 0
         }
-        array unset portinfo
-        array set portinfo [lindex $result 1]
-        set portfile [file join [macports::getportdir $portinfo(porturl)] Portfile]
+        set portinfo [lindex $result 1]
+        set portfile [file join [macports::getportdir [dict get $portinfo porturl]] Portfile]
         if {[file isfile $portfile]} {
             set portfile_hash [sha256 file $portfile]
             set fd [open $cache_entry]
@@ -83,29 +82,28 @@ proc check_mirror_done {portname} {
             close $fd
             if {$portfile_hash eq $entry_hash} {
                 if {$partial eq ""} {
-                    set ::mirror_done($portname) 1
+                    dict set ::mirror_done $portname 1
                     return 1
                 } else {
-                    set ::mirror_done($portname) $partial
+                    dict set ::mirror_done $portname $partial
                     return $partial
                 }
             } else {
                 file delete -force $cache_entry
-                set ::mirror_done($portname) 0
+                dict set ::mirror_done $portname 0
             }
         }
     } else {
-        set ::mirror_done($portname) 0
+        dict set ::mirror_done $portname 0
     }
     return 0
 }
 
 proc set_mirror_done {portname value} {
-    if {![info exists ::mirror_done($portname)] || $::mirror_done($portname) != 1} {
+    if {![dict exists $::mirror_done $portname] || [dict get $::mirror_done $portname] != 1} {
         set result [mportlookup $portname]
-        array unset portinfo
-        array set portinfo [lindex $result 1]
-        set portfile [file join [macports::getportdir $portinfo(porturl)] Portfile]
+        set portinfo [lindex $result 1]
+        set portfile [file join [macports::getportdir [dict get $portinfo porturl]] Portfile]
         set portfile_hash [sha256 file $portfile]
 
         set cache_dir [file join $::mirrorcache_dir [string toupper [string index $portname 0]]]
@@ -117,16 +115,15 @@ proc set_mirror_done {portname value} {
             puts $fd $value
         }
         close $fd
-        set ::mirror_done($portname) 1
+        dict set ::mirror_done $portname 1
     }
 }
 
-proc get_dep_list {portinfovar} {
-    upvar $portinfovar portinfo
-    set deps {}
+proc get_dep_list {portinfo} {
+    set deps [list]
     foreach deptype $::deptypes {
-        if {[info exists portinfo($deptype)]} {
-            foreach dep $portinfo($deptype) {
+        if {[dict exists $portinfo $deptype]} {
+            foreach dep [dict get $portinfo $deptype] {
                 lappend deps [lindex [split $dep :] end]
             }
         }
@@ -134,18 +131,14 @@ proc get_dep_list {portinfovar} {
     return $deps
 }
 
-proc get_variants {portinfovar} {
-    upvar $portinfovar portinfo
-    if {![info exists portinfo(vinfo)]} {
+proc get_variants {portinfo} {
+    if {![dict exists $portinfo vinfo]} {
         return {}
     }
     set variants {}
-    array set vinfo $portinfo(vinfo)
-    foreach v [array names vinfo] {
-        array unset variant
-        array set variant $vinfo($v)
-        if {![info exists variant(is_default)] || $variant(is_default) ne "+"} {
-            lappend variants $v
+    dict for {vname variant} [dict get $portinfo vinfo] {
+        if {![dict exists $variant is_default] || [dict get $variant is_default] ne "+"} {
+            lappend variants $vname
         }
     }
     return $variants
@@ -161,7 +154,7 @@ proc save_distfiles_results {mport succeeded} {
     set distpath [_mportkey $mport distpath]
     foreach distfile $all_dist_files {
         set filepath [file join $distpath $distfile]
-        set ::distfiles_results($filepath) $succeeded
+        dict set ::distfiles_results $filepath $succeeded
     }
 }
 
@@ -201,9 +194,9 @@ proc skip_mirror {mport identifier} {
         }
         set distfile [getdistname $distfile]
         set filepath [file join $distpath $distfile]
-        if {![info exists ::distfiles_results($filepath)]} {
+        if {![dict exists $::distfiles_results $filepath]} {
             set any_unmirrored 1
-        } elseif {$::distfiles_results($filepath) == 0} {
+        } elseif {[dict get $::distfiles_results $filepath] == 0} {
             ui_msg "Skipping ${identifier}: $distfile already failed checksum"
             return 2
         }
@@ -216,24 +209,22 @@ proc skip_mirror {mport identifier} {
 }
 
 
-proc mirror_port {portinfo_list} {
-    array set portinfo $portinfo_list
-    set portname $portinfo(name)
-    set porturl $portinfo(porturl)
-    set ::processed($portname) 1
+proc mirror_port {portinfo} {
+    set portname [dict get $portinfo name]
+    set porturl [dict get $portinfo porturl]
+    dict set ::processed $portname 1
     set do_mirror 1
     set attempted 0
     set succeeded 0
-    if {[lsearch -exact -nocase $portinfo(license) "nomirror"] >= 0} {
+    if {[lsearch -exact -nocase [dict get $portinfo license] "nomirror"] >= 0} {
         ui_msg "Not mirroring $portname due to license"
         set do_mirror 0
     }
-    if {[catch {mportopen $porturl [list subport $portname] {}} mport]} {
+    if {[catch {mportopen $porturl [dict create subport $portname] {}} mport]} {
         ui_error "mportopen $porturl failed: $mport"
         return 1
     }
-    array unset portinfo
-    array set portinfo [mportinfo $mport]
+    set portinfo [mportinfo $mport]
 
     set skip_result [skip_mirror $mport $portname]
     if {$do_mirror && $skip_result == 0} {
@@ -251,18 +242,17 @@ proc mirror_port {portinfo_list} {
     }
     mportclose $mport
 
-    set deps [get_dep_list portinfo]
-    set variants [get_variants portinfo]
+    set deps [get_dep_list $portinfo]
+    set variants [get_variants $portinfo]
 
     foreach variant $variants {
         ui_msg "$portname +${variant}"
-        if {[catch {mportopen $porturl [list subport $portname] [list $variant +]} mport]} {
+        if {[catch {mportopen $porturl [dict create subport $portname] [dict create $variant +]} mport]} {
             ui_error "mportopen $porturl failed: $mport"
             continue
         }
-        array unset portinfo
-        array set portinfo [mportinfo $mport]
-        lappend deps {*}[get_dep_list portinfo]
+        set portinfo [mportinfo $mport]
+        lappend deps {*}[get_dep_list $portinfo]
         set skip_result [skip_mirror $mport "$portname +${variant}"]
         if {$do_mirror && $skip_result == 0} {
             incr attempted
@@ -281,13 +271,12 @@ proc mirror_port {portinfo_list} {
 
     foreach {os_major os_arch} $::platforms {
         ui_msg "$portname with platform 'darwin $os_major $os_arch'"
-        if {[catch {mportopen $porturl [list subport $portname os_major $os_major os_arch $os_arch] {}} mport]} {
+        if {[catch {mportopen $porturl [dict create subport $portname os_major $os_major os_arch $os_arch] {}} mport]} {
             ui_error "mportopen $porturl failed: $mport"
             continue
         }
-        array unset portinfo
-        array set portinfo [mportinfo $mport]
-        lappend deps {*}[get_dep_list portinfo]
+        set portinfo [mportinfo $mport]
+        lappend deps {*}[get_dep_list $portinfo]
         set skip_result [skip_mirror $mport "$portname darwin $os_major $os_arch"]
         if {$do_mirror && $skip_result == 0} {
             incr attempted
@@ -306,7 +295,7 @@ proc mirror_port {portinfo_list} {
 
     set dep_failed 0
     foreach dep [lsort -unique $deps] {
-        if {![info exists ::processed($dep)] && [check_mirror_done $dep] == 0} {
+        if {![dict exists $::processed $dep] && [check_mirror_done $dep] == 0} {
             set result [mportlookup $dep]
             if {[llength $result] < 2} {
                 ui_error "No such port: $dep"
@@ -338,7 +327,7 @@ if {[lindex $::argv 0] eq "-c"} {
 
 set exitval 0
 foreach portname $::argv {
-    if {[info exists ::processed($portname)]} {
+    if {[dict exists $::processed $portname]} {
         ui_msg "skipping ${portname}, already processed"
         continue
     }

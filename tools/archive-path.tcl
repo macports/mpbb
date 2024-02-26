@@ -30,10 +30,10 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 proc split_variants {variants} {
-    set result {}
+    set result [dict create]
     set l [regexp -all -inline -- {([-+])([[:alpha:]_]+[\w\.]*)} $variants]
     foreach { match sign variant } $l {
-        lappend result $variant $sign
+        dict set result $variant $sign
     }
     return $result
 }
@@ -59,9 +59,9 @@ if {[catch {set one_result [mportlookup $portname]}] || [llength $one_result] < 
     exit 0
 }
 
-array set portinfo [lindex $one_result 1]
-if {[info exists portinfo(porturl)]} {
-    if {[catch {set mport [mportopen $portinfo(porturl) [list subport $portinfo(name)] $variations]}]} {
+lassign $one_result portname portinfo
+if {[dict exists $portinfo porturl]} {
+    if {[catch {set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] $variations]}]} {
         ui_warn "failed to open port: $portname"
         puts "nonexistent"
         exit 0

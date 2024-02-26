@@ -32,10 +32,10 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 proc split_variants {variants} {
-    set result {}
+    set result [dict create]
     set l [regexp -all -inline -- {([-+])([[:alpha:]_]+[\w\.]*)} $variants]
     foreach { match sign variant } $l {
-        lappend result $variant $sign
+        dict set result $variant $sign
     }
     return $result
 }
@@ -74,21 +74,21 @@ try {
 }
 
 # open the port so we can run dependency calculation
-array set portinfo [lindex $result 1]
+lassign $result portname portinfo
 #try -pass_signal {...}
 try {
-    set mport [mportopen $portinfo(porturl) [list subport $portname] $variations]
+    set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] $variations]
 } on error {eMessage} {
-    ui_error "mportopen ${portinfo(porturl)} failed: $eMessage"
+    ui_error "mportopen for $portname with url [dict get $portinfo porturl] failed: $eMessage"
     exit 1
 }
 
 # obtain PortInfo array for this port and print the list of included
 # PortGroups
-array set portinfo [mportinfo $mport]
+set portinfo [mportinfo $mport]
 # only ports that include at least one PortGroup have portinfo(portgroups) set
-if {[info exists portinfo(portgroups)]} {
-    foreach portgroup $portinfo(portgroups) {
+if {[dict exists $portinfo portgroups]} {
+    foreach portgroup [dict get $portinfo portgroups] {
         lassign $portgroup group version
         puts "$group-$version"
     }

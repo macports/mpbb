@@ -61,22 +61,22 @@ try {
 }
 
 # parse the given variants from the command line
-array set variants {}
+set variants [dict create]
 foreach item [lrange $::argv 1 end] {
     foreach {_ sign variant} [regexp -all -inline -- {([-+])([[:alpha:]_]+[\w\.]*)} $item] {
-        set variants($variant) $sign
+        dict set variants $variant $sign
     }
 }
 
 # open the port to get its active variants
-array set portinfo [lindex $result 1]
+lassign $result portname portinfo
 #try -pass_signal {...}
 try {
-    set mport [mportopen $portinfo(porturl) [list subport $portname] [array get variants]]
+    set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] $variants]
 } on error {eMessage} {
-    ui_error "mportopen ${portinfo(porturl)} failed: $eMessage"
+    ui_error "mportopen $portname from [dict get $portinfo porturl] failed: $eMessage"
     exit 1
 }
 
-array set info [mportinfo $mport]
-puts $info(canonical_active_variants)
+set portinfo [mportinfo $mport]
+puts [dict get $portinfo canonical_active_variants]

@@ -33,9 +33,8 @@ if {$failcache_dir eq ""} {
         file delete -force [file join $failcache_dir $f]
         continue
     }
-    array unset portinfo
-    array set portinfo [lindex $result 1]
-    set hash [port_files_checksum $portinfo(porturl)]
+    set portinfo [lindex $result 1]
+    set hash [port_files_checksum [dict get $portinfo porturl]]
     if {$entry_hash ne $hash} {
         puts "Removing stale failcache entry: $f"
         file delete -force [file join $failcache_dir $f]
