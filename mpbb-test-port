@@ -1,0 +1,57 @@
+#!/bin/bash
+# -*- coding: utf-8; mode: sh; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=sh:et:sw=4:ts=4:sts=4
+
+# Note:
+# This script is sourced by the mpbb wrapper script.
+# Do not execute this directly!
+
+test-port-usage() {
+    # "prog" is defined in mpbb-help.
+    # shellcheck disable=SC2154
+    cat <<EOF
+usage: $prog [<global opts>] test-port <port>
+
+Run tests for the given port.
+
+Options:
+
+  --builtin-only
+    Run only built-in tests, skipping those defined in the Portfile.
+
+Run \`$prog help' for global options and a list of other subcommands.
+EOF
+}
+
+install-port() {
+    local args
+    parseopt builtin-only "$@" || return
+    # $option_builtin-only is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_builtin-only=0}"
+    set -- ${args+"${args[@]}"}
+    local test_run_flag
+    [[ "${option_builtin-only}" -eq 1 ]] && test_run_flag="test.run=no"
+    local port=${1-}
+    if [[ -z "$port" ]]; then
+        err "Must specify a port"
+        return 1
+    fi
+    # $option_log_dir is set in mpbb
+    # shellcheck disable=SC2154
+    #local log_subports_progress="${option_log_dir}/ports-progress.txt"
+
+    # prepare the log files and make sure to start with empty ones
+    mkdir -p "${option_log_dir}"
+
+    # $option_prefix is set in mpbb
+    # shellcheck disable=SC2154
+    if ! "${option_prefix}/bin/port" -dkn test "$@" ${test_run_flag}; then
+        echo "Testing '$port' failed."
+        # log: summary for the portwatcher
+        #echo "Testing '$port' ... [FAIL] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
+        return 1
+    fi
+
+    # log: summary for the portwatcher
+    #echo "Testing '$port' ... [OK]" >> "$log_subports_progress"
+}
