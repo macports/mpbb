@@ -63,7 +63,7 @@ proc process_port_deps {portname} {
 }
 
 proc check_failing_deps {portname} {
-    if {[dict exists ::failingports $portname]} {
+    if {[dict exists $::failingports $portname]} {
         return [dict get $::failingports $portname]
     }
     # Protect against dependency cycles
