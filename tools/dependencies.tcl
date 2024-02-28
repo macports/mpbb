@@ -111,7 +111,7 @@ try {
     exit 2
 }
 
-set portinfo [mportinfo $mport]
+set portinfo [dict merge $portinfo [mportinfo $mport]]
 # Also checking for matching archive, in case supported_archs changed
 if {[registry::entry imaged $portname [dict get $portinfo version] [dict get $portinfo revision] [dict get $portinfo canonical_active_variants]] ne ""
         && [[ditem_key $mport workername] eval [list _archive_available]]} {
@@ -236,7 +236,7 @@ proc open_port {portname} {
         exit 2
     }
 
-    set portinfo [mportinfo $mport]
+    set portinfo [dict merge $portinfo [mportinfo $mport]]
     if {![dict exists $::mportinfo_array $mport]} {
         dict set ::mportinfo_array $mport $portinfo
     }
