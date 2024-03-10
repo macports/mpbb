@@ -63,10 +63,12 @@ set mirror_done [dict create]
 set distfiles_results [dict create]
 
 proc check_mirror_done {portname} {
-    if {[dict exists $::mirror_done $portname]} {
-        return [dict get $::mirror_done $portname]
+    global mirror_done
+    if {[dict exists $mirror_done $portname]} {
+        return [dict get $mirror_done $portname]
     }
-    set cache_entry [file join $::mirrorcache_dir [string toupper [string index $portname 0]] $portname]
+    global mirrorcache_dir
+    set cache_entry [file join $mirrorcache_dir [string toupper [string index $portname 0]] $portname]
     if {[file isfile $cache_entry]} {
         set result [mportlookup $portname]
         if {[llength $result] < 2} {
@@ -82,31 +84,33 @@ proc check_mirror_done {portname} {
             close $fd
             if {$portfile_hash eq $entry_hash} {
                 if {$partial eq ""} {
-                    dict set ::mirror_done $portname 1
+                    dict set mirror_done $portname 1
                     return 1
                 } else {
-                    dict set ::mirror_done $portname $partial
+                    dict set mirror_done $portname $partial
                     return $partial
                 }
             } else {
                 file delete -force $cache_entry
-                dict set ::mirror_done $portname 0
+                dict set mirror_done $portname 0
             }
         }
     } else {
-        dict set ::mirror_done $portname 0
+        dict set mirror_done $portname 0
     }
     return 0
 }
 
 proc set_mirror_done {portname value} {
-    if {![dict exists $::mirror_done $portname] || [dict get $::mirror_done $portname] != 1} {
+    global mirror_done
+    if {![dict exists $mirror_done $portname] || [dict get $mirror_done $portname] != 1} {
+        global mirrorcache_dir
         set result [mportlookup $portname]
         set portinfo [lindex $result 1]
         set portfile [file join [macports::getportdir [dict get $portinfo porturl]] Portfile]
         set portfile_hash [sha256 file $portfile]
 
-        set cache_dir [file join $::mirrorcache_dir [string toupper [string index $portname 0]]]
+        set cache_dir [file join $mirrorcache_dir [string toupper [string index $portname 0]]]
         file mkdir $cache_dir
         set cache_entry [file join $cache_dir $portname]
         set fd [open $cache_entry w]
@@ -115,13 +119,14 @@ proc set_mirror_done {portname value} {
             puts $fd $value
         }
         close $fd
-        dict set ::mirror_done $portname 1
+        dict set mirror_done $portname 1
     }
 }
 
 proc get_dep_list {portinfo} {
+    global deptypes
     set deps [list]
-    foreach deptype $::deptypes {
+    foreach deptype $deptypes {
         if {[dict exists $portinfo $deptype]} {
             foreach dep [dict get $portinfo $deptype] {
                 lappend deps [lindex [split $dep :] end]
@@ -151,10 +156,11 @@ proc save_distfiles_results {mport succeeded} {
         # no distfiles, no problem
         return
     }
+    global distfiles_results
     set distpath [_mportkey $mport distpath]
     foreach distfile $all_dist_files {
         set filepath [file join $distpath $distfile]
-        dict set ::distfiles_results $filepath $succeeded
+        dict set distfiles_results $filepath $succeeded
     }
 }
 
@@ -179,6 +185,7 @@ proc skip_mirror {mport identifier} {
         # no distfiles, no need to mirror
         return 1
     }
+    global distfiles_results
     if {![info exists distfiles]} {
         set distfiles [list]
     }
@@ -194,9 +201,9 @@ proc skip_mirror {mport identifier} {
         }
         set distfile [getdistname $distfile]
         set filepath [file join $distpath $distfile]
-        if {![dict exists $::distfiles_results $filepath]} {
+        if {![dict exists $distfiles_results $filepath]} {
             set any_unmirrored 1
-        } elseif {[dict get $::distfiles_results $filepath] == 0} {
+        } elseif {[dict get $distfiles_results $filepath] == 0} {
             ui_msg "Skipping ${identifier}: $distfile already failed checksum"
             return 2
         }
@@ -210,9 +217,10 @@ proc skip_mirror {mport identifier} {
 
 
 proc mirror_port {portinfo} {
+    global processed platforms
     set portname [dict get $portinfo name]
     set porturl [dict get $portinfo porturl]
-    dict set ::processed $portname 1
+    dict set processed $portname 1
     set do_mirror 1
     set attempted 0
     set succeeded 0
@@ -269,7 +277,7 @@ proc mirror_port {portinfo} {
         mportclose $mport
     }
 
-    foreach {os_major os_arch} $::platforms {
+    foreach {os_major os_arch} $platforms {
         ui_msg "$portname with platform 'darwin $os_major $os_arch'"
         if {[catch {mportopen $porturl [dict create subport $portname os_major $os_major os_arch $os_arch] {}} mport]} {
             ui_error "mportopen $porturl failed: $mport"
@@ -295,7 +303,7 @@ proc mirror_port {portinfo} {
 
     set dep_failed 0
     foreach dep [lsort -unique $deps] {
-        if {![dict exists $::processed $dep] && [check_mirror_done $dep] == 0} {
+        if {![dict exists $processed $dep] && [check_mirror_done $dep] == 0} {
             set result [mportlookup $dep]
             if {[llength $result] < 2} {
                 ui_error "No such port: $dep"
@@ -320,14 +328,14 @@ proc mirror_port {portinfo} {
 }
 
 set mirrorcache_dir /tmp/mirrorcache
-if {[lindex $::argv 0] eq "-c"} {
-    set mirrorcache_dir [lindex $::argv 1]
-    set ::argv [lrange $::argv 2 end]
+if {[lindex $argv 0] eq "-c"} {
+    set mirrorcache_dir [lindex $argv 1]
+    set argv [lrange $argv 2 end]
 }
 
 set exitval 0
-foreach portname $::argv {
-    if {[dict exists $::processed $portname]} {
+foreach portname $argv {
+    if {[dict exists $processed $portname]} {
         ui_msg "skipping ${portname}, already processed"
         continue
     }

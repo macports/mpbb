@@ -48,60 +48,63 @@ proc ui_channels {priority} {
 
 
 proc process_port_deps {portname} {
-    set deplist [dict get $::portdepinfo $portname]
-    dict unset ::portdepinfo $portname
-    if {[dict exists $::portsoftdeps $portname]} {
-        lappend deplist {*}[dict get $::portsoftdeps $portname]
-        dict unset ::portsoftdeps $portname
+    global portdepinfo portsoftdeps portlist
+    set deplist [dict get $portdepinfo $portname]
+    dict unset portdepinfo $portname
+    if {[dict exists $portsoftdeps $portname]} {
+        lappend deplist {*}[dict get $portsoftdeps $portname]
+        dict unset portsoftdeps $portname
     }
     foreach portdep $deplist {
-        if {[dict exists $::portdepinfo $portdep]} {
+        if {[dict exists $portdepinfo $portdep]} {
             process_port_deps $portdep
         }
     }
-    lappend ::portlist $portname
+    lappend portlist $portname
 }
 
 proc check_failing_deps {portname} {
-    if {[dict exists $::failingports $portname]} {
-        return [dict get $::failingports $portname]
+    global failingports portdepinfo outputports requestedports \
+           canonicalnames
+    if {[dict exists $failingports $portname]} {
+        return [dict get $failingports $portname]
     }
     # Protect against dependency cycles
-    dict set ::failingports $portname [list 3 $portname]
-    foreach portdep [dict get $::portdepinfo $portname] {
+    dict set failingports $portname [list 3 $portname]
+    foreach portdep [dict get $portdepinfo $portname] {
         set dep_ret [check_failing_deps $portdep]
         # 0 = ok, 1 = known_fail, 2 = failcache, 3 = dep cycle
         set status [lindex $dep_ret 0]
         if {$status != 0} {
             set failed_dep [lindex $dep_ret 1]
-            if {[dict get $::outputports $portname] == 1} {
+            if {[dict get $outputports $portname] == 1} {
                 if {$status == 1} {
-                    if {[dict exists $::requestedports $portname]} {
-                        puts stderr "Excluding [dict get $::canonicalnames $portname] because its dependency '$failed_dep' is known to fail"
+                    if {[dict exists $requestedports $portname]} {
+                        puts stderr "Excluding [dict get $canonicalnames $portname] because its dependency '$failed_dep' is known to fail"
                     }
-                    dict set ::outputports $portname 0
-                } elseif {$status == 2 && ![dict exists $::requestedports $portname]} {
+                    dict set outputports $portname 0
+                } elseif {$status == 2 && ![dict exists $requestedports $portname]} {
                     # Exclude deps that will fail due to their own dep being in the failcache.
                     # But still output requested ports so the failure will be reported.
-                    dict set ::outputports $portname 0
+                    dict set outputports $portname 0
                 } elseif {$status == 3} {
-                    if {[dict exists $::requestedports $portname]} {
-                        puts stderr "Warning: [dict get $::canonicalnames $portname] appears to have a cyclic dependency involving '$portdep'"
+                    if {[dict exists $requestedports $portname]} {
+                        puts stderr "Warning: [dict get $canonicalnames $portname] appears to have a cyclic dependency involving '$portdep'"
                     }
                     # Some cycles involving depends_test exist, which don't cause
                     # problems yet only because we don't run tests.
-                    #dict set ::outputports $portname 0
+                    #dict set outputports $portname 0
                 }
             }
             # keep processing other deps for now if there was a dep cycle
             if {$status != 3} {
-                dict set ::failingports $portname [list $status $failed_dep]
-                return [dict get $::failingports $portname]
+                dict set failingports $portname [list $status $failed_dep]
+                return [dict get $failingports $portname]
             }
         }
     }
-    dict set ::failingports $portname [list 0 ""]
-    return [dict get $::failingports $portname]
+    dict set failingports $portname [list 0 ""]
+    return [dict get $failingports $portname]
 }
 
 source [file join [file dirname [info script]] failcache.tcl]

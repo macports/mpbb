@@ -25,13 +25,14 @@ proc port_files_checksum {porturl} {
 }
 
 proc check_failcache {portname porturl canonical_variants {return_contents no}} {
+    global failcache_dir
     set hash [port_files_checksum $porturl]
     set key "$portname $canonical_variants $hash"
     set ret 0
-    foreach f [glob -directory $::failcache_dir -nocomplain -tails "${portname} *"] {
+    foreach f [glob -directory $failcache_dir -nocomplain -tails "${portname} *"] {
         if {$f eq $key} {
             if {$return_contents} {
-                set fd [open [file join $::failcache_dir $f] r]
+                set fd [open [file join $failcache_dir $f] r]
                 set line [gets $fd]
                 close $fd
                 return $line
@@ -39,22 +40,24 @@ proc check_failcache {portname porturl canonical_variants {return_contents no}} 
             set ret 1
         } elseif {[lindex [split $f " "] end] ne $hash} {
             puts stderr "removing stale failcache entry: $f"
-            file delete -force [file join $::failcache_dir $f]
+            file delete -force [file join $failcache_dir $f]
         }
     }
     return $ret
 }
 
 proc failcache_update {portname porturl canonical_variants failed} {
+    global failcache_dir
     set hash [port_files_checksum $porturl]
-    set entry_path [file join $::failcache_dir "$portname $canonical_variants $hash"]
+    set entry_path [file join $failcache_dir "$portname $canonical_variants $hash"]
     if {$failed} {
-        file mkdir $::failcache_dir
+        global env failcache_buildurl
+        file mkdir $failcache_dir
         set fd [open $entry_path w]
-        if {[info exists ::env(BUILDBOT_BUILDURL)]} {
-            puts $fd $::env(BUILDBOT_BUILDURL)
-        } elseif {[info exists ::failcache_buildurl]} {
-            puts $fd $::failcache_buildurl
+        if {[info exists env(BUILDBOT_BUILDURL)]} {
+            puts $fd $env(BUILDBOT_BUILDURL)
+        } elseif {[info exists failcache_buildurl]} {
+            puts $fd $failcache_buildurl
         } else {
             puts $fd "unknown"
         }
@@ -66,7 +69,8 @@ proc failcache_update {portname porturl canonical_variants failed} {
 
 # clear all entries for portname
 proc failcache_clear_all {portname} {
-    foreach f [glob -directory $::failcache_dir -nocomplain "${portname} *"] {
+    global failcache_dir
+    foreach f [glob -directory $failcache_dir -nocomplain "${portname} *"] {
         puts stderr "clearing failcache entry: [file tail $f]"
         file delete -force $f
     }
