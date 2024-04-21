@@ -30,7 +30,7 @@ test-port() {
     : "${option_builtin_only=0}"
     set -- ${args+"${args[@]}"}
     local test_run_flag
-    [[ "${option_builtin_only}" -eq 1 ]] && test_run_flag="test.run=no"
+    [[ "${option_builtin_only}" -eq 1 ]] && test_run_flag="test.run=no depends_test=''"
     local port=${1-}
     if [[ -z "$port" ]]; then
         err "Must specify a port"
