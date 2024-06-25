@@ -58,6 +58,8 @@ if {$license_db_dir ne ""} {
     init_license_db $license_db_dir
 }
 
+set tarcmd "$macports::autoconf::tar_path [macports::get_tar_flags .${macports::portarchivetype}]cvf"
+
 file stat $staging_dir stat_array
 set staging_device $stat_array(dev)
 
@@ -91,7 +93,28 @@ while {[gets $infd line] >= 0} {
             set archive_type private
             set archive_site $archive_site_private
         }
-        set archive_path [$e location]
+        set portimage_path [$e location]
+        # Port image may sometimes be a directory
+        if {[file isfile $portimage_path]} {
+            set archive_path $portimage_path
+            set staging_operation copy
+        } else {
+            set archive_path ${portimage_path}.${macports::portarchivetype}
+            # Check if an archive also exists
+            if {[file isfile $archive_path]} {
+                # The archive is not the image, so it can be safely
+                # deleted after staging.
+                set staging_operation move
+            } elseif {[file isdirectory $portimage_path]} {
+                # The archive was either somehow never created, or
+                # has since been deleted. Recreate it if needed.
+                set staging_operation create
+            } else {
+                # No portimage at all
+                puts "Image for [$e name] @[$e version]_[$e revision][$e variants] seems to be missing"
+                continue
+            }
+        }
         set archive_basename [file tail $archive_path]
         set archive_name_encoded [portfetch::percent_encode $archive_basename]
         if {![catch {curl getsize ${archive_site}/[$e name]/${archive_name_encoded}} size] && $size > 0} {
@@ -102,13 +125,25 @@ while {[gets $infd line] >= 0} {
         puts "Staging ${archive_type} archive for upload: ${archive_basename}"
         set archive_staging_dir [file join ${staging_dir} ${archive_type} [$e name]]
         file mkdir $archive_staging_dir
-        file stat $archive_path stat_array
-        if {$stat_array(dev) == $staging_device} {
-            puts "creating hardlink to $archive_path at [file join $archive_staging_dir $archive_basename]"
-            file link -hard [file join $archive_staging_dir $archive_basename] $archive_path
-        } else {
-            puts "copying $archive_path to $archive_staging_dir"
-            file copy -force -- $archive_path $archive_staging_dir
+        switch $staging_operation {
+            copy {
+                file stat $archive_path stat_array
+                if {$stat_array(dev) == $staging_device} {
+                    puts "creating hardlink to $archive_path in $archive_staging_dir"
+                    file link -hard [file join $archive_staging_dir $archive_basename] $archive_path
+                } else {
+                    puts "copying $archive_path to $archive_staging_dir"
+                    file copy -force -- $archive_path $archive_staging_dir
+                }
+            }
+            create {
+                puts "creating $archive_basename from $portimage_path"
+                system -W $portimage_path "$tarcmd [file join $archive_staging_dir $archive_basename] ."
+            }
+            move {
+                puts "moving $archive_path to $archive_staging_dir"
+                file rename -force -- $archive_path $archive_staging_dir
+            }
         }
     }
 }
