@@ -184,6 +184,7 @@ foreach p $todo {
     dict set outputports $p 1
     dict set requestedports $p 1
 }
+set archive_ext .tbz2
 # process all recursive deps
 set depstypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run]
 while {[llength $todo] > 0} {
@@ -268,6 +269,9 @@ while {[llength $todo] > 0} {
                         set archives_prefix ${macports::portdbpath}/software/[dict get $portinfo name]/[dict get $portinfo name]-[dict get $portinfo version]_[dict get $portinfo revision]
                         set any_archive_missing 0
                         foreach installed_archive [glob -nocomplain -tails -path ${archives_prefix} *] {
+                            if {[file extension $installed_archive] ne $archive_ext} {
+                                set installed_archive ${installed_archive}${archive_ext}
+                            }
                             if {$installed_archive ne $archive_name} {
                                 set installed_archive_encoded [portfetch::percent_encode $installed_archive]
                                 if {[catch {curl getsize ${archive_site_public}/[dict get $portinfo name]/${installed_archive_encoded}} size] || $size <= 0} {
