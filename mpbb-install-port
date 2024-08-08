@@ -53,7 +53,7 @@ install-port() {
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
     local imagepath=$("$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/archive-path.tcl" "$@")
-    if [[ -f "$imagepath" -o -d "${imagepath%.*}" ]]; then
+    if [[ -f "$imagepath" || -d "${imagepath%.*}" ]]; then
         echo "$* already installed, nothing to do"
         # log: summary for the portwatcher
         echo "Building '$port' ... [OK]" >> "$log_subports_progress"
