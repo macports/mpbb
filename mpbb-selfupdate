@@ -51,8 +51,8 @@ selfupdate() {
         rm -rf ${macports_distfile} ${macports_distname} || return
     fi
 
-    # selfupdate at most once every 24 hours
-    if [[ ! -f selfupdate.timestamp || $(($(date +%s) - $(stat -f %m selfupdate.timestamp))) -gt 86400 ]]; then
+    # selfupdate at most once every 12 hours
+    if [[ ! -f selfupdate.timestamp || $(($(date +%s) - $(stat -f %m selfupdate.timestamp))) -gt 43200 ]]; then
         "${option_prefix}/bin/port" -d selfupdate --no-sync || return
         touch selfupdate.timestamp
     fi
