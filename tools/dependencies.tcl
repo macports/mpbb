@@ -506,7 +506,8 @@ proc install_dep_source {depinfo} {
     close_open_mports
     clean_workdirs
     set mportinfo_array [dict create]
-    set ditem [lindex [open_port [dict get $depinfo name] [dict get $depinfo requested_variations]] 0]
+    set requested_variations [expr {[dict exists $depinfo requested_variations] ? [dict get $depinfo requested_variations] : {}}]
+    set ditem [lindex [open_port [dict get $depinfo name] $requested_variations] 0]
     # Ensure archivefetch is not attempted at all
     set workername [ditem_key $ditem workername]
     $workername eval [list set portutil::archive_available_result 0]
