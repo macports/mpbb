@@ -215,7 +215,7 @@ proc get_maintainers {args} {
     return [join $retlist ,]
 }
 
-proc open_port {portname} {
+proc open_port {portname {variations {}}} {
     try {
         set result [mportlookup $portname]
         if {[llength $result] < 2} {
@@ -229,13 +229,14 @@ proc open_port {portname} {
     }
     lassign $result portname portinfo
     try {
-        set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] ""]
+        set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] $variations]
     } on error {eMessage} {
         ui_error "mportopen $portname from [dict get $portinfo porturl] failed: $eMessage"
         exit 2
     }
 
     set portinfo [dict merge $portinfo [mportinfo $mport]]
+    dict set portinfo requested_variations $variations
     global mportinfo_array
     if {![dict exists $mportinfo_array $mport]} {
         dict set mportinfo_array $mport $portinfo
@@ -505,7 +506,7 @@ proc install_dep_source {depinfo} {
     close_open_mports
     clean_workdirs
     set mportinfo_array [dict create]
-    set ditem [lindex [open_port [dict get $depinfo name]] 0]
+    set ditem [lindex [open_port [dict get $depinfo name] [dict get $depinfo requested_variations]] 0]
     # Ensure archivefetch is not attempted at all
     set workername [ditem_key $ditem workername]
     $workername eval [list set portutil::archive_available_result 0]
