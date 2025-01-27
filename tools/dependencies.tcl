@@ -360,7 +360,9 @@ if {[catch {mportdepends $mport "activate" 1 1 0 dlist} result]} {
 proc append_it {ditem} {
     global dlist_sorted mportinfo_array
     lappend dlist_sorted $ditem
-    dict set mportinfo_array $ditem [mportinfo $ditem]
+    set this_portinfo [mportinfo $ditem]
+    dict set this_portinfo requested_variations [ditem_key $ditem variations]
+    dict set mportinfo_array $ditem $this_portinfo
     return 0
 }
 try {
