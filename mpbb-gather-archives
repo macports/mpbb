@@ -62,6 +62,7 @@ gather-archives() {
     fi
 
     mkdir -p "${option_staging_dir}"/public "${option_staging_dir}"/private || return
+    chmod -R a+rX "${option_staging_dir}"
 
     # $thisdir is set in mpbb
     # shellcheck disable=SC2154
