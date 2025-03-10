@@ -61,8 +61,33 @@ set deptypes [list depends_fetch depends_extract depends_patch depends_build dep
 set processed [dict create]
 set mirror_done [dict create]
 set distfiles_results [dict create]
+set portname_portfile_map [dict create]
+set portfile_hash_cache [dict create]
 
-proc check_mirror_done {portname} {
+proc get_portfile_hash {portname} {
+    global portfile_hash_cache portname_portfile_map
+    if {[dict exists $portname_portfile_map $portname]} {
+        set portfile [dict get $portname_portfile_map $portname]
+    } else {
+        set result [mportlookup $portname]
+        if {[llength $result] < 2} {
+            return {}
+        }
+        set portinfo [lindex $result 1]
+        set portfile [file join [macports::getportdir [dict get $portinfo porturl]] Portfile]
+        dict set portname_portfile_map $portname $portfile
+    }
+    if {[dict exists $portfile_hash_cache $portfile]} {
+        return [dict get $portfile_hash_cache $portfile]
+    } elseif {[file isfile $portfile]} {
+        set portfile_hash [sha256 file $portfile]
+        dict set portfile_hash_cache $portfile $portfile_hash
+        return $portfile_hash
+    }
+    return {}
+}
+
+proc check_mirror_done_local {portname} {
     global mirror_done
     if {[dict exists $mirror_done $portname]} {
         return [dict get $mirror_done $portname]
@@ -70,30 +95,25 @@ proc check_mirror_done {portname} {
     global mirrorcache_dir
     set cache_entry [file join $mirrorcache_dir [string toupper [string index $portname 0]] $portname]
     if {[file isfile $cache_entry]} {
-        set result [mportlookup $portname]
-        if {[llength $result] < 2} {
+        set portfile_hash [get_portfile_hash $portname]
+        if {$portfile_hash eq {}} {
             return 0
         }
-        set portinfo [lindex $result 1]
-        set portfile [file join [macports::getportdir [dict get $portinfo porturl]] Portfile]
-        if {[file isfile $portfile]} {
-            set portfile_hash [sha256 file $portfile]
-            set fd [open $cache_entry]
-            set entry_hash [gets $fd]
-            set partial [gets $fd]
-            close $fd
-            if {$portfile_hash eq $entry_hash} {
-                if {$partial eq ""} {
-                    dict set mirror_done $portname 1
-                    return 1
-                } else {
-                    dict set mirror_done $portname $partial
-                    return $partial
-                }
+        set fd [open $cache_entry]
+        set entry_hash [gets $fd]
+        set partial [gets $fd]
+        close $fd
+        if {$portfile_hash eq $entry_hash} {
+            if {$partial eq ""} {
+                dict set mirror_done $portname 1
+                return 1
             } else {
-                file delete -force $cache_entry
-                dict set mirror_done $portname 0
+                dict set mirror_done $portname $partial
+                return $partial
             }
+        } else {
+            file delete -force $cache_entry
+            dict set mirror_done $portname 0
         }
     } else {
         dict set mirror_done $portname 0
@@ -101,14 +121,65 @@ proc check_mirror_done {portname} {
     return 0
 }
 
-proc set_mirror_done {portname value} {
+proc get_remote_db_value {key} {
+     global mirrorcache_baseurl mirrorcache_credentials
+     set fullurl ${mirrorcache_baseurl}GET/${key}?type=txt
+     try {
+        curl fetch -u $mirrorcache_credentials $fullurl mirror_db_response
+        set fd [open mirror_db_response r]
+        gets $fd result
+        close $fd
+    } on error {} {
+        set result {}
+    } finally {
+        file delete mirror_db_response
+    }
+    return $result
+}
+
+proc check_mirror_done_remote {portname} {
+    global mirror_done
+    if {[dict exists $mirror_done $portname]} {
+        return [dict get $mirror_done $portname]
+    }
+    if {[get_remote_db_value mirror.sha256.${portname}] eq [get_portfile_hash $portname]} {
+        set result [get_remote_db_value mirror.status.${portname}]
+        if {$result ne {}} {
+            dict set mirror_done $portname $result
+            return $result
+        }
+    } else {
+        dict set mirror_done $portname 0
+    }
+    return 0
+}
+
+
+proc set_mirror_done_remote {portname value} {
+    # We actually need to upload the files before updating their
+    # status in the remote db, so just update the dict here.
+    global mirror_done
+    if {![dict exists $mirror_done $portname] || [dict get $mirror_done $portname] != 1} {
+        dict set mirror_done $portname $value
+    }
+}
+
+# Write out info needed to update the remote db.
+proc write_status_dicts {} {
+    foreach d {mirror_done portfile_hash_cache portname_portfile_map} {
+        global $d
+        set fd [open $d w]
+        puts -nonewline $fd [set $d]
+        close $fd
+    }
+}
+
+
+proc set_mirror_done_local {portname value} {
     global mirror_done
     if {![dict exists $mirror_done $portname] || [dict get $mirror_done $portname] != 1} {
         global mirrorcache_dir
-        set result [mportlookup $portname]
-        set portinfo [lindex $result 1]
-        set portfile [file join [macports::getportdir [dict get $portinfo porturl]] Portfile]
-        set portfile_hash [sha256 file $portfile]
+        set portfile_hash [get_portfile_hash $portname]
 
         set cache_dir [file join $mirrorcache_dir [string toupper [string index $portname 0]]]
         file mkdir $cache_dir
@@ -331,6 +402,14 @@ set mirrorcache_dir /tmp/mirrorcache
 if {[lindex $argv 0] eq "-c"} {
     set mirrorcache_dir [lindex $argv 1]
     set argv [lrange $argv 2 end]
+    rename check_mirror_done_local check_mirror_done
+    rename set_mirror_done_local set_mirror_done
+} elseif {[lindex $argv 0] eq "-r"} {
+    set mirrorcache_baseurl [lindex $argv 1]
+    set mirrorcache_credentials [lindex $argv 2]
+    set argv [lrange $argv 3 end]
+    rename check_mirror_done_remote check_mirror_done
+    rename set_mirror_done_remote set_mirror_done
 }
 
 set exitval 0
@@ -353,6 +432,10 @@ foreach portname $argv {
     if {[mirror_port [lindex $result 1]] != 0} {
         set exitval 1
     }
+}
+
+if {[info exists mirrorcache_baseurl]} {
+    write_status_dicts
 }
 
 exit $exitval
