@@ -399,42 +399,78 @@ proc mirror_port {portinfo} {
 }
 
 set mirrorcache_dir /tmp/mirrorcache
-if {[lindex $argv 0] eq "-c"} {
-    set mirrorcache_dir [lindex $argv 1]
-    set argv [lrange $argv 2 end]
+set use_cachedir yes
+set include_subports no
+set use_remotedb no
+while {[string match -* [lindex $argv 0]]} {
+    switch -- [lindex $argv 0] {
+        -c {
+            set use_cachedir yes
+            set mirrorcache_dir [lindex $argv 1]
+            set argv [lrange $argv 1 end]
+        }
+        -s {
+            set include_subports yes
+        }
+        -r {
+            set use_remotedb yes
+            set use_cachedir no
+            set mirrorcache_baseurl [lindex $argv 1]
+            set mirrorcache_credentials [lindex $argv 2]
+            set argv [lrange $argv 2 end]
+        }
+        default {
+            ui_error "Unknown option [lindex $argv 0]"
+        }
+    }
+    set argv [lrange $argv 1 end]
+}
+if {$use_cachedir} {
     rename check_mirror_done_local check_mirror_done
     rename set_mirror_done_local set_mirror_done
-} elseif {[lindex $argv 0] eq "-r"} {
-    set mirrorcache_baseurl [lindex $argv 1]
-    set mirrorcache_credentials [lindex $argv 2]
-    set argv [lrange $argv 3 end]
+} elseif {$use_remotedb} {
     rename check_mirror_done_remote check_mirror_done
     rename set_mirror_done_remote set_mirror_done
 }
 
-set exitval 0
-foreach portname $argv {
+proc process_port {portname} {
+    global processed
     if {[dict exists $processed $portname]} {
         ui_msg "skipping ${portname}, already processed"
-        continue
+        return
     }
     if {[check_mirror_done $portname] == 1} {
         ui_msg "skipping ${portname}, previously mirrored"
-        continue
+        return
     }
 
+    global exitval
     set result [mportlookup $portname]
     if {[llength $result] < 2} {
         ui_error "No such port: $portname"
         set exitval 1
-        continue
+        return
     }
-    if {[mirror_port [lindex $result 1]] != 0} {
+    set portinfo [lindex $result 1]
+    if {[mirror_port $portinfo] != 0} {
         set exitval 1
+    }
+
+    global include_subports
+    if {$include_subports} {
+        set subports [expr {[dict exists $portinfo subports] ? [dict get $portinfo subports] : {}}]
+        foreach subport $subports {
+            process_port $subport
+        }
     }
 }
 
-if {[info exists mirrorcache_baseurl]} {
+set exitval 0
+foreach portname $argv {
+    process_port $portname
+}
+
+if {$use_remotedb} {
     write_status_dicts
 }
 
