@@ -33,6 +33,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package require macports
+package require fetch_common
 
 set ui_options(ports_verbose) yes
 if {[catch {mportinit ui_options "" ""} result]} {
@@ -256,12 +257,15 @@ proc skip_mirror {mport identifier} {
         # no distfiles, no need to mirror
         return 1
     }
-    global distfiles_results
+    global distfiles_results check_distfiles_url distfiles_url
     if {![info exists distfiles]} {
         set distfiles [list]
     }
     if {![info exists patchfiles]} {
         set patchfiles [list]
+    }
+    if {$check_distfiles_url} {
+        set dist_subdir [_mportkey $mport dist_subdir]
     }
     set distpath [_mportkey $mport distpath]
     set filespath [_mportkey $mport filespath]
@@ -271,6 +275,12 @@ proc skip_mirror {mport identifier} {
             continue
         }
         set distfile [getdistname $distfile]
+        if {$check_distfiles_url} {
+            set distfile_url ${distfiles_url}${dist_subdir}/[portfetch::percent_encode $distfile]
+            if {![catch {curl getsize $distfile_url} size] && $size > 0} {
+                continue
+            }
+        }
         set filepath [file join $distpath $distfile]
         if {![dict exists $distfiles_results $filepath]} {
             set any_unmirrored 1
@@ -402,11 +412,17 @@ set mirrorcache_dir /tmp/mirrorcache
 set use_cachedir yes
 set include_subports no
 set use_remotedb no
+set check_distfiles_url no
 while {[string match -* [lindex $argv 0]]} {
     switch -- [lindex $argv 0] {
         -c {
             set use_cachedir yes
             set mirrorcache_dir [lindex $argv 1]
+            set argv [lrange $argv 1 end]
+        }
+        -d {
+            set check_distfiles_url yes
+            set distfiles_url [lindex $argv 1]
             set argv [lrange $argv 1 end]
         }
         -s {
