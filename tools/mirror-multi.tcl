@@ -197,11 +197,11 @@ proc set_mirror_done_local {portname value} {
 
 proc get_dep_list {portinfo} {
     global deptypes
-    set deps [list]
+    set deps [dict create]
     foreach deptype $deptypes {
         if {[dict exists $portinfo $deptype]} {
             foreach dep [dict get $portinfo $deptype] {
-                lappend deps [lindex [split $dep :] end]
+                dict set deps [lindex [split $dep :] end] 1
             }
         }
     }
@@ -257,7 +257,7 @@ proc skip_mirror {mport identifier} {
         # no distfiles, no need to mirror
         return 1
     }
-    global distfiles_results check_distfiles_url distfiles_url
+    global distfiles_results check_distfiles_url
     if {![info exists distfiles]} {
         set distfiles [list]
     }
@@ -266,6 +266,7 @@ proc skip_mirror {mport identifier} {
     }
     if {$check_distfiles_url} {
         set dist_subdir [_mportkey $mport dist_subdir]
+        global distfiles_url distfiles_url_results
     }
     set distpath [_mportkey $mport distpath]
     set filespath [_mportkey $mport filespath]
@@ -276,8 +277,14 @@ proc skip_mirror {mport identifier} {
         }
         set distfile [getdistname $distfile]
         if {$check_distfiles_url} {
-            set distfile_url ${distfiles_url}${dist_subdir}/[portfetch::percent_encode $distfile]
-            if {![catch {curl getsize $distfile_url} size] && $size > 0} {
+            if {[dict exists $distfiles_url_results ${dist_subdir}/${distfile}]} {
+                set url_result [dict get $distfiles_url_results ${dist_subdir}/${distfile}]
+            } else {
+                set distfile_url ${distfiles_url}${dist_subdir}/[portfetch::percent_encode $distfile]
+                set url_result [expr {![catch {curl getsize $distfile_url} size] && $size > 0}]
+                dict set distfiles_url_results ${dist_subdir}/${distfile} $url_result
+            }
+            if {$url_result} {
                 continue
             }
         }
@@ -341,7 +348,7 @@ proc mirror_port {portinfo} {
             continue
         }
         set portinfo [mportinfo $mport]
-        lappend deps {*}[get_dep_list $portinfo]
+        set deps [dict merge [get_dep_list $portinfo] $deps]
         set skip_result [skip_mirror $mport "$portname +${variant}"]
         if {$do_mirror && $skip_result == 0} {
             incr attempted
@@ -365,7 +372,7 @@ proc mirror_port {portinfo} {
             continue
         }
         set portinfo [mportinfo $mport]
-        lappend deps {*}[get_dep_list $portinfo]
+        set deps [dict merge [get_dep_list $portinfo] $deps]
         set skip_result [skip_mirror $mport "$portname darwin $os_major $os_arch"]
         if {$do_mirror && $skip_result == 0} {
             incr attempted
@@ -383,7 +390,7 @@ proc mirror_port {portinfo} {
     }
 
     set dep_failed 0
-    foreach dep [lsort -unique $deps] {
+    foreach dep [dict keys $deps] {
         if {![dict exists $processed $dep] && [check_mirror_done $dep] == 0} {
             set result [mportlookup $dep]
             if {[llength $result] < 2} {
@@ -422,6 +429,7 @@ while {[string match -* [lindex $argv 0]]} {
         }
         -d {
             set check_distfiles_url yes
+            set distfiles_url_results [dict create]
             set distfiles_url [lindex $argv 1]
             set argv [lrange $argv 1 end]
         }
