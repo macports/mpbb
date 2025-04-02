@@ -15,6 +15,10 @@ foreach var {mirror_done portfile_hash_cache portname_portfile_map} {
 }
 
 dict for {portname status} $mirror_done {
+    if {![dict exists $portname_portfile_map $portname]} {
+        ui_warn "$portname not found in portname_portfile_map"
+        continue
+    }
     set portfile [dict get $portname_portfile_map $portname]
     set hash [dict get $portfile_hash_cache $portfile]
     set hashurl ${mirrorcache_baseurl}SET/mirror.sha256.${portname}/${hash}
