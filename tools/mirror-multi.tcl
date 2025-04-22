@@ -35,6 +35,8 @@
 package require macports
 package require fetch_common
 
+source [file join [file dirname [info script]] mirrordb.tcl]
+
 set ui_options(ports_verbose) yes
 if {[catch {mportinit ui_options "" ""} result]} {
    ui_error "$errorInfo"
@@ -62,31 +64,6 @@ set deptypes [list depends_fetch depends_extract depends_patch depends_build dep
 set processed [dict create]
 set mirror_done [dict create]
 set distfiles_results [dict create]
-set portname_portfile_map [dict create]
-set portfile_hash_cache [dict create]
-
-proc get_portfile_hash {portname} {
-    global portfile_hash_cache portname_portfile_map
-    if {[dict exists $portname_portfile_map $portname]} {
-        set portfile [dict get $portname_portfile_map $portname]
-    } else {
-        set result [mportlookup $portname]
-        if {[llength $result] < 2} {
-            return {}
-        }
-        set portinfo [lindex $result 1]
-        set portfile [file join [macports::getportdir [dict get $portinfo porturl]] Portfile]
-        dict set portname_portfile_map $portname $portfile
-    }
-    if {[dict exists $portfile_hash_cache $portfile]} {
-        return [dict get $portfile_hash_cache $portfile]
-    } elseif {[file isfile $portfile]} {
-        set portfile_hash [sha256 file $portfile]
-        dict set portfile_hash_cache $portfile $portfile_hash
-        return $portfile_hash
-    }
-    return {}
-}
 
 proc check_mirror_done_local {portname} {
     global mirror_done
@@ -120,22 +97,6 @@ proc check_mirror_done_local {portname} {
         dict set mirror_done $portname 0
     }
     return 0
-}
-
-proc get_remote_db_value {key} {
-     global mirrorcache_baseurl mirrorcache_credentials
-     set fullurl ${mirrorcache_baseurl}GET/${key}?type=txt
-     try {
-        curl fetch -u $mirrorcache_credentials $fullurl mirror_db_response
-        set fd [open mirror_db_response r]
-        gets $fd result
-        close $fd
-    } on error {} {
-        set result {}
-    } finally {
-        file delete mirror_db_response
-    }
-    return $result
 }
 
 proc check_mirror_done_remote {portname} {

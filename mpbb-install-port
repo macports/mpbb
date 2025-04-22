@@ -67,15 +67,34 @@ install-port() {
     local time_start
     local time_stop
     time_start=$(date +%s)
+    FETCHFAILED=0
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     if ! "${option_prefix}/bin/port" -d fetch "$@"; then
         echo "Fetch of '$port' failed."
-        # log: summary for the portwatcher
-        echo "Fetching '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
-        # Do not add to failcache. This could be a temporary problem that will
-        # be resolved once the file appears on mirrors.
-        return 1
+        if [ -n "$option_mirrordb_url" ]; then
+            echo "Waiting for '$port' to be mirrored."
+            if "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/wait-for-mirror.tcl" \
+                    "$option_mirrordb_url" "$option_mirrordb_credentials" "$port"; then
+                echo "Mirroring of '$port' done. Retrying fetch."
+                if ! "${option_prefix}/bin/port" -d fetch "$@"; then
+                    echo "Second fetch of '$port' failed."
+                    FETCHFAILED=1
+                fi
+            else
+                echo "Timed out waiting for '$port' to be mirrored."
+                FETCHFAILED=1
+            fi
+        else
+            FETCHFAILED=1
+        fi
+        if [ "$FETCHFAILED" -eq 1 ]; then
+            # log: summary for the portwatcher
+            echo "Fetching '$port' ... [ERROR] maintainers: $(get-maintainers "$port")." >> "$log_subports_progress"
+            # Do not add to failcache. This could be a temporary problem that will
+            # be resolved once the file appears on mirrors.
+            return 1
+        fi
     fi
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154

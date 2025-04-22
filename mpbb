@@ -59,6 +59,8 @@ parseopt prefix:,work-dir: "$@" || exit
 }
 option_failcache_dir=${option_work_dir}/failcache
 option_license_db_dir=${option_work_dir}/license_db
+option_mirrordb_url=""
+option_mirrordb_credentials=""
 
 # Inform the user if old repositories are still present.
 if [[ -d ${option_work_dir}/tools/.svn ]]; then
