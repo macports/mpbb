@@ -52,7 +52,7 @@ install-port() {
 
     # $option_prefix and $thisdir are set in mpbb
     # shellcheck disable=SC2154
-    local imagepath=$("$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/archive-path.tcl" "$@")
+    local imagepath=$("${option_prefix}/bin/port-tclsh" "${thisdir}/tools/archive-path.tcl" "$@")
     if [[ -f "$imagepath" || -d "${imagepath%.*}" ]]; then
         echo "$* already installed, nothing to do"
         # log: summary for the portwatcher
@@ -74,7 +74,7 @@ install-port() {
         echo "Fetch of '$port' failed."
         if [ -n "$option_mirrordb_url" ]; then
             echo "Waiting for '$port' to be mirrored."
-            if "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/wait-for-mirror.tcl" \
+            if "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/wait-for-mirror.tcl" \
                     "$option_mirrordb_url" "$option_mirrordb_credentials" "$port"; then
                 echo "Mirroring of '$port' done. Retrying fetch."
                 if ! "${option_prefix}/bin/port" -d fetch "$@"; then

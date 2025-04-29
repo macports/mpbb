@@ -86,7 +86,7 @@ cleanup() {
             echo "----> Uninstalling unneeded ports"
             # $thisdir is set by mpbb and points to the directory in which this script resides
             # shellcheck disable=SC2154
-            "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/uninstall-unneeded-ports.tcl"
+            "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/uninstall-unneeded-ports.tcl"
         fi
         if [ ! -L "${option_prefix}/var/macports/distfiles" ]; then
             echo
@@ -99,7 +99,7 @@ cleanup() {
         if [[ ! -f "$timestamp" || $(($(date +%s) - $(stat -f %m "$timestamp"))) -gt 604800 ]]; then
             echo
             echo "----> Deleting unneeded failcache entries"
-            "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/failcache-cleanup.tcl" --failcache_dir "${option_failcache_dir}"
+            "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/failcache-cleanup.tcl" --failcache_dir "${option_failcache_dir}"
             touch "$timestamp"
         fi
     fi
@@ -109,7 +109,7 @@ cleanup() {
         ports="$(find "${option_prefix}/var/macports/${dir}" -name '.*' -prune -o -depth 2 -type d -print | sed 's,^.*/,,' | sort -fu)"
         for port in ${ports}; do
             echo "Deleting ${dir} for ${port}"
-            "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/noisy-delete.tcl" "${option_prefix}/var/macports/${dir}"/*/"${port}"
+            "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/noisy-delete.tcl" "${option_prefix}/var/macports/${dir}"/*/"${port}"
         done
         rm -rf "${option_prefix}/var/macports/${dir}"/*
         echo
@@ -124,7 +124,7 @@ cleanup() {
         echo "----> Trying to free more disk space"
         # $thisdir is set by mpbb and points to the directory in which this script resides
         # shellcheck disable=SC2154
-        "$(readlink "${option_prefix}/bin/port-tclsh")" "${thisdir}/tools/reclaim-space.tcl" "$disk_free_after" "$DISK_FREE_THRESHOLD"
+        "${option_prefix}/bin/port-tclsh" "${thisdir}/tools/reclaim-space.tcl" "$disk_free_after" "$DISK_FREE_THRESHOLD"
         # $option_prefix is set in mpbb
         # shellcheck disable=SC2154
         disk_free_after=$(disk_free "$option_prefix")

@@ -35,7 +35,7 @@ print-subports() {
 
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
-    tclsh=$(readlink "${option_prefix}/bin/port-tclsh")
+    tclsh="${option_prefix}/bin/port-tclsh"
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
     if [ "${include_deps}" = "yes" ]; then
