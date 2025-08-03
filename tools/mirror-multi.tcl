@@ -104,13 +104,20 @@ proc check_mirror_done_remote {portname} {
     if {[dict exists $mirror_done $portname]} {
         return [dict get $mirror_done $portname]
     }
-    if {[get_remote_db_value mirror.sha256.${portname}] eq [get_portfile_hash $portname]} {
+    set db_hash [get_remote_db_value mirror.sha256.${portname}]
+    if {$db_hash eq [get_portfile_hash $portname]} {
         set result [get_remote_db_value mirror.status.${portname}]
         if {$result ne {}} {
             dict set mirror_done $portname $result
             return $result
         }
+        ui_warn "Failed to retrieve mirrored status for ${portname}."
     } else {
+        if {$db_hash eq {}} {
+            ui_msg "$portname does not appear to have been mirrored before."
+        } else {
+            ui_msg "$portname has changed since it was last mirrored."
+        }
         dict set mirror_done $portname 0
     }
     return 0
