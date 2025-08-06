@@ -34,7 +34,10 @@ proc get_remote_db_value {key} {
         set fd [open mirror_db_response r]
         gets $fd result
         close $fd
-    } on error {} {
+    } on error {err} {
+        if {$err ne "The requested URL returned error: 404"} {
+            puts stderr "get_remote_db_value: curl failed for key '$key': $err"
+        }
         set result {}
     } finally {
         file delete mirror_db_response
