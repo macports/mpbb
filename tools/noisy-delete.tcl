@@ -15,4 +15,9 @@ set noisemaker {
 
 thread::create $noisemaker
 
-file delete -force {*}$::argv
+foreach f $::argv {
+    if {[file type $f] eq "link"} {
+        file delete -force [file link $f]
+    }
+    file delete -force $f
+}
