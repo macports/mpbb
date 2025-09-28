@@ -483,15 +483,24 @@ proc install_dep_archive {ditem} {
     return 0
 }
 
-# mportexec uses this global variable, so we have to clean up between
-# doing operations (that require deps) on different ports.
+# Clean up open mports between doing operations (that require deps) on
+# different ports, just in case something neglected to close them.
 proc close_open_mports {} {
     global macports::open_mports
-    foreach mport $open_mports {
+    # Older base versions use a list, newer ones a dict. A list with an
+    # even number of elements looks just like a dict, so check that the
+    # first potential key is not actually an mport.
+    if {![catch {dict keys $open_mports} keys] && [ditem_key [lindex $keys 0]] eq {}} {
+        # Valid dict mapping porturls to lists of mports
+        set actual_mports [concat {*}[dict values $open_mports]]
+    } else {
+        # Old style list of mports (or an empty dict)
+        set actual_mports $open_mports
+    }
+    foreach mport $actual_mports {
         catch {ditem_key $mport refcnt 1}
         catch {mportclose $mport}
     }
-    set open_mports [list]
 }
 
 proc install_dep_source {depinfo} {
