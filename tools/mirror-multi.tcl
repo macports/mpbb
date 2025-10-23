@@ -35,7 +35,8 @@
 package require macports
 package require fetch_common
 
-source [file join [file dirname [info script]] mirrordb.tcl]
+set mpbbdir [file dirname [file dirname [info script]]]
+source [file join $mpbbdir tools mirrordb.tcl]
 
 set ui_options(ports_verbose) yes
 if {[catch {mportinit ui_options "" ""} result]} {
@@ -44,21 +45,36 @@ if {[catch {mportinit ui_options "" ""} result]} {
    exit 1
 }
 
-set platforms [list 9 powerpc 9 i386]
-foreach vers {10 11 12 13 14 15 16 17 18 19} {
-    if {${macports::os_major} != $vers} {
-        lappend platforms $vers i386
+proc init_platforms {} {
+    global platforms host_platform var_overrides mpbbdir
+    set platforms [list 9 powerpc 9 i386]
+    foreach vers {10 11 12 13 14 15 16 17 18 19} {
+        if {${macports::os_major} != $vers} {
+            lappend platforms $vers i386
+        }
+    }
+    foreach vers {20 21 22 23 24 25} {
+        if {${macports::os_major} != $vers} {
+            lappend platforms $vers arm $vers i386
+        } elseif {${macports::os_arch} eq "i386"} {
+            lappend platforms $vers arm
+        } else {
+            lappend platforms $vers i386
+        }
+    }
+    set host_platform ${macports::os_major}_${macports::os_arch}
+    set all_platforms [list {*}$platforms ${macports::os_major} ${macports::os_arch}]
+    set var_overrides [dict create]
+    foreach {os_major os_arch} $all_platforms {
+        set override_file [file join $mpbbdir index_vars macosx_${os_major}_${os_arch}]
+        set fd [open $override_file r]
+        gets $fd cur_overrides
+        close $fd
+        dict set var_overrides ${os_major}_${os_arch} $cur_overrides
     }
 }
-foreach vers {20 21 22 23 24 25} {
-    if {${macports::os_major} != $vers} {
-        lappend platforms $vers arm $vers i386
-    } elseif {${macports::os_arch} eq "i386"} {
-        lappend platforms $vers arm
-    } else {
-        lappend platforms $vers i386
-    }
-}
+init_platforms
+
 set deptypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run depends_test]
 
 set processed [dict create]
@@ -273,7 +289,7 @@ proc skip_mirror {mport identifier} {
 
 
 proc mirror_port {portinfo} {
-    global processed platforms
+    global processed platforms host_platform var_overrides
     set portname [dict get $portinfo name]
     set porturl [dict get $portinfo porturl]
     dict set processed $portname 1
@@ -284,6 +300,8 @@ proc mirror_port {portinfo} {
         ui_msg "Not mirroring $portname due to license"
         set do_mirror 0
     }
+    # Reset vars that may have been overridden for a different platform
+    macports::override_vars [dict get $var_overrides $host_platform]
     if {[catch {mportopen $porturl [dict create subport $portname] {}} mport]} {
         ui_error "mportopen $porturl failed: $mport"
         return 1
@@ -335,6 +353,7 @@ proc mirror_port {portinfo} {
 
     foreach {os_major os_arch} $platforms {
         ui_msg "$portname with platform 'darwin $os_major $os_arch'"
+        macports::override_vars [dict get $var_overrides ${os_major}_${os_arch}]
         if {[catch {mportopen $porturl [dict create subport $portname os_major $os_major os_arch $os_arch] {}} mport]} {
             ui_error "mportopen $porturl failed: $mport"
             continue
