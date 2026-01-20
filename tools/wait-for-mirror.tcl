@@ -5,10 +5,18 @@
 # periodically until it has been, or timeout is reached.
 
 if {$argc != 3} {
-    error "Usage: wait-for-mirror.tcl mirrorcache_baseurl mirrorcache_credentials portname"
+    error "Usage: wait-for-mirror.tcl mirrorcache_baseurl mirrorcache_credentials_file portname"
 }
 
-lassign $argv mirrorcache_baseurl mirrorcache_credentials portname
+lassign $argv mirrorcache_baseurl mirrorcache_credentials_file portname
+try {
+    set fd [open $mirrorcache_credentials_file r]
+    set mirrorcache_credentials [gets $fd]
+    close $fd
+} on error {eMessage} {
+    puts stderr "Failed to load credentials file '$mirrorcache_credentials_file': $eMessage"
+    exit 1
+}
 
 package require macports
 source [file join [file dirname [info script]] mirrordb.tcl]
