@@ -24,7 +24,7 @@ EOF
 
 install-port() {
     local args
-    parseopt source "$@" || return
+    parseopt source,mirrordb-url:,mirrordb-credentials-file: "$@" || return
     # $option_source is set by parseopt
     # shellcheck disable=SC2154
     : "${option_source=0}"
