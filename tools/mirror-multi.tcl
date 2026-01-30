@@ -236,8 +236,8 @@ proc getdistname {name} {
 # 1 - mirror not needed
 # 2 - mirror already failed for at least one distfile
 proc skip_mirror {mport identifier} {
-    if {([catch {_mportkey $mport distfiles} distfiles] || $distfiles eq "")
-        && ([catch {_mportkey $mport patchfiles} patchfiles] || $patchfiles eq "")} {
+    if {([catch {set distfiles [_mportkey $mport distfiles]}] || $distfiles eq "")
+        && ([catch {set patchfiles [_mportkey $mport patchfiles]}] || $patchfiles eq "")} {
         # no distfiles, no need to mirror
         return 1
     }
@@ -276,7 +276,7 @@ proc skip_mirror {mport identifier} {
         if {![dict exists $distfiles_results $filepath]} {
             set any_unmirrored 1
         } elseif {[dict get $distfiles_results $filepath] == 0} {
-            ui_msg "Skipping ${identifier}: $distfile already failed checksum"
+            ui_msg "Skipping ${identifier}: $distfile already failed"
             return 2
         }
     }
