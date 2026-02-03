@@ -105,7 +105,7 @@ foreach item [lrange $argv 1 end] {
 lassign $result portname portinfo
 #try -pass_signal {...}
 try {
-    set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] $variants]
+    set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname mport_hint_install 1] $variants]
 } on error {eMessage} {
     ui_error "mportopen of $portname from [dict get $portinfo porturl] failed: $eMessage"
     exit 2
@@ -229,7 +229,7 @@ proc open_port {portname {variations {}}} {
     }
     lassign $result portname portinfo
     try {
-        set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname] $variations]
+        set mport [mportopen [dict get $portinfo porturl] [dict create subport $portname mport_hint_install 1] $variations]
     } on error {eMessage} {
         ui_error "mportopen $portname from [dict get $portinfo porturl] failed: $eMessage"
         exit 2
@@ -594,6 +594,11 @@ set macports::channels(info) stdout
 set dependencies_counter 0
 set missing_deps [list]
 try {
+    if {[vercmp [macports::version] >= 2.12.0]} {
+        foreach ditem $dlist_sorted {
+            macports::async_fetch_mport install $ditem
+        }
+    }
     foreach ditem $dlist_sorted {
         if {[install_dep_archive $ditem]} {
             lappend missing_deps [dict get $mportinfo_array $ditem]
