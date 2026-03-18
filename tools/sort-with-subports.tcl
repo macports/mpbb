@@ -187,11 +187,18 @@ foreach p $todo {
 set archive_ext .tbz2
 # process all recursive deps
 set depstypes [list depends_fetch depends_extract depends_patch depends_build depends_lib depends_run]
+set last_noisy_time [clock seconds]
 while {[llength $todo] > 0} {
     set p [lindex $todo 0]
     set todo [lreplace ${todo}[set todo {}] 0 0]
 
     if {![dict exists $portdepinfo $p]} {
+        # Avoid buildbot timing out on long runs
+        set now [clock seconds]
+        if {$now - $last_noisy_time >= 900} {
+            puts stderr "Still processing..."
+            set last_noisy_time $now
+        }
         if {[catch {mportlookup $p} result]} {
             puts stderr "$errorInfo"
             error "Failed to find port '$p': $result"
