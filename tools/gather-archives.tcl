@@ -60,12 +60,14 @@ if {[file isfile $credentials_file]} {
     while {[gets $fd line] >= 0} {
         set type [lindex $line 0]
         if {$type eq "public"} {
-            set priv_creds [list -u [lindex $line 1]]
-        } elseif {$type eq "private"} {
             set pub_creds [list -u [lindex $line 1]]
+        } elseif {$type eq "private"} {
+            set priv_creds [list -u [lindex $line 1]]
         }
     }
     close $fd
+}  else {
+    puts stderr "no credentials file loaded"
 }
 
 if {[catch {mportinit "" "" ""} result]} {
