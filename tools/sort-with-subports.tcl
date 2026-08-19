@@ -116,7 +116,6 @@ if {[catch {mportinit "" "" ""} result]} {
 
 set archive_site_private ""
 set archive_site_public ""
-set credentials_file archive_credentials
 set failcache_dir ""
 set jobs_dir ""
 set license_db_dir ""
@@ -129,10 +128,6 @@ while {[string range [lindex $::argv 0] 0 1] eq "--"} {
         }
         --archive_site_public {
             set archive_site_public [lindex $::argv 1]
-            set ::argv [lrange $::argv 1 end]
-        }
-        --credentials_file {
-            set credentials_file [lindex $::argv 1]
             set ::argv [lrange $::argv 1 end]
         }
         --failcache_dir {
@@ -162,22 +157,6 @@ if {$jobs_dir ne "" && $archive_site_public ne "" && $archive_site_private ne ""
     if {$license_db_dir ne ""} {
         init_license_db $license_db_dir
     }
-}
-set priv_creds {}
-set pub_creds {}
-if {[file isfile $credentials_file]} {
-    set fd [open $credentials_file r]
-    while {[gets $fd line] >= 0} {
-        set type [lindex $line 0]
-        if {$type eq "public"} {
-            set pub_creds [list -u [lindex $line 1]]
-        } elseif {$type eq "private"} {
-            set priv_creds [list -u [lindex $line 1]]
-        }
-    }
-    close $fd
-} else {
-    puts stderr "no credentials file loaded"
 }
 
 set is_64bit_capable [sysctl hw.cpu64bit_capable]
@@ -292,7 +271,7 @@ while {[llength $todo] > 0} {
                     set workername [ditem_key $mport workername]
                     set archive_name [$workername eval {get_portimage_name}]
                     set archive_name_encoded [portfetch::percent_encode $archive_name]
-                    if {![catch {curl getsize {*}$pub_creds ${archive_site_public}/[dict get $portinfo name]/${archive_name_encoded}} size] && $size > 0} {
+                    if {![catch {macports::curlwrap getsize $archive_site_public {} ${archive_site_public}/[dict get $portinfo name]/${archive_name_encoded}} size] && $size > 0} {
                         # Check for other installed variants that might not have been uploaded
                         set archives_prefix ${macports::portdbpath}/software/[dict get $portinfo name]/[dict get $portinfo name]-[dict get $portinfo version]_[dict get $portinfo revision]
                         set any_archive_missing 0
@@ -302,7 +281,7 @@ while {[llength $todo] > 0} {
                             }
                             if {$installed_archive ne $archive_name} {
                                 set installed_archive_encoded [portfetch::percent_encode $installed_archive]
-                                if {[catch {curl getsize {*}$pub_creds ${archive_site_public}/[dict get $portinfo name]/${installed_archive_encoded}} size] || $size <= 0} {
+                                if {[catch {macports::curlwrap getsize $archive_site_public {} ${archive_site_public}/[dict get $portinfo name]/${installed_archive_encoded}} size] || $size <= 0} {
                                     set any_archive_missing 1
                                     puts stderr "$installed_archive installed but not uploaded"
                                     break
@@ -325,7 +304,7 @@ while {[llength $todo] > 0} {
                 if {[dict get $outputports $p] == 1 && $archive_site_private ne "" && $jobs_dir ne ""} {
                     # FIXME: support non-default variants
                     set results [check_licenses [dict get $portinfo name] [list]]
-                    if {[lindex $results 0] == 1 && ![catch {curl getsize {*}$priv_creds ${archive_site_private}/[dict get $portinfo name]/${archive_name_encoded}} size] && $size > 0} {
+                    if {[lindex $results 0] == 1 && ![catch {macports::curlwrap getsize $archive_site_private {} ${archive_site_private}/[dict get $portinfo name]/${archive_name_encoded}} size] && $size > 0} {
                         if {[dict exists $requestedports $p]} {
                             puts stderr "Excluding [dict get $portinfo name] because it is not distributable and it has already been built and uploaded to the private server"
                         }

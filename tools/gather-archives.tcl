@@ -6,7 +6,6 @@ package require fetch_common
 
 set archive_site_private https://packages-private.macports.org
 set archive_site_public https://packages.macports.org
-set credentials_file archive_credentials
 set jobs_dir ""
 set license_db_dir ""
 set staging_dir ""
@@ -18,10 +17,6 @@ while {[string range [lindex $::argv 0] 0 1] eq "--"} {
         }
         --archive_site_public {
             set archive_site_public [lindex $::argv 1]
-            set ::argv [lreplace $::argv 0 0]
-        }
-        --credentials_file {
-            set credentials_file [lindex $::argv 1]
             set ::argv [lreplace $::argv 0 0]
         }
         --jobs_dir {
@@ -51,23 +46,6 @@ if {$jobs_dir eq ""} {
 }
 if {[llength $::argv] == 0} {
     error "must specify an input file"
-}
-
-set priv_creds {}
-set pub_creds {}
-if {[file isfile $credentials_file]} {
-    set fd [open $credentials_file r]
-    while {[gets $fd line] >= 0} {
-        set type [lindex $line 0]
-        if {$type eq "public"} {
-            set pub_creds [list -u [lindex $line 1]]
-        } elseif {$type eq "private"} {
-            set priv_creds [list -u [lindex $line 1]]
-        }
-    }
-    close $fd
-}  else {
-    puts stderr "no credentials file loaded"
 }
 
 if {[catch {mportinit "" "" ""} result]} {
@@ -111,11 +89,9 @@ while {[gets $infd line] >= 0} {
         if {$license_result == 0} {
             set archive_type public
             set archive_site $archive_site_public
-            set creds $pub_creds
         } else {
             set archive_type private
             set archive_site $archive_site_private
-            set creds $priv_creds
         }
         set portimage_path [$e location]
         # Port image may sometimes be a directory
@@ -141,7 +117,7 @@ while {[gets $infd line] >= 0} {
         }
         set archive_basename [file tail $archive_path]
         set archive_name_encoded [portfetch::percent_encode $archive_basename]
-        if {![catch {curl getsize {*}$creds ${archive_site}/[$e name]/${archive_name_encoded}} size] && $size > 0} {
+        if {![catch {macports::curlwrap getsize ${archive_site} {} ${archive_site}/[$e name]/${archive_name_encoded}} size] && $size > 0} {
             puts "Already uploaded ${archive_type} archive: ${archive_basename}"
             continue
         }
