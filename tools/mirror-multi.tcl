@@ -246,7 +246,7 @@ proc skip_mirror {mport identifier} {
         # no distfiles, no need to mirror
         return 1
     }
-    global distfiles_results check_distfiles_url
+    global distfiles_results check_distfiles_url percent_encode
     if {![info exists distfiles]} {
         set distfiles [list]
     }
