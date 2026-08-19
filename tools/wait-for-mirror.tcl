@@ -9,13 +9,17 @@ if {$argc != 3} {
 }
 
 lassign $argv mirrorcache_baseurl mirrorcache_credentials_file portname
-try {
-    set fd [open $mirrorcache_credentials_file r]
-    set mirrorcache_credentials [gets $fd]
-    close $fd
-} on error {eMessage} {
-    puts stderr "Failed to load credentials file '$mirrorcache_credentials_file': $eMessage"
-    exit 1
+if {$mirrorcache_credentials_file ne {}} {
+    try {
+        set fd [open $mirrorcache_credentials_file r]
+        set mirrorcache_credentials [gets $fd]
+        close $fd
+    } on error {eMessage} {
+        puts stderr "Failed to load credentials file '$mirrorcache_credentials_file': $eMessage"
+        exit 1
+    }
+} else {
+    set mirrorcache_credentials {}
 }
 
 package require macports

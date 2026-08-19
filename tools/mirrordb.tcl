@@ -30,7 +30,7 @@ proc get_remote_db_value {key} {
      global mirrorcache_baseurl mirrorcache_credentials
      set fullurl ${mirrorcache_baseurl}GET/${key}?type=txt
      try {
-        curl fetch -u $mirrorcache_credentials $fullurl mirror_db_response
+        macports::curlwrap fetch $mirrorcache_baseurl $mirrorcache_credentials $fullurl mirror_db_response
         set fd [open mirror_db_response r]
         gets $fd result
         close $fd
