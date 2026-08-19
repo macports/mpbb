@@ -33,7 +33,12 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package require macports
-package require fetch_common
+if {![catch {package require portlib}]} {
+    set percent_encode portlib::fetch::percent_encode
+} else {
+    package require fetch_common
+    set percent_encode portfetch::percent_encode
+}
 
 set mpbbdir [file dirname [file dirname [info script]]]
 source [file join $mpbbdir tools mirrordb.tcl]
@@ -264,7 +269,7 @@ proc skip_mirror {mport identifier} {
             if {[dict exists $distfiles_url_results ${dist_subdir}/${distfile}]} {
                 set url_result [dict get $distfiles_url_results ${dist_subdir}/${distfile}]
             } else {
-                set distfile_url ${distfiles_url}${dist_subdir}/[portfetch::percent_encode $distfile]
+                set distfile_url ${distfiles_url}${dist_subdir}/[$percent_encode $distfile]
                 set url_result [expr {![catch {curl getsize $distfile_url} size] && $size > 0}]
                 dict set distfiles_url_results ${dist_subdir}/${distfile} $url_result
             }

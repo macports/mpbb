@@ -34,7 +34,12 @@
 #
 
 package require macports
-package require fetch_common
+if {![catch {package require portlib}]} {
+    set percent_encode portlib::fetch::percent_encode
+} else {
+    package require fetch_common
+    set percent_encode portfetch::percent_encode
+}
 
 
 proc ui_prefix {priority} {
@@ -270,7 +275,7 @@ while {[llength $todo] > 0} {
                     }
                     set workername [ditem_key $mport workername]
                     set archive_name [$workername eval {get_portimage_name}]
-                    set archive_name_encoded [portfetch::percent_encode $archive_name]
+                    set archive_name_encoded [$percent_encode $archive_name]
                     if {![catch {macports::curlwrap getsize $archive_site_public {} ${archive_site_public}/[dict get $portinfo name]/${archive_name_encoded}} size] && $size > 0} {
                         # Check for other installed variants that might not have been uploaded
                         set archives_prefix ${macports::portdbpath}/software/[dict get $portinfo name]/[dict get $portinfo name]-[dict get $portinfo version]_[dict get $portinfo revision]
@@ -280,7 +285,7 @@ while {[llength $todo] > 0} {
                                 set installed_archive ${installed_archive}${archive_ext}
                             }
                             if {$installed_archive ne $archive_name} {
-                                set installed_archive_encoded [portfetch::percent_encode $installed_archive]
+                                set installed_archive_encoded [$percent_encode $installed_archive]
                                 if {[catch {macports::curlwrap getsize $archive_site_public {} ${archive_site_public}/[dict get $portinfo name]/${installed_archive_encoded}} size] || $size <= 0} {
                                     set any_archive_missing 1
                                     puts stderr "$installed_archive installed but not uploaded"

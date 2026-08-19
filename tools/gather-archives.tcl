@@ -2,7 +2,12 @@
 
 package require macports
 package require registry2
-package require fetch_common
+if {![catch {package require portlib}]} {
+    set percent_encode portlib::fetch::percent_encode
+} else {
+    package require fetch_common
+    set percent_encode portfetch::percent_encode
+}
 
 set archive_site_private https://packages-private.macports.org
 set archive_site_public https://packages.macports.org
@@ -116,7 +121,7 @@ while {[gets $infd line] >= 0} {
             }
         }
         set archive_basename [file tail $archive_path]
-        set archive_name_encoded [portfetch::percent_encode $archive_basename]
+        set archive_name_encoded [$percent_encode $archive_basename]
         if {![catch {macports::curlwrap getsize ${archive_site} {} ${archive_site}/[$e name]/${archive_name_encoded}} size] && $size > 0} {
             puts "Already uploaded ${archive_type} archive: ${archive_basename}"
             continue
