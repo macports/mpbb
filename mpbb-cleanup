@@ -81,6 +81,13 @@ cleanup() {
     DISK_FREE_THRESHOLD=15000000
 
     if [[ ${BUILDBOT_BUILDERNAME:-unknown} == *-watcher || "$disk_free_before" -lt "$DISK_FREE_THRESHOLD" ]]; then
+        # Limit clock drift by checking offset from time server after
+        # 10 minutes and syncing if needed.
+        timestamp="${option_work_dir}/clock_sync.timestamp"
+        if [[ ! -f "$timestamp" || $(($(date +%s) - $(stat -f %m "$timestamp"))) -gt 600 ]]; then
+            "${thisdir}"/tools/sync_time.sh
+            touch "$timestamp"
+        fi
         if [[ ${BUILDBOT_BUILDERNAME:-unknown} == *-watcher ]]; then
             echo
             echo "----> Uninstalling unneeded ports"

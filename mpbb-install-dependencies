@@ -26,6 +26,26 @@ install-dependencies() {
     local log_subports_progress="${option_log_dir}/ports-progress.txt"
     local result
 
+    # Check if PortIndex has a timestamp newer than the current time.
+
+    # shellcheck disable=SC2154
+    local -r ports_dir=${option_work_dir}/ports
+    if [ "$(date +%s)" -lt "$(stat -f %m ${ports_dir}/PortIndex)" ]; then
+        # This probably means the system clock is wrong, so sync it.
+        "${thisdir}"/tools/sync_time.sh
+        local timediff="$(( $(stat -f %m ${ports_dir}/PortIndex) - $(date +%s) ))"
+        if [ "$timediff" -gt 0 ]; then
+            if [ "$timediff" -le 60 ]; then
+                # Still a little bit behind, wait for it to catch up.
+                sleep "$timediff"
+            else
+                # Way off. Might need manual intervention.
+                echo "Error: PortIndex timestamp is more than 60 seconds in the future after syncing clock"
+                return 1
+            fi
+        fi
+    fi
+
     # Script attempts to get to a state where all dependencies (and
     # only dependencies) of the port are active
     # $option_prefix and $thisdir are set in mpbb
