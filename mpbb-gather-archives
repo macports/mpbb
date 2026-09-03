@@ -67,8 +67,8 @@ gather-archives() {
     # shellcheck disable=SC2086
     set -- ${args+"${args[@]}"}
 
-    # Use http on older OS versions
-    if [ "$(uname -r | cut -f 1 -d .)" -lt 19 ]; then
+    # Use http on Intel builders
+    if [ "$(uname -p)" != "arm" ]; then
         option_archive_site="$option_archive_site_http"
         option_archive_site_private="$option_archive_site_private_http"
     fi
