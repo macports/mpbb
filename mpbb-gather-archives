@@ -24,6 +24,16 @@ Options:
     URL to check for preexisting private archives. Defaults to
     \`https://packages-private.macports.org'.
 
+ --archive-site-http=<URL>
+    URL to check for preexisting public archives if the OS is unable to
+    connect to modern https sites. Defaults to
+    \`http://packages.internal.macports.net'.
+
+  --archive-site-private-http=<URL>
+    URL to check for preexisting private archives if the OS is unable
+    to connect to modern https sites. Defaults to
+    \`http://packages-private.internal.macports.net'.
+
   --staging-dir=<path>
     A directory for storing archives before deployment. Defaults to the
     \`archive-staging' subdirectory of the \`--work-dir' working directory.
@@ -38,18 +48,30 @@ device-of-path() {
 
 gather-archives() {
     local args
-    parseopt archive-site:,archive-site-private:,staging-dir: "$@" || return
+    parseopt archive-site:,archive-site-private:,archive-site-http:,archive-site-private-http:,staging-dir: "$@" || return
     # $option_archive_site is set by parseopt
     # shellcheck disable=SC2154
     : "${option_archive_site=https://packages.macports.org}"
     # $option_archive_site_private is set by parseopt
     # shellcheck disable=SC2154
     : "${option_archive_site_private=https://packages-private.macports.org}"
+    # $option_archive_site_http is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_archive_site_http=http://packages.internal.macports.net}"
+    # $option_archive_site_private_http is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_archive_site_private_http=http://packages-private.internal.macports.net}"
     # $option_staging_dir is set by parseopt
     # shellcheck disable=SC2154
     : "${option_staging_dir=${option_work_dir}/archive-staging}"
     # shellcheck disable=SC2086
     set -- ${args+"${args[@]}"}
+
+    # Use http on older OS versions
+    if [ "$(uname -r | cut -f 1 -d .)" -lt 19 ]; then
+        option_archive_site="$option_archive_site_http"
+        option_archive_site_private="$option_archive_site_private_http"
+    fi
 
     # $option_prefix is set in mpbb
     # shellcheck disable=SC2154
