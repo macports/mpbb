@@ -24,7 +24,7 @@ EOF
 
 install-port() {
     local args
-    parseopt source,mirrordb-url:,mirrordb-credentials-file: "$@" || return
+    parseopt source,mirrordb-url:,mirrordb-url-http:,mirrordb-credentials-file: "$@" || return
     # $option_source is set by parseopt
     # shellcheck disable=SC2154
     : "${option_source=0}"
@@ -36,6 +36,12 @@ install-port() {
         err "Must specify a port"
         return 1
     fi
+
+    # Use http on older OS versions
+    if [ "$(uname -r | cut -f 1 -d .)" -lt 19 ]; then
+        option_mirrordb_url="$option_mirrordb_url_http"
+    fi
+
     # $option_log_dir is set in mpbb
     # shellcheck disable=SC2154
     local log_port_contents="${option_log_dir}/port-contents.txt"
