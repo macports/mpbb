@@ -89,8 +89,9 @@ list-subports() {
         return 1
     fi
 
-    # Use http on Intel builders
-    if [ "$(uname -p)" != "arm" ]; then
+    # Use http on builders that don't support modern TLS
+    local -r os_major="$(uname -r | cut -f 1 -d .)"
+    if [ "$os_major" -lt 19 -a "$os_major" -ne 16 ]; then
         option_archive_site="$option_archive_site_http"
         option_archive_site_private="$option_archive_site_private_http"
     fi

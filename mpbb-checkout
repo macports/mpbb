@@ -163,8 +163,9 @@ checkout() {
     # shellcheck disable=SC2154
     : "${option_archive_sites_http=http://packages.internal.macports.net http://packages-private.internal.macports.net}"
 
-    # Use http on Intel builders
-    if [ "$(uname -p)" != "arm" ]; then
+    # Use http on builders that don't support modern TLS
+    local -r os_major="$(uname -r | cut -f 1 -d .)"
+    if [ "$os_major" -lt 19 -a "$os_major" -ne 16 ]; then
         option_archive_sites="$option_archive_sites_http"
     fi
 
