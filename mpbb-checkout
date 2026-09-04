@@ -141,7 +141,7 @@ svn-checkout() {
 
 checkout() {
     local args
-    parseopt archive-sites:,binpath:,git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,svn::,svn-url: "$@" \
+    parseopt archive-sites:,archive-sites-http:,binpath:,git::,jobs-url:,ports-branch:,ports-commit:,ports-url:,svn::,svn-url: "$@" \
         || return
     # shellcheck disable=SC2086
     set -- ${args+"${args[@]}"}
@@ -158,6 +158,15 @@ checkout() {
     # $option_archive_sites is set by parseopt
     # shellcheck disable=SC2154
     : "${option_archive_sites=https://packages-private.macports.org}"
+
+    # $option_archive_sites_http is set by parseopt
+    # shellcheck disable=SC2154
+    : "${option_archive_sites_http=http://packages.internal.macports.net http://packages-private.internal.macports.net}"
+
+    # Use http on Intel builders
+    if [ "$(uname -p)" != "arm" ]; then
+        option_archive_sites="$option_archive_sites_http"
+    fi
 
     # $option_archive_sites isn't quoted on purpose
     # shellcheck disable=SC2086
