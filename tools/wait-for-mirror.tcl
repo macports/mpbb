@@ -9,7 +9,7 @@ if {$argc != 3} {
 }
 
 lassign $argv mirrorcache_baseurl mirrorcache_credentials_file portname
-if {$mirrorcache_credentials_file ne {}} {
+if {$mirrorcache_credentials_file ne {} && [file isfile $mirrorcache_credentials_file]} {
     try {
         set fd [open $mirrorcache_credentials_file r]
         set mirrorcache_credentials [gets $fd]
