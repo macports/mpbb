@@ -67,6 +67,11 @@ proc init_platforms {} {
             lappend platforms $vers i386
         }
     }
+    foreach vers {27} {
+        if {${macports::os_major} != $vers} {
+            lappend platforms $vers arm
+        }
+    }
     set host_platform ${macports::os_major}_${macports::os_arch}
     set all_platforms [list {*}$platforms ${macports::os_major} ${macports::os_arch}]
     set var_overrides [dict create]
