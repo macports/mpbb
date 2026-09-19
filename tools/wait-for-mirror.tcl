@@ -36,10 +36,16 @@ proc main {portname} {
     set portfile_hash [get_portfile_hash $portname]
     set key mirror.sha256.${portname}
     set start [clock seconds]
+    set last_output $start
     while {[get_remote_db_value $key] ne $portfile_hash} {
         # 1h timeout
-        if {[clock seconds] - $start >= 3600} {
+        set now [clock seconds]
+        if {$now - $start >= 3600} {
             return 1
+        } elseif {$now - $last_output >= 900} {
+            # avoid buildbot timeout due to no output
+            set last_output $now
+            puts stderr "Still waiting..."
         }
         # 10s delay between queries
         after 10000
