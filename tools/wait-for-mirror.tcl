@@ -33,6 +33,22 @@ if {[catch {mportinit ui_options "" ""} result]} {
 }
 
 proc main {portname} {
+    set result [mportlookup $portname]
+    if {[llength $result] < 2} {
+        ui_error "No such port: $portname"
+        return 1
+    }
+    lassign $result portname portinfo
+    if {[catch {mportopen [dict get $portinfo porturl] [dict create subport $portname] {}} mport]} {
+        ui_error "mportopen failed: $mport"
+        return 1
+    }
+    # ports with no distfiles are not mirrored
+    if {([catch {set distfiles [_mportkey $mport distfiles]}] || $distfiles eq "")
+        && ([catch {set patchfiles [_mportkey $mport patchfiles]}] || $patchfiles eq "")} {
+        return 0
+    }
+    mportclose $mport
     set portfile_hash [get_portfile_hash $portname]
     set key mirror.sha256.${portname}
     set start [clock seconds]
