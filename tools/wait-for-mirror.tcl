@@ -44,11 +44,27 @@ proc main {portname} {
         return 1
     }
     # ports with no distfiles are not mirrored
-    if {([catch {set distfiles [_mportkey $mport distfiles]}] || $distfiles eq "")
-        && ([catch {set patchfiles [_mportkey $mport patchfiles]}] || $patchfiles eq "")} {
-        return 0
+    if {[catch {_mportkey $mport filespath} filespath]} {
+        ui_error "$portname has no filespath set"
+        return 1
+    }
+    if {[catch {_mportkey $mport distfiles} distfiles]} {
+        set distfiles {}
+    }
+    if {[catch {_mportkey $mport patchfiles} patchfiles]} {
+        set patchfiles {}
     }
     mportclose $mport
+    set any_files_to_mirror 0
+    foreach checkfile [concat $distfiles $patchfiles] {
+        if {![file exists [file join $filespath $checkfile]]} {
+            set any_files_to_mirror 1
+            break
+        }
+    }
+    if {!$any_files_to_mirror} {
+        return 0
+    }
     set portfile_hash [get_portfile_hash $portname]
     set key mirror.sha256.${portname}
     set start [clock seconds]
