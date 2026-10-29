@@ -456,32 +456,34 @@ if {$use_cachedir} {
 
 proc process_port {portname} {
     global processed
+    set skip 0
     if {[dict exists $processed $portname]} {
         ui_msg "skipping ${portname}, already processed"
-        return
+        set skip 1
     }
-    if {[check_mirror_done $portname] == 1} {
+    if {!$skip && [check_mirror_done $portname] == 1} {
         ui_msg "skipping ${portname}, previously mirrored"
-        return
-    }
-
-    global exitval
-    set result [mportlookup $portname]
-    if {[llength $result] < 2} {
-        ui_error "No such port: $portname"
-        set exitval 1
-        return
-    }
-    set portinfo [lindex $result 1]
-    if {[mirror_port $portinfo] != 0} {
-        set exitval 1
+        set skip 1
     }
 
     global include_subports
-    if {$include_subports} {
-        set subports [expr {[dict exists $portinfo subports] ? [dict get $portinfo subports] : {}}]
-        foreach subport $subports {
-            process_port $subport
+    if {!$skip || $include_subports} {
+        global exitval
+        set result [mportlookup $portname]
+        if {[llength $result] < 2} {
+            ui_error "No such port: $portname"
+            set exitval 1
+            return
+        }
+        set portinfo [lindex $result 1]
+        if {!$skip && [mirror_port $portinfo] != 0} {
+            set exitval 1
+        }
+        if {$include_subports} {
+            set subports [expr {[dict exists $portinfo subports] ? [dict get $portinfo subports] : {}}]
+            foreach subport $subports {
+                process_port $subport
+            }
         }
     }
 }
